@@ -135,7 +135,7 @@ export default function TheDJCaresPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {filteredMusic.map(r => (
                 <a key={r.title} href={ytSearch(`${r.title} ${r.artist ?? ""}`)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-                  <div style={{ background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "20px 22px", display: "flex", gap: 16, alignItems: "flex-start" }}>
+                  <div className="pop" style={{ background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "20px 22px", display: "flex", gap: 16, alignItems: "flex-start" }}>
                     <span style={{ fontSize: 28, flexShrink: 0 }}>▶️</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
@@ -202,7 +202,7 @@ export default function TheDJCaresPage() {
               {ENCOURAGE.map((e, i) => {
                 const isVerse = e.source !== "theDJcares";
                 return (
-                  <div key={i} style={{ background: copiedIdx === i ? active : card, border: `2px solid ${copiedIdx === i ? activeBorder : border}`, borderRadius: 18, overflow: "hidden" }}>
+                  <div key={i} className="pop" style={{ background: copiedIdx === i ? active : card, border: `2px solid ${copiedIdx === i ? activeBorder : border}`, borderRadius: 18, overflow: "hidden" }}>
                     <button onClick={() => copyLine(e.text, e.source, i)} style={{ width: "100%", background: "none", border: "none", padding: "22px 24px", cursor: "pointer", textAlign: "left" }}>
                       <p style={{ fontSize: 17, fontWeight: 700, color: text, lineHeight: 1.65, margin: "0 0 8px" }}>"{e.text}"</p>
                       <p style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: copiedIdx === i ? "#FB7185" : sub, margin: 0 }}>
