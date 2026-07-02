@@ -141,6 +141,7 @@ const inCollection = (collection: string, items: LibraryItem[]): LibraryItem[] =
 // ============================================================================
 export const DJ_CARES_LIBRARY: LibraryItem[] = [
   ...inCollection("Featured", [
+    v("gospel-power-of-god", "The Gospel Is the Power of God", "Dr. David Jeremiah", "MtzBPkbFjwk", "Message", "gospel", "The heart of everything here — Romans 1:16–17: the gospel is the power of God for salvation. Start here, then keep going.", true),
     v("biblical-habit-rewires-your-brain", "This Biblical Habit Rewires Your Brain", "", "JW6fd-ZWavs", "Message", "encouragement", "A reminder that repeated time with Scripture, prayer, and God-focused habits can reshape what we notice, how we respond, and where we turn when life gets heavy. Save this as encouragement, not pressure — one faithful habit at a time.", true),
   ]),
 
