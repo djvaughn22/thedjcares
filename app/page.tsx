@@ -10,16 +10,31 @@ import {
   type LibraryItem,
 } from "./lib/djCaresLibrary";
 
-const ENCOURAGE: { text: string; source: string }[] = [
-  { text: "You are not what you have done. You are not what has been done to you. You are who God says you are.", source: "theDJcares" },
-  { text: "The same power that raised Jesus from the dead lives in you. That is not a metaphor.", source: "Romans 8:11" },
-  { text: "You don't have to have it figured out. You just have to take the next faithful step.", source: "theDJcares" },
-  { text: "Cast all your anxiety on him because he cares for you.", source: "1 Peter 5:7" },
-  { text: "Your worst day is not the end of your story.", source: "theDJcares" },
-  { text: "The LORD your God is with you, the Mighty Warrior who saves. He will take great delight in you.", source: "Zephaniah 3:17" },
-  { text: "Someone out there needs exactly the thing you've been through. Don't waste it.", source: "theDJcares" },
-  { text: "For I know the plans I have for you — plans to prosper you and not to harm you.", source: "Jeremiah 29:11" },
+// Daily Hope verses (mirrored from Cross Heart Pray, in day order). Each links to the
+// bible.com app for the verse and its full chapter. Version 206 = World English Bible.
+const ENCOURAGE: { day: string; label: string; code: string; chapter: string; verse: string; text: string }[] = [
+  { day: "Sunday", label: "Romans 5:3-5", code: "ROM", chapter: "5", verse: "3", text: `Not only this, but we also rejoice in our sufferings, knowing that suffering produces perseverance; and perseverance, proven character; and proven character, hope: and hope doesn’t disappoint us, because God’s love has been poured into our hearts through the Holy Spirit who was given to us.` },
+  { day: "Sunday", label: "Psalm 39:7", code: "PSA", chapter: "39", verse: "7", text: `Now, Lord, what do I wait for? My hope is in you.` },
+  { day: "Monday", label: "1 Peter 3:15", code: "1PE", chapter: "3", verse: "15", text: `But sanctify the Lord God in your hearts. Always be ready to give an answer to everyone who asks you a reason concerning the hope that is in you, with humility and fear,` },
+  { day: "Monday", label: "Deuteronomy 31:6", code: "DEU", chapter: "31", verse: "6", text: `Be strong and courageous. Don’t be afraid or scared of them; for Yahweh your God himself is who goes with you. He will not fail you nor forsake you.”` },
+  { day: "Tuesday", label: "1 Peter 1:3", code: "1PE", chapter: "1", verse: "3", text: `Blessed be the God and Father of our Lord Jesus Christ, who according to his great mercy caused us to be born again to a living hope through the resurrection of Jesus Christ from the dead,` },
+  { day: "Tuesday", label: "Romans 15:4", code: "ROM", chapter: "15", verse: "4", text: `For whatever things were written before were written for our learning, that through perseverance and through encouragement of the Scriptures we might have hope.` },
+  { day: "Wednesday", label: "Proverbs 23:18", code: "PRO", chapter: "23", verse: "18", text: `Indeed surely there is a future hope, and your hope will not be cut off.` },
+  { day: "Wednesday", label: "1 Corinthians 13:13", code: "1CO", chapter: "13", verse: "13", text: `But now faith, hope, and love remain—these three. The greatest of these is love.` },
+  { day: "Thursday", label: "Psalm 31:24", code: "PSA", chapter: "31", verse: "24", text: `Be strong, and let your heart take courage, all you who hope in the LORD.` },
+  { day: "Thursday", label: "Jeremiah 17:7", code: "JER", chapter: "17", verse: "7", text: `“Blessed is the man who trusts in Yahweh, and whose confidence is in Yahweh.` },
+  { day: "Thursday", label: "Hebrews 11:1", code: "HEB", chapter: "11", verse: "1", text: `Now faith is assurance of things hoped for, proof of things not seen.` },
+  { day: "Friday", label: "Mark 9:23", code: "MRK", chapter: "9", verse: "23", text: `Jesus said to him, “If you can believe, all things are possible to him who believes.”` },
+  { day: "Friday", label: "Romans 8:25", code: "ROM", chapter: "8", verse: "25", text: `But if we hope for that which we don’t see, we wait for it with patience.` },
+  { day: "Friday", label: "Isaiah 41:10", code: "ISA", chapter: "41", verse: "10", text: `Don’t you be afraid, for I am with you. Don’t be dismayed, for I am your God. I will strengthen you. Yes, I will help you. Yes, I will uphold you with the right hand of my righteousness.` },
+  { day: "Saturday", label: "Romans 8:24-25", code: "ROM", chapter: "8", verse: "24", text: `For we were saved in hope, but hope that is seen is not hope. For who hopes for that which he sees? But if we hope for that which we don’t see, we wait for it with patience.` },
+  { day: "Saturday", label: "Proverbs 13:12", code: "PRO", chapter: "13", verse: "12", text: `Hope deferred makes the heart sick, but when longing is fulfilled, it is a tree of life.` },
 ];
+
+const bibleVerseUrl = (v: { code: string; chapter: string; verse: string }) =>
+  `https://www.bible.com/bible/206/${v.code}.${v.chapter}.${v.verse}.WEBUS`;
+const bibleChapterUrl = (v: { code: string; chapter: string }) =>
+  `https://www.bible.com/bible/206/${v.code}.${v.chapter}.WEBUS`;
 
 type Tab = "library" | "encourage";
 
@@ -233,28 +248,43 @@ export default function TheDJCaresPage() {
         {/* Encouragement tab */}
         {tab === "encourage" && (
           <>
-            <p style={{ fontSize: 16, color: sub, marginBottom: 20 }}>Tap any card to copy and send to someone who needs it.</p>
+            <p style={{ fontSize: 16, color: sub, marginBottom: 20 }}>Scripture on hope — the Daily Hope verses, one set for each day. Tap a card to copy and send it, or open the verse or full chapter in the Bible.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {ENCOURAGE.map((e, i) => {
-                const isVerse = e.source !== "theDJcares";
+                const showDay = i === 0 || ENCOURAGE[i - 1].day !== e.day;
                 return (
-                  <div key={i} className="pop" style={{ background: copiedIdx === i ? active : card, border: `2px solid ${copiedIdx === i ? activeBorder : border}`, borderRadius: 18, overflow: "hidden" }}>
-                    <button onClick={() => copyLine(e.text, e.source, i)} style={{ width: "100%", background: "none", border: "none", padding: "22px 24px", cursor: "pointer", textAlign: "left" }}>
-                      <p style={{ fontSize: 18, fontWeight: 700, color: text, lineHeight: 1.65, margin: "0 0 8px" }}>&ldquo;{e.text}&rdquo;</p>
-                      <p style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: copiedIdx === i ? "#FB7185" : sub, margin: 0 }}>
-                        {copiedIdx === i ? "✓ Copied!" : `— ${e.source}${isVerse ? "  ·  tap to copy" : ""}`}
+                  <div key={i}>
+                    {showDay && (
+                      <p style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.16em", color: "#FB7185", margin: i === 0 ? "0 0 10px" : "22px 0 10px" }}>
+                        {e.day}
                       </p>
-                    </button>
-                    {isVerse && (
-                      <a
-                        href={`https://www.bible.com/search/bible?q=${encodeURIComponent(e.source)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ display: "block", borderTop: `1px solid ${border}`, padding: "11px 24px", fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", color: "#FB7185", textDecoration: "none" }}
-                      >
-                        📖 Read {e.source} in the Bible →
-                      </a>
                     )}
+                    <div className="pop" style={{ background: copiedIdx === i ? active : card, border: `2px solid ${copiedIdx === i ? activeBorder : border}`, borderRadius: 18, overflow: "hidden" }}>
+                      <button onClick={() => copyLine(e.text, e.label, i)} style={{ width: "100%", background: "none", border: "none", padding: "22px 24px", cursor: "pointer", textAlign: "left" }}>
+                        <p style={{ fontSize: 18, fontWeight: 700, color: text, lineHeight: 1.65, margin: "0 0 8px" }}>&ldquo;{e.text}&rdquo;</p>
+                        <p style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: copiedIdx === i ? "#FB7185" : sub, margin: 0 }}>
+                          {copiedIdx === i ? "✓ Copied!" : `— ${e.label}  ·  tap to copy`}
+                        </p>
+                      </button>
+                      <div style={{ display: "flex", borderTop: `1px solid ${border}` }}>
+                        <a
+                          href={bibleVerseUrl(e)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ flex: 1, textAlign: "center", padding: "11px 16px", fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", color: "#FB7185", textDecoration: "none" }}
+                        >
+                          📖 Verse
+                        </a>
+                        <a
+                          href={bibleChapterUrl(e)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ flex: 1, textAlign: "center", padding: "11px 16px", fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", color: "#FB7185", textDecoration: "none", borderLeft: `1px solid ${border}` }}
+                        >
+                          📖 Chapter
+                        </a>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
