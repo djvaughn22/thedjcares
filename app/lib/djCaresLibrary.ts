@@ -147,6 +147,7 @@ export const DJ_CARES_LIBRARY: LibraryItem[] = [
 
   ...inCollection("Playlists", [
     applePl("apple-todays-christian", "Today's Christian", "Apple Music", "todays-christian/pl.fecfa8a26ea44ad581d4fe501892c8ff", "Worship", "A great song can lift you up or get you over the hump. Press play — the whole playlist streams right here.", true),
+    applePl("apple-church-hymns", "Church Hymns", "theDJcares", "church-hymns/pl.u-oZyll6RTRo9g6J", "Hymns", "The old hymns that have carried the church for generations. Timeless, steady, and good for a quiet moment.", true),
     // ↓ add Apple/Spotify/YouTube playlists here (one line each)
   ]),
 
