@@ -6,10 +6,10 @@ type Item = { label: string; href: string; note?: string; blank?: boolean };
 
 const LINKS: Item[] = [
   { label: "Open Mirror Home", href: "https://openmirrorllc.com" },
-  { label: "Reflect", href: "https://openmirrorllc.com/reflect", note: "Quick" },
-  { label: "WhatAmIAI.com", href: "https://whatamiai.com" },
-  { label: "PleaseBeReady.com", href: "https://pleasebeready.com" },
   { label: "CrossHeartPray.com", href: "https://crossheartpray.com" },
+  { label: "WhatAmIAI.com", href: "https://whatamiai.com" },
+  { label: "Reflect", href: "https://openmirrorllc.com/reflect", note: "Quick" },
+  { label: "PleaseBeReady.com", href: "https://pleasebeready.com" },
   { label: "TheDJCares.com", href: "https://thedjcares.com" },
   { label: "DontCloneMeTom.com", href: "https://dontclonemetom.com" },
   { label: "iDontCry.com", href: "https://idontcry.com" },
