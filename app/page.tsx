@@ -2,6 +2,9 @@
 import { useState, useEffect } from "react";
 import OpenMirrorNav from "./OpenMirrorNav";
 
+// Reliable links: search resolves the right video/show and never 404s on a dead ID.
+const ytSearch = (q: string) => `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
+
 type Resource = { title: string; artist?: string; desc: string; url: string; tag: string };
 
 const MUSIC: Resource[] = [
@@ -32,8 +35,8 @@ const PODCASTS: Resource[] = [
   { title: "The Bible Project Podcast", desc: "Deep, thoughtful, and makes Scripture come alive. Start anywhere.", url: "https://bibleproject.com/podcasts/", tag: "Bible" },
   { title: "Carey Nieuwhof Leadership Podcast", desc: "Faith, leadership, culture, and what it means to live with purpose.", url: "https://careynieuwhof.com/podcast/", tag: "Growth" },
   { title: "Ask Pastor John (Desiring God)", desc: "Honest answers to hard questions from John Piper.", url: "https://www.desiringgod.org/ask-pastor-john", tag: "Answers" },
-  { title: "Elevation with Steven Furtick", desc: "Weekly sermons from Elevation Church — practical and biblical.", url: "https://podcasts.apple.com/us/podcast/elevation-with-steven-furtick/id277654229", tag: "Sermons" },
-  { title: "Knowing Faith", desc: "Theology for regular people. Warm, accessible, real.", url: "https://podcasts.apple.com/us/podcast/knowing-faith/id1436991928", tag: "Theology" },
+  { title: "Elevation with Steven Furtick", desc: "Weekly sermons from Elevation Church — practical and biblical.", url: "https://www.google.com/search?q=Elevation+with+Steven+Furtick+podcast", tag: "Sermons" },
+  { title: "Knowing Faith", desc: "Theology for regular people. Warm, accessible, real.", url: "https://www.google.com/search?q=Knowing+Faith+podcast", tag: "Theology" },
   { title: "The RobCast (Rob Bell)", desc: "Contemplative, wide-ranging conversations about faith and meaning.", url: "https://robbell.com/portfolio/robcast/", tag: "Contemplative" },
 ];
 
@@ -131,7 +134,7 @@ export default function TheDJCaresPage() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {filteredMusic.map(r => (
-                <a key={r.title} href={r.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                <a key={r.title} href={ytSearch(`${r.title} ${r.artist ?? ""}`)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
                   <div style={{ background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "20px 22px", display: "flex", gap: 16, alignItems: "flex-start" }}>
                     <span style={{ fontSize: 28, flexShrink: 0 }}>▶️</span>
                     <div style={{ flex: 1 }}>
@@ -155,7 +158,7 @@ export default function TheDJCaresPage() {
         {tab === "sermons" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {SERMONS.map(r => (
-              <a key={r.title} href={r.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+              <a key={r.title} href={ytSearch(r.title)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
                 <div style={{ background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "20px 22px", display: "flex", gap: 16, alignItems: "flex-start" }}>
                   <span style={{ fontSize: 28, flexShrink: 0 }}>🎙️</span>
                   <div style={{ flex: 1 }}>
