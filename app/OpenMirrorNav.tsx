@@ -6,12 +6,18 @@ type Item = { label: string; href: string; note?: string; blank?: boolean };
 
 const LINKS: Item[] = [
   { label: "Open Mirror Home", href: "https://openmirrorllc.com" },
-  { label: "WhatAmIAI", href: "https://whatamiai.com", note: "Reflection" },
   { label: "Reflect", href: "https://openmirrorllc.com/reflect", note: "Quick" },
-  { label: "About Open Mirror", href: "https://openmirrorllc.com/about-open-mirror" },
-  { label: "DJ Cares", href: "https://thedjcares.com" },
+  { label: "WhatAmIAI.com", href: "https://whatamiai.com" },
+  { label: "PleaseBeReady.com", href: "https://pleasebeready.com" },
+  { label: "CrossHeartPray.com", href: "https://crossheartpray.com" },
+  { label: "TheDJCares.com", href: "https://thedjcares.com" },
   { label: "DontCloneMeTom.com", href: "https://dontclonemetom.com" },
-  { label: "CrossHeartPray", href: "https://crossheartpray.com" },
+  { label: "iDontCry.com", href: "https://idontcry.com" },
+  { label: "StepInTheRing.com", href: "https://stepinthering.com" },
+  { label: "WatchedNotWatched.com", href: "https://watchednotwatched.com" },
+  { label: "Fambookagram.com", href: "https://fambookagram.com" },
+  { label: "Friendbookagram.com", href: "https://friendbookagram.com" },
+  { label: "About Open Mirror", href: "https://openmirrorllc.com/about-open-mirror" },
   { label: "Bible Reading Plan PDF", href: "https://openmirrorllc.com/resources/52-week-bible-reading-plan.pdf", note: "PDF", blank: true },
 ];
 
@@ -49,7 +55,7 @@ export default function OpenMirrorNav() {
           </button>
 
           {open && (
-            <nav style={{ position: "absolute", right: 0, marginTop: 12, width: 256, borderRadius: 16, border: "1px solid #262626", background: "#151515", padding: 8, boxShadow: "0 20px 40px rgba(0,0,0,0.5)" }}>
+            <nav style={{ position: "absolute", right: 0, marginTop: 12, width: 256, maxHeight: "80vh", overflowY: "auto", borderRadius: 16, border: "1px solid #262626", background: "#151515", padding: 8, boxShadow: "0 20px 40px rgba(0,0,0,0.5)" }}>
               {LINKS.map((l) => (
                 <a
                   key={l.href}
