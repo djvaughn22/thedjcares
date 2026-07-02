@@ -29,6 +29,7 @@ export type LibraryItem = {
   appleEmbed?: string; // embed.music.apple.com URL — plays Apple Music in-app
   spotifyEmbed?: string; // open.spotify.com/embed URL — plays Spotify in-app
   collection?: string; // the category/section this item shows under (set by inCollection)
+  verse?: string; // scripture reference — renders a "Read in the Bible" link (e.g. "Romans 1:16-17")
 };
 
 // Top-level filter groups (chips). "All" is added in the UI.
@@ -141,7 +142,7 @@ const inCollection = (collection: string, items: LibraryItem[]): LibraryItem[] =
 // ============================================================================
 export const DJ_CARES_LIBRARY: LibraryItem[] = [
   ...inCollection("Featured", [
-    v("gospel-power-of-god", "The Gospel Is the Power of God", "Dr. David Jeremiah", "MtzBPkbFjwk", "Message", "gospel", "The heart of everything here — Romans 1:16–17: the gospel is the power of God for salvation. Start here, then keep going.", true),
+    { ...v("gospel-power-of-god", "The Gospel Is the Power of God", "Dr. David Jeremiah", "MtzBPkbFjwk", "Message", "gospel", "“The just shall live by faith.” — Habakkuk 2:4, carried into Romans 1:16–17. The gospel is the power of God for everyone who believes.", true), verse: "Romans 1:16-17" },
     v("biblical-habit-rewires-your-brain", "This Biblical Habit Rewires Your Brain", "", "JW6fd-ZWavs", "Message", "encouragement", "A reminder that repeated time with Scripture, prayer, and God-focused habits can reshape what we notice, how we respond, and where we turn when life gets heavy. Save this as encouragement, not pressure — one faithful habit at a time.", true),
   ]),
 

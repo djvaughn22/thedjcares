@@ -124,6 +124,17 @@ export default function TheDJCaresPage() {
           <p style={{ fontSize: 15, color: sub, margin: "0 0 12px", lineHeight: 1.6 }}>{item.summary}</p>
         )}
 
+        {item.verse && (
+          <a
+            href={`https://www.bible.com/search/bible?q=${encodeURIComponent(item.verse)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: "inline-block", marginBottom: 12, fontSize: 13, fontWeight: 800, letterSpacing: "0.04em", color: "#FB7185", textDecoration: "none" }}
+          >
+            📖 Read {item.verse} in the Bible →
+          </a>
+        )}
+
         {item.tags && item.tags.length > 0 && (
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
             {item.tags.map(t => (
