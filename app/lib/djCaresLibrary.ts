@@ -27,6 +27,7 @@ export type LibraryItem = {
   embedUrl?: string; // optional explicit embed; otherwise derived
   search?: string; // fallback: no verified embeddable id — link to a reliable YouTube search
   appleEmbed?: string; // embed.music.apple.com URL — plays Apple Music in-app
+  spotifyEmbed?: string; // open.spotify.com/embed URL — plays Spotify in-app
 };
 
 // Top-level filter groups (chips). "All" is added in the UI.
@@ -117,9 +118,14 @@ export function isAppleItem(item: LibraryItem): boolean {
   return !!item.appleEmbed;
 }
 
-// Privacy-friendly embed URL for any video/playlist/Apple item.
+export function isSpotifyItem(item: LibraryItem): boolean {
+  return !!item.spotifyEmbed;
+}
+
+// Privacy-friendly embed URL for any video/playlist/Apple/Spotify item.
 export function getEmbedUrl(item: LibraryItem): string | null {
   if (item.appleEmbed) return item.appleEmbed;
+  if (item.spotifyEmbed) return item.spotifyEmbed;
   if (item.embedUrl) return item.embedUrl;
   if (item.playlistId) return `https://www.youtube-nocookie.com/embed/videoseries?list=${item.playlistId}`;
   if (!item.isVideo) return null;
@@ -219,5 +225,33 @@ export function userAppleItem(embedUrl: string): LibraryItem {
     summary: "Your Apple Music, playing right here. Share the card link to send it on.",
     appleEmbed: embedUrl,
     url: embedUrl.replace("://embed.music.apple.com", "://music.apple.com"),
+  };
+}
+
+// Convert any open.spotify.com playlist/album/track/etc URL into an embeddable one.
+export function parseSpotify(input: string): string[] {
+  const urls: string[] = [];
+  const re = /https?:\/\/open\.spotify\.com\/(?:embed\/)?(playlist|album|track|artist|show|episode)\/[A-Za-z0-9]+/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(input)) !== null) {
+    const embed = m[0].replace("open.spotify.com/", "open.spotify.com/embed/").replace("/embed/embed/", "/embed/");
+    if (!urls.includes(embed)) urls.push(embed);
+  }
+  return urls;
+}
+
+// Build a playable Spotify item (playlist / album / track / show / episode).
+export function userSpotifyItem(embedUrl: string): LibraryItem {
+  const type = embedUrl.match(/\/embed\/(playlist|album|track|artist|show|episode)\//)?.[1] ?? "playlist";
+  const label = type.charAt(0).toUpperCase() + type.slice(1);
+  const key = embedUrl.split("/").pop() || embedUrl;
+  return {
+    id: `user-spotify-${key}`,
+    title: `Spotify ${label}`,
+    category: "Music",
+    author: "Your picks",
+    summary: "Your Spotify, playing right here. Share the card link to send it on.",
+    spotifyEmbed: embedUrl,
+    url: embedUrl.replace("/embed/", "/"),
   };
 }

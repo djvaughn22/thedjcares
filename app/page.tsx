@@ -7,11 +7,14 @@ import {
   getEmbedUrl,
   getWatchUrl,
   isAppleItem,
+  isSpotifyItem,
   parseYouTube,
   parseAppleMusic,
+  parseSpotify,
   userVideoItem,
   userPlaylistItem,
   userAppleItem,
+  userSpotifyItem,
   type LibraryItem,
 } from "./lib/djCaresLibrary";
 
@@ -92,8 +95,13 @@ export default function TheDJCaresPage() {
   const addFromDrop = () => {
     const { playlistId, videoIds } = parseYouTube(dropText);
     const appleUrls = parseAppleMusic(dropText);
+    const spotifyUrls = parseSpotify(dropText);
     const next = [...userItems];
     const has = (id: string) => next.some(i => i.id === id);
+    for (const url of spotifyUrls) {
+      const item = userSpotifyItem(url);
+      if (!has(item.id)) next.unshift(item);
+    }
     for (const url of appleUrls) {
       const item = userAppleItem(url);
       if (!has(item.id)) next.unshift(item);
@@ -194,12 +202,12 @@ export default function TheDJCaresPage() {
             <div style={{ marginBottom: 28, background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "20px 22px" }}>
               <p style={{ fontSize: 16, fontWeight: 800, color: text, margin: "0 0 4px" }}>🎧 Drop your playlist</p>
               <p style={{ fontSize: 13, color: sub, margin: "0 0 12px", lineHeight: 1.55 }}>
-                Paste a <strong>YouTube</strong> playlist / video links (play in-app) or an <strong>Apple Music</strong> playlist, album, or song link (plays right here in Apple&apos;s player). One per line — everything saves to this browser and shows up below as playable cards to share.
+                Paste <strong>YouTube</strong> playlist / video links, an <strong>Apple Music</strong> link, or a <strong>Spotify</strong> playlist / album / track link — each plays right here in its own player. One per line; everything saves to this browser and shows up below as playable cards to share.
               </p>
               <textarea
                 value={dropText}
                 onChange={e => setDropText(e.target.value)}
-                placeholder={"https://music.apple.com/us/playlist/...\nhttps://www.youtube.com/playlist?list=...\nhttps://youtu.be/JW6fd-ZWavs"}
+                placeholder={"https://open.spotify.com/playlist/...\nhttps://music.apple.com/us/playlist/...\nhttps://youtu.be/JW6fd-ZWavs"}
                 rows={3}
                 style={{ width: "100%", boxSizing: "border-box", background: bg, color: text, border: `2px solid ${border}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "inherit", resize: "vertical", marginBottom: 12 }}
               />
@@ -243,7 +251,9 @@ export default function TheDJCaresPage() {
               {filteredLibrary.map(item => {
                 const embed = getEmbedUrl(item);
                 const apple = isAppleItem(item);
+                const spotify = isSpotifyItem(item);
                 const appleHeight = item.appleEmbed && /\/song\//.test(item.appleEmbed) ? 175 : 450;
+                const spotifyHeight = item.spotifyEmbed && /\/embed\/(track|episode)\//.test(item.spotifyEmbed) ? 152 : 352;
                 const isUser = item.id.startsWith("user-");
                 return (
                   <div key={item.id} className="pop" style={{ background: card, border: `2px solid ${item.featured ? activeBorder : border}`, borderRadius: 18, padding: 20 }}>
@@ -272,8 +282,20 @@ export default function TheDJCaresPage() {
                       />
                     )}
 
+                    {/* In-app Spotify player */}
+                    {embed && spotify && (
+                      <iframe
+                        src={embed}
+                        title={item.title}
+                        loading="lazy"
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        allowFullScreen
+                        style={{ width: "100%", height: spotifyHeight, border: 0, borderRadius: 14, overflow: "hidden", margin: "12px 0 14px" }}
+                      />
+                    )}
+
                     {/* In-app responsive video / playlist player */}
-                    {embed && !apple && (
+                    {embed && !apple && !spotify && (
                       <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 14, overflow: "hidden", margin: "12px 0 14px", background: "#000" }}>
                         <iframe
                           src={embed}
@@ -301,7 +323,7 @@ export default function TheDJCaresPage() {
                     <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
                       {embed ? (
                         <a href={getWatchUrl(item)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 800, color: sub, textDecoration: "none", letterSpacing: "0.04em" }}>
-                          {apple ? "↗ Open in Apple Music" : "↗ Open on YouTube"}
+                          {apple ? "↗ Open in Apple Music" : spotify ? "↗ Open in Spotify" : "↗ Open on YouTube"}
                         </a>
                       ) : item.search ? (
                         <a href={getWatchUrl(item)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 800, color: "#FB7185", textDecoration: "none", letterSpacing: "0.04em" }}>
