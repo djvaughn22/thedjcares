@@ -26,6 +26,7 @@ export type LibraryItem = {
   playlistId?: string; // if set, embeds a whole YouTube playlist
   embedUrl?: string; // optional explicit embed; otherwise derived
   search?: string; // fallback: no verified embeddable id — link to a reliable YouTube search
+  appleEmbed?: string; // embed.music.apple.com URL — plays Apple Music in-app
 };
 
 // Top-level filter groups (chips). "All" is added in the UI.
@@ -107,14 +108,18 @@ export const DJ_CARES_LIBRARY: LibraryItem[] = [
   v("dont-give-the-enemy-a-seat", "Don't Give the Enemy a Seat at Your Table", "Louie Giglio", "_mLgS63cObI", "Message", "Identity", "Powerful teaching on spiritual warfare and identity."),
   v("the-prodigal-sons", "The Prodigal Sons", "Tim Keller", "lsTzXI7cJGA", "Message", "Grace", "The best sermon ever preached on Luke 15. Period."),
   v("thats-not-who-you-are", "That's Not Who You Are", "Steven Furtick", "KQQMGSvUf2U", "Message", "Identity", "For anyone carrying someone else's label."),
-  // Only found re-uploads / partial clips — reliable search links to the real thing:
-  s("forgotten-god", "Forgotten God", "Francis Chan", "Francis Chan Forgotten God full sermon", "Message", "Spirit", "A sobering look at how the church often ignores the Holy Spirit."),
-  s("kingdom-man", "Kingdom Man", "Tony Evans", "Tony Evans Kingdom Man sermon", "Message", "Purpose", "On identity, purpose, and being who God called you to be."),
-  s("why-i-believe-the-bible", "Why I Choose to Believe the Bible", "Voddie Baucham", "Voddie Baucham Why I Choose to Believe the Bible", "Message", "Truth", "Thoughtful, direct, apologetics for real questions."),
+  v("forgotten-god", "Forgotten God", "Francis Chan", "sWMjg7CxIKk", "Message", "Spirit", "A sobering look at how the church often ignores the Holy Spirit."),
+  v("kingdom-man", "Kingdom Man", "Tony Evans", "xjNyrYmEiW0", "Message", "Purpose", "On identity, purpose, and being who God called you to be."),
+  v("why-i-believe-the-bible", "Why I Choose to Believe the Bible", "Voddie Baucham", "nMfKlqMNnw0", "Message", "Truth", "Thoughtful, direct, apologetics for real questions."),
 ];
 
-// Privacy-friendly embed URL for any video/playlist item.
+export function isAppleItem(item: LibraryItem): boolean {
+  return !!item.appleEmbed;
+}
+
+// Privacy-friendly embed URL for any video/playlist/Apple item.
 export function getEmbedUrl(item: LibraryItem): string | null {
+  if (item.appleEmbed) return item.appleEmbed;
   if (item.embedUrl) return item.embedUrl;
   if (item.playlistId) return `https://www.youtube-nocookie.com/embed/videoseries?list=${item.playlistId}`;
   if (!item.isVideo) return null;
@@ -187,5 +192,32 @@ export function userPlaylistItem(playlistId: string): LibraryItem {
     author: "Your picks",
     summary: "Every video in the playlist you dropped in — plays right here.",
     playlistId,
+  };
+}
+
+// Convert any music.apple.com playlist/album/song URL into an embeddable one.
+export function parseAppleMusic(input: string): string[] {
+  const urls: string[] = [];
+  const re = /https?:\/\/(?:embed\.)?music\.apple\.com\/[^\s"'<>]+/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(input)) !== null) {
+    const embed = m[0].replace("://music.apple.com", "://embed.music.apple.com");
+    if (!urls.includes(embed)) urls.push(embed);
+  }
+  return urls;
+}
+
+// Build a playable Apple Music item (playlist / album / song).
+export function userAppleItem(embedUrl: string): LibraryItem {
+  const kind = /\/album\//.test(embedUrl) ? "Album" : /\/song\//.test(embedUrl) ? "Song" : "Playlist";
+  const key = embedUrl.split("/").pop() || embedUrl;
+  return {
+    id: `user-apple-${key}`,
+    title: `Apple Music ${kind}`,
+    category: "Music",
+    author: "Your picks",
+    summary: "Your Apple Music, playing right here. Share the card link to send it on.",
+    appleEmbed: embedUrl,
+    url: embedUrl.replace("://embed.music.apple.com", "://music.apple.com"),
   };
 }
