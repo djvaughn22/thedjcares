@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import OpenMirrorNav from "./OpenMirrorNav";
+import { DJ_CARES_LIBRARY, getEmbedUrl, getWatchUrl, type LibraryItem } from "./lib/djCaresLibrary";
 
 // Reliable links: search resolves the right video/show and never 404s on a dead ID.
 const ytSearch = (q: string) => `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
@@ -51,13 +52,24 @@ const ENCOURAGE: { text: string; source: string }[] = [
   { text: "For I know the plans I have for you — plans to prosper you and not to harm you.", source: "Jeremiah 29:11" },
 ];
 
-type Tab = "music" | "sermons" | "podcasts" | "encourage";
+type Tab = "library" | "music" | "sermons" | "podcasts" | "encourage";
+
+// Library category chips -> which item categories they include.
+const LIBRARY_CHIPS: { label: string; match: LibraryItem["category"][] | null }[] = [
+  { label: "All", match: null },
+  { label: "Messages", match: ["Message", "Pastor"] },
+  { label: "Music", match: ["Music", "Song"] },
+  { label: "Books", match: ["Book"] },
+  { label: "Lessons", match: ["Lesson"] },
+  { label: "Resources", match: ["Resource"] },
+];
 
 export default function TheDJCaresPage() {
   const [dark, setDark] = useState(true);
-  const [tab, setTab] = useState<Tab>("music");
+  const [tab, setTab] = useState<Tab>("library");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [musicTag, setMusicTag] = useState("All");
+  const [libChip, setLibChip] = useState("All");
 
   useEffect(() => {
     const saved = localStorage.getItem("djc-theme");
@@ -83,7 +95,13 @@ export default function TheDJCaresPage() {
   const musicTags = ["All", ...Array.from(new Set(MUSIC.map(m => m.tag)))];
   const filteredMusic = musicTag === "All" ? MUSIC : MUSIC.filter(m => m.tag === musicTag);
 
+  const activeChip = LIBRARY_CHIPS.find(c => c.label === libChip) ?? LIBRARY_CHIPS[0];
+  const filteredLibrary = activeChip.match === null
+    ? DJ_CARES_LIBRARY
+    : DJ_CARES_LIBRARY.filter(item => activeChip.match!.includes(item.category));
+
   const tabs: { id: Tab; label: string; emoji: string }[] = [
+    { id: "library", label: "Library", emoji: "📚" },
     { id: "music", label: "Music", emoji: "🎵" },
     { id: "sermons", label: "Sermons", emoji: "🎙️" },
     { id: "podcasts", label: "Podcasts", emoji: "🎧" },
@@ -117,6 +135,101 @@ export default function TheDJCaresPage() {
             </button>
           ))}
         </div>
+
+        {/* Library tab — curated Encouragement Library, videos play in-app */}
+        {tab === "library" && (
+          <>
+            <div style={{ marginBottom: 24 }}>
+              <h2 style={{ fontSize: 24, fontWeight: 900, color: text, margin: "0 0 10px" }}>Encouragement Library</h2>
+              <p style={{ fontSize: 15, color: sub, lineHeight: 1.7, margin: "0 0 12px" }}>
+                A growing place for the messages, songs, books, lessons, and links I want to keep close and share with people who need encouragement.
+              </p>
+              <p style={{ fontSize: 12, fontWeight: 800, color: "#FB7185", letterSpacing: "0.02em", margin: 0 }}>
+                Curated for encouragement. Always test every message against Scripture.
+              </p>
+            </div>
+
+            {/* Category chips */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
+              {LIBRARY_CHIPS.map(c => (
+                <button key={c.label} onClick={() => setLibChip(c.label)} style={{
+                  background: libChip === c.label ? active : "none",
+                  border: `2px solid ${libChip === c.label ? activeBorder : border}`,
+                  borderRadius: 50, padding: "7px 16px",
+                  fontSize: 12, fontWeight: 800, cursor: "pointer",
+                  color: libChip === c.label ? "#FB7185" : sub,
+                }}>{c.label}</button>
+              ))}
+            </div>
+
+            {/* Cards */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {filteredLibrary.length === 0 && (
+                <p style={{ fontSize: 14, color: sub, margin: 0 }}>Nothing here yet — check back soon.</p>
+              )}
+              {filteredLibrary.map(item => {
+                const embed = getEmbedUrl(item);
+                return (
+                  <div key={item.id} className="pop" style={{ background: card, border: `2px solid ${item.featured ? activeBorder : border}`, borderRadius: 18, padding: 20 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
+                      <div>
+                        {item.featured && (
+                          <span style={{ fontSize: 11, fontWeight: 800, color: "#FB7185", textTransform: "uppercase", letterSpacing: "0.1em" }}>★ Featured</span>
+                        )}
+                        <p style={{ fontSize: 18, fontWeight: 800, color: text, margin: "2px 0 2px" }}>{item.title}</p>
+                        {item.author && <p style={{ fontSize: 13, fontWeight: 700, color: "#FB7185", margin: 0 }}>{item.author}</p>}
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: sub, textTransform: "uppercase", letterSpacing: "0.08em", flexShrink: 0, paddingTop: 3 }}>
+                        {item.category === "Message" ? "Message · Encouragement" : item.category}
+                      </span>
+                    </div>
+
+                    {/* In-app responsive video player */}
+                    {embed && (
+                      <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 14, overflow: "hidden", margin: "12px 0 14px", background: "#000" }}>
+                        <iframe
+                          src={embed}
+                          title={item.title}
+                          loading="lazy"
+                          allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
+                        />
+                      </div>
+                    )}
+
+                    <p style={{ fontSize: 14, color: sub, margin: "0 0 12px", lineHeight: 1.6 }}>{item.summary}</p>
+
+                    {item.tags.length > 0 && (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: item.isVideo ? 12 : 0 }}>
+                        {item.tags.map(t => (
+                          <span key={t} style={{ fontSize: 11, fontWeight: 700, color: sub, background: dark ? "#1A1A1A" : "#F5F5F4", border: `1px solid ${border}`, borderRadius: 50, padding: "4px 10px" }}>#{t}</span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Secondary: open on YouTube */}
+                    {item.isVideo && (
+                      <a href={getWatchUrl(item)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 800, color: sub, textDecoration: "none", letterSpacing: "0.04em" }}>
+                        ↗ Open on YouTube
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Coming next — no fake content, just a roadmap */}
+            <div style={{ marginTop: 32, background: dark ? "#111" : "#FAFAF9", border: `2px dashed ${border}`, borderRadius: 18, padding: "20px 22px" }}>
+              <p style={{ fontSize: 12, fontWeight: 800, color: sub, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 12px" }}>Coming next</p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {["Pastors", "Books", "Songs", "Lessons"].map(label => (
+                  <span key={label} style={{ fontSize: 13, fontWeight: 800, color: sub, background: card, border: `2px solid ${border}`, borderRadius: 50, padding: "8px 16px" }}>{label}</span>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Music tab */}
         {tab === "music" && (
