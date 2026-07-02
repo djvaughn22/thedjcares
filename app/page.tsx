@@ -1,7 +1,16 @@
 "use client";
 import { useState, useEffect } from "react";
 import OpenMirrorNav from "./OpenMirrorNav";
-import { DJ_CARES_LIBRARY, getEmbedUrl, getWatchUrl, type LibraryItem } from "./lib/djCaresLibrary";
+import {
+  DJ_CARES_LIBRARY,
+  LIBRARY_FILTERS,
+  getEmbedUrl,
+  getWatchUrl,
+  parseYouTube,
+  userVideoItem,
+  userPlaylistItem,
+  type LibraryItem,
+} from "./lib/djCaresLibrary";
 
 // Reliable links: search resolves the right video/show and never 404s on a dead ID.
 const ytSearch = (q: string) => `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
@@ -54,27 +63,47 @@ const ENCOURAGE: { text: string; source: string }[] = [
 
 type Tab = "library" | "music" | "sermons" | "podcasts" | "encourage";
 
-// Library category chips -> which item categories they include.
-const LIBRARY_CHIPS: { label: string; match: LibraryItem["category"][] | null }[] = [
-  { label: "All", match: null },
-  { label: "Messages", match: ["Message", "Pastor"] },
-  { label: "Music", match: ["Music", "Song"] },
-  { label: "Books", match: ["Book"] },
-  { label: "Lessons", match: ["Lesson"] },
-  { label: "Resources", match: ["Resource"] },
-];
-
 export default function TheDJCaresPage() {
   const [dark, setDark] = useState(true);
   const [tab, setTab] = useState<Tab>("library");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [musicTag, setMusicTag] = useState("All");
-  const [libChip, setLibChip] = useState("All");
+  const [libFilter, setLibFilter] = useState("All");
+  const [dropText, setDropText] = useState("");
+  const [userItems, setUserItems] = useState<LibraryItem[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem("djc-theme");
     if (saved) setDark(saved === "dark");
+    try {
+      const raw = localStorage.getItem("djc-playlist");
+      if (raw) setUserItems(JSON.parse(raw) as LibraryItem[]);
+    } catch {}
   }, []);
+
+  const persistUserItems = (items: LibraryItem[]) => {
+    setUserItems(items);
+    try { localStorage.setItem("djc-playlist", JSON.stringify(items)); } catch {}
+  };
+
+  const addFromDrop = () => {
+    const { playlistId, videoIds } = parseYouTube(dropText);
+    const next = [...userItems];
+    const has = (id: string) => next.some(i => i.id === id);
+    if (playlistId) {
+      const item = userPlaylistItem(playlistId);
+      if (!has(item.id)) next.unshift(item);
+    }
+    for (const vid of videoIds) {
+      const item = userVideoItem(vid);
+      if (!has(item.id)) next.push(item);
+    }
+    persistUserItems(next);
+    setDropText("");
+  };
+
+  const removeUserItem = (id: string) => persistUserItems(userItems.filter(i => i.id !== id));
+  const clearUserItems = () => persistUserItems([]);
 
 
   const copyLine = (text: string, source: string, i: number) => {
@@ -95,10 +124,14 @@ export default function TheDJCaresPage() {
   const musicTags = ["All", ...Array.from(new Set(MUSIC.map(m => m.tag)))];
   const filteredMusic = musicTag === "All" ? MUSIC : MUSIC.filter(m => m.tag === musicTag);
 
-  const activeChip = LIBRARY_CHIPS.find(c => c.label === libChip) ?? LIBRARY_CHIPS[0];
-  const filteredLibrary = activeChip.match === null
-    ? DJ_CARES_LIBRARY
-    : DJ_CARES_LIBRARY.filter(item => activeChip.match!.includes(item.category));
+  // Combined library = curated items + the user's dropped playlist videos.
+  const allLibrary = [...DJ_CARES_LIBRARY, ...userItems];
+  const catsFor = (label: string) => LIBRARY_FILTERS.find(f => f.label === label)?.categories ?? [];
+  const countFor = (label: string) =>
+    label === "All" ? allLibrary.length : allLibrary.filter(i => catsFor(label).includes(i.category)).length;
+  const libChips = ["All", ...LIBRARY_FILTERS.map(f => f.label)];
+  const filteredLibrary =
+    libFilter === "All" ? allLibrary : allLibrary.filter(i => catsFor(libFilter).includes(i.category));
 
   const tabs: { id: Tab; label: string; emoji: string }[] = [
     { id: "library", label: "Library", emoji: "📚" },
@@ -149,17 +182,49 @@ export default function TheDJCaresPage() {
               </p>
             </div>
 
-            {/* Category chips */}
+            {/* Drop your playlist — plays in-app, saved to this browser */}
+            <div style={{ marginBottom: 28, background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "20px 22px" }}>
+              <p style={{ fontSize: 16, fontWeight: 800, color: text, margin: "0 0 4px" }}>🎧 Drop your playlist</p>
+              <p style={{ fontSize: 13, color: sub, margin: "0 0 12px", lineHeight: 1.55 }}>
+                Paste a YouTube <strong>playlist link</strong> (plays every video in-app) or <strong>video links / IDs</strong>, one per line. They save to this browser and show up below as playable cards.
+              </p>
+              <textarea
+                value={dropText}
+                onChange={e => setDropText(e.target.value)}
+                placeholder={"https://www.youtube.com/playlist?list=...\nhttps://youtu.be/JW6fd-ZWavs"}
+                rows={3}
+                style={{ width: "100%", boxSizing: "border-box", background: bg, color: text, border: `2px solid ${border}`, borderRadius: 12, padding: "12px 14px", fontSize: 14, fontFamily: "inherit", resize: "vertical", marginBottom: 12 }}
+              />
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <button onClick={addFromDrop} disabled={!dropText.trim()} style={{
+                  background: dropText.trim() ? "#FB7185" : border, color: dropText.trim() ? "#0C0C0C" : sub,
+                  border: "none", borderRadius: 50, padding: "10px 22px", fontSize: 14, fontWeight: 800,
+                  cursor: dropText.trim() ? "pointer" : "default",
+                }}>Add to my library</button>
+                {userItems.length > 0 && (
+                  <button onClick={clearUserItems} style={{ background: "none", border: `2px solid ${border}`, color: sub, borderRadius: 50, padding: "10px 18px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+                    Clear my {userItems.length} item{userItems.length === 1 ? "" : "s"}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Category filter chips (with counts) */}
             <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
-              {LIBRARY_CHIPS.map(c => (
-                <button key={c.label} onClick={() => setLibChip(c.label)} style={{
-                  background: libChip === c.label ? active : "none",
-                  border: `2px solid ${libChip === c.label ? activeBorder : border}`,
-                  borderRadius: 50, padding: "7px 16px",
-                  fontSize: 12, fontWeight: 800, cursor: "pointer",
-                  color: libChip === c.label ? "#FB7185" : sub,
-                }}>{c.label}</button>
-              ))}
+              {libChips.map(label => {
+                const count = countFor(label);
+                const selected = libFilter === label;
+                const empty = count === 0;
+                return (
+                  <button key={label} onClick={() => !empty && setLibFilter(label)} disabled={empty} style={{
+                    background: selected ? active : "none",
+                    border: `2px solid ${selected ? activeBorder : border}`,
+                    borderRadius: 50, padding: "7px 16px",
+                    fontSize: 12, fontWeight: 800, cursor: empty ? "default" : "pointer",
+                    color: selected ? "#FB7185" : sub, opacity: empty ? 0.4 : 1,
+                  }}>{label} <span style={{ opacity: 0.7 }}>{count}</span></button>
+                );
+              })}
             </div>
 
             {/* Cards */}
@@ -169,6 +234,7 @@ export default function TheDJCaresPage() {
               )}
               {filteredLibrary.map(item => {
                 const embed = getEmbedUrl(item);
+                const isUser = item.id.startsWith("user-");
                 return (
                   <div key={item.id} className="pop" style={{ background: card, border: `2px solid ${item.featured ? activeBorder : border}`, borderRadius: 18, padding: 20 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
@@ -184,7 +250,7 @@ export default function TheDJCaresPage() {
                       </span>
                     </div>
 
-                    {/* In-app responsive video player */}
+                    {/* In-app responsive video / playlist player */}
                     {embed && (
                       <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 14, overflow: "hidden", margin: "12px 0 14px", background: "#000" }}>
                         <iframe
@@ -198,22 +264,30 @@ export default function TheDJCaresPage() {
                       </div>
                     )}
 
-                    <p style={{ fontSize: 14, color: sub, margin: "0 0 12px", lineHeight: 1.6 }}>{item.summary}</p>
+                    {item.summary && (
+                      <p style={{ fontSize: 14, color: sub, margin: "0 0 12px", lineHeight: 1.6 }}>{item.summary}</p>
+                    )}
 
-                    {item.tags.length > 0 && (
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: item.isVideo ? 12 : 0 }}>
+                    {item.tags && item.tags.length > 0 && (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
                         {item.tags.map(t => (
                           <span key={t} style={{ fontSize: 11, fontWeight: 700, color: sub, background: dark ? "#1A1A1A" : "#F5F5F4", border: `1px solid ${border}`, borderRadius: 50, padding: "4px 10px" }}>#{t}</span>
                         ))}
                       </div>
                     )}
 
-                    {/* Secondary: open on YouTube */}
-                    {item.isVideo && (
-                      <a href={getWatchUrl(item)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 800, color: sub, textDecoration: "none", letterSpacing: "0.04em" }}>
-                        ↗ Open on YouTube
-                      </a>
-                    )}
+                    <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+                      {embed && (
+                        <a href={getWatchUrl(item)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 800, color: sub, textDecoration: "none", letterSpacing: "0.04em" }}>
+                          ↗ Open on YouTube
+                        </a>
+                      )}
+                      {isUser && (
+                        <button onClick={() => removeUserItem(item.id)} style={{ background: "none", border: "none", color: sub, fontSize: 12, fontWeight: 800, cursor: "pointer", padding: 0, letterSpacing: "0.04em" }}>
+                          ✕ Remove
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
