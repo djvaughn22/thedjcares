@@ -199,18 +199,29 @@ export default function TheDJCaresPage() {
           <>
             <p style={{ fontSize: 15, color: sub, marginBottom: 20 }}>Tap any card to copy and send to someone who needs it.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {ENCOURAGE.map((e, i) => (
-                <button key={i} onClick={() => copyLine(e.text, e.source, i)} style={{
-                  background: copiedIdx === i ? active : card,
-                  border: `2px solid ${copiedIdx === i ? activeBorder : border}`,
-                  borderRadius: 18, padding: "22px 24px", cursor: "pointer", textAlign: "left",
-                }}>
-                  <p style={{ fontSize: 17, fontWeight: 700, color: text, lineHeight: 1.65, margin: "0 0 8px" }}>"{e.text}"</p>
-                  <p style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: copiedIdx === i ? "#FB7185" : sub, margin: 0 }}>
-                    {copiedIdx === i ? "✓ Copied!" : `— ${e.source}`}
-                  </p>
-                </button>
-              ))}
+              {ENCOURAGE.map((e, i) => {
+                const isVerse = e.source !== "theDJcares";
+                return (
+                  <div key={i} style={{ background: copiedIdx === i ? active : card, border: `2px solid ${copiedIdx === i ? activeBorder : border}`, borderRadius: 18, overflow: "hidden" }}>
+                    <button onClick={() => copyLine(e.text, e.source, i)} style={{ width: "100%", background: "none", border: "none", padding: "22px 24px", cursor: "pointer", textAlign: "left" }}>
+                      <p style={{ fontSize: 17, fontWeight: 700, color: text, lineHeight: 1.65, margin: "0 0 8px" }}>"{e.text}"</p>
+                      <p style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: copiedIdx === i ? "#FB7185" : sub, margin: 0 }}>
+                        {copiedIdx === i ? "✓ Copied!" : `— ${e.source}${isVerse ? "  ·  tap to copy" : ""}`}
+                      </p>
+                    </button>
+                    {isVerse && (
+                      <a
+                        href={`https://www.bible.com/search/bible?q=${encodeURIComponent(e.source)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: "block", borderTop: `1px solid ${border}`, padding: "11px 24px", fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", color: "#FB7185", textDecoration: "none" }}
+                      >
+                        📖 Read {e.source} in the Bible →
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             <div style={{ marginTop: 36, background: dark ? "#0A1F12" : "#F0FDF4", border: `2px solid ${dark ? "#1A3A22" : "#BBF7D0"}`, borderRadius: 20, padding: "24px 28px" }}>
