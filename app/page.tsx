@@ -277,11 +277,15 @@ export default function TheDJCaresPage() {
                     )}
 
                     <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-                      {embed && (
+                      {embed ? (
                         <a href={getWatchUrl(item)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 800, color: sub, textDecoration: "none", letterSpacing: "0.04em" }}>
                           ↗ Open on YouTube
                         </a>
-                      )}
+                      ) : item.search ? (
+                        <a href={getWatchUrl(item)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 800, color: "#FB7185", textDecoration: "none", letterSpacing: "0.04em" }}>
+                          ▶ Watch on YouTube
+                        </a>
+                      ) : null}
                       {isUser && (
                         <button onClick={() => removeUserItem(item.id)} style={{ background: "none", border: "none", color: sub, fontSize: 12, fontWeight: 800, cursor: "pointer", padding: 0, letterSpacing: "0.04em" }}>
                           ✕ Remove

@@ -25,6 +25,7 @@ export type LibraryItem = {
   videoId?: string;
   playlistId?: string; // if set, embeds a whole YouTube playlist
   embedUrl?: string; // optional explicit embed; otherwise derived
+  search?: string; // fallback: no verified embeddable id — link to a reliable YouTube search
 };
 
 // Top-level filter groups (chips). "All" is added in the UI.
@@ -59,7 +60,20 @@ const v = (
   url: `https://www.youtube.com/watch?v=${videoId}`,
 });
 
-// All items are real picks DJ already curated — now playable in-app.
+// Reliable search-link card (no verified embeddable id — never 404s).
+const s = (
+  id: string,
+  title: string,
+  author: string,
+  search: string,
+  category: LibraryCategory,
+  tag: string,
+  summary: string,
+): LibraryItem => ({ id, title, author, category, tags: [tag], summary, search });
+
+// All items are real picks DJ already curated.
+// Video IDs were verified live via YouTube oEmbed (2026-07); the ones that
+// couldn't be confidently resolved fall back to a reliable YouTube search.
 // Do not invent pastors, books, songs, or lessons; add them only when they're real.
 export const DJ_CARES_LIBRARY: LibraryItem[] = [
   // Featured message
@@ -74,27 +88,29 @@ export const DJ_CARES_LIBRARY: LibraryItem[] = [
     true,
   ),
 
-  // Worship music
-  v("graves-into-gardens", "Graves Into Gardens", "Elevation Worship", "oDEO2N7EgZI", "Music", "Worship", "One of the most powerful modern worship songs — turn it up."),
-  v("gratitude", "Gratitude", "Brandon Lake", "OSTzXwJYxkU", "Music", "Gratitude", "Simple, honest, and hits every time."),
+  // Worship music (verified live IDs)
+  v("graves-into-gardens", "Graves Into Gardens", "Elevation Worship", "KwX1f2gYKZ4", "Music", "Worship", "One of the most powerful modern worship songs — turn it up."),
+  v("gratitude", "Gratitude", "Brandon Lake", "dQdfs5S6jyA", "Music", "Gratitude", "Simple, honest, and hits every time."),
   v("way-maker", "Way Maker", "Sinach", "iJCV_2H9xD0", "Music", "Faith", "A declaration of faith over any hard season."),
-  v("king-of-kings", "King of Kings", "Hillsong Worship", "BpFubBhIRe4", "Music", "Worship", "A sweeping reminder of the whole gospel story."),
-  v("goodness-of-god", "Goodness of God", "Bethel Music / Jenn Johnson", "XEatn9OiASc", "Music", "Healing", "For when you need to remember He has been faithful."),
-  v("greater-things", "Greater Things", "Shawn McDonald", "RhH5ew4kfD8", "Music", "Prayer", "Quiet, prayerful, honest."),
-  v("even-if", "Even If", "MercyMe", "blSAJXFNnnc", "Music", "Healing", "Written from real pain. For the hard days."),
-  v("same-god", "Same God", "Elevation Worship", "xLlNqhRpHk4", "Music", "Faith", "He was faithful then. He is faithful now."),
-  v("christ-be-all-around-me", "Christ Be All Around Me", "All Sons & Daughters", "BxLvfylP2UA", "Music", "Morning", "Slow, quiet, prayerful — good for morning."),
-  v("holy-water", "Holy Water", "We The Kingdom", "b7A5x_bLo1s", "Music", "Grace", "About grace, honesty, and needing Jesus."),
-  v("i-can-only-imagine", "I Can Only Imagine", "MercyMe", "Q5NUqCjY0BA", "Music", "Eternal", "A classic. If you don't know the story behind it, look it up."),
+  v("king-of-kings", "King of Kings", "Hillsong Worship", "dQl4izxPeNU", "Music", "Worship", "A sweeping reminder of the whole gospel story."),
+  v("goodness-of-god", "Goodness of God", "Bethel Music / Jenn Johnson", "n0FBb6hnwTo", "Music", "Healing", "For when you need to remember He has been faithful."),
+  v("even-if", "Even If", "MercyMe", "B6fA35Ved-Y", "Music", "Healing", "Written from real pain. For the hard days."),
+  v("same-god", "Same God", "Elevation Worship", "LawxIZE9ePE", "Music", "Faith", "He was faithful then. He is faithful now."),
+  v("christ-be-all-around-me", "Christ Be All Around Me", "All Sons & Daughters", "cmge-ycIkoo", "Music", "Morning", "Slow, quiet, prayerful — good for morning."),
+  v("holy-water", "Holy Water", "We The Kingdom", "7KLQ2AXQmtA", "Music", "Grace", "About grace, honesty, and needing Jesus."),
+  v("i-can-only-imagine", "I Can Only Imagine", "MercyMe", "N_lrrq_opng", "Music", "Eternal", "A classic. If you don't know the story behind it, look it up."),
   v("what-a-beautiful-name", "What a Beautiful Name", "Hillsong Worship", "nQWFzMvCfLE", "Music", "Worship", "One of the best modern hymns written in a generation."),
+  // Couldn't confidently resolve a correct official upload — reliable search link:
+  s("greater-things", "Greater Things", "Shawn McDonald", "Greater Things Shawn McDonald", "Music", "Prayer", "Quiet, prayerful, honest."),
 
-  // Messages / sermons
-  v("dont-give-the-enemy-a-seat", "Don't Give the Enemy a Seat at Your Table", "Louie Giglio", "RkqPbOh5NfI", "Message", "Identity", "Powerful teaching on spiritual warfare and identity."),
-  v("the-prodigal-sons", "The Prodigal Sons", "Tim Keller", "H-UAmXBpNXo", "Message", "Grace", "The best sermon ever preached on Luke 15. Period."),
-  v("forgotten-god", "Forgotten God", "Francis Chan", "H8mENj5Lj-A", "Message", "Spirit", "A sobering look at how the church often ignores the Holy Spirit."),
-  v("kingdom-man", "Kingdom Man", "Tony Evans", "BQXR7IlkL2U", "Message", "Purpose", "On identity, purpose, and being who God called you to be."),
-  v("youre-not-who-they-say", "You're Not Who They Say You Are", "Steven Furtick", "TIQFH1Jq1JM", "Message", "Identity", "For anyone carrying someone else's label."),
-  v("why-i-believe-the-bible", "Why I Choose to Believe the Bible", "Voddie Baucham", "KgDEiGEoExM", "Message", "Truth", "Thoughtful, direct, apologetics for real questions."),
+  // Messages / sermons (verified live IDs)
+  v("dont-give-the-enemy-a-seat", "Don't Give the Enemy a Seat at Your Table", "Louie Giglio", "_mLgS63cObI", "Message", "Identity", "Powerful teaching on spiritual warfare and identity."),
+  v("the-prodigal-sons", "The Prodigal Sons", "Tim Keller", "lsTzXI7cJGA", "Message", "Grace", "The best sermon ever preached on Luke 15. Period."),
+  v("thats-not-who-you-are", "That's Not Who You Are", "Steven Furtick", "KQQMGSvUf2U", "Message", "Identity", "For anyone carrying someone else's label."),
+  // Only found re-uploads / partial clips — reliable search links to the real thing:
+  s("forgotten-god", "Forgotten God", "Francis Chan", "Francis Chan Forgotten God full sermon", "Message", "Spirit", "A sobering look at how the church often ignores the Holy Spirit."),
+  s("kingdom-man", "Kingdom Man", "Tony Evans", "Tony Evans Kingdom Man sermon", "Message", "Purpose", "On identity, purpose, and being who God called you to be."),
+  s("why-i-believe-the-bible", "Why I Choose to Believe the Bible", "Voddie Baucham", "Voddie Baucham Why I Choose to Believe the Bible", "Message", "Truth", "Thoughtful, direct, apologetics for real questions."),
 ];
 
 // Privacy-friendly embed URL for any video/playlist item.
@@ -114,6 +130,7 @@ export function getWatchUrl(item: LibraryItem): string {
   if (item.videoProvider === "youtube" && item.videoId) {
     return `https://www.youtube.com/watch?v=${item.videoId}`;
   }
+  if (item.search) return `https://www.youtube.com/results?search_query=${encodeURIComponent(item.search)}`;
   return item.url ?? "#";
 }
 
