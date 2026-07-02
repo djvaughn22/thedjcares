@@ -62,6 +62,28 @@ const v = (
   url: `https://www.youtube.com/watch?v=${videoId}`,
 });
 
+// Curated Apple Music playlist/album (embeds and plays the whole thing in-app).
+// `path` is everything after .../playlist/ — e.g. "todays-christian/pl.fecfa8a26ea44ad581d4fe501892c8ff"
+const applePl = (
+  id: string,
+  title: string,
+  author: string,
+  path: string,
+  tag: string,
+  summary: string,
+  featured = false,
+): LibraryItem => ({
+  id,
+  title,
+  author,
+  category: "Music",
+  tags: [tag],
+  summary,
+  featured,
+  appleEmbed: `https://embed.music.apple.com/us/playlist/${path}`,
+  url: `https://music.apple.com/us/playlist/${path}`,
+});
+
 // Reliable search-link card (no verified embeddable id — never 404s).
 const s = (
   id: string,
@@ -87,6 +109,17 @@ export const DJ_CARES_LIBRARY: LibraryItem[] = [
     "Message",
     "encouragement",
     "A reminder that repeated time with Scripture, prayer, and God-focused habits can reshape what we notice, how we respond, and where we turn when life gets heavy. Save this as encouragement, not pressure — one faithful habit at a time.",
+    true,
+  ),
+
+  // Featured playlists (DJ uploads — whole playlist plays in-app)
+  applePl(
+    "apple-todays-christian",
+    "Today's Christian",
+    "Apple Music",
+    "todays-christian/pl.fecfa8a26ea44ad581d4fe501892c8ff",
+    "Worship",
+    "A great song can lift you up or get you over the hump. Press play — the whole playlist streams right here.",
     true,
   ),
 
