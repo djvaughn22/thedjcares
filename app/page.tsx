@@ -13,6 +13,7 @@ import {
   getGeneGetzPrinciplesForVerse,
   type LifeEssentialsPrinciple,
 } from "./lib/geneGetzLifeEssentials";
+import { FAITH_THEMES } from "./lib/faithYouTube";
 
 // Daily Hope verses (mirrored from Cross Heart Pray, in day order). Each links to the
 // bible.com app for the verse and its full chapter. Version 206 = World English Bible.
@@ -40,7 +41,7 @@ const bibleVerseUrl = (v: { code: string; chapter: string; verse: string }) =>
 const bibleChapterUrl = (v: { code: string; chapter: string }) =>
   `https://www.bible.com/bible/206/${v.code}.${v.chapter}.WEBUS`;
 
-type Tab = "library" | "encourage";
+type Tab = "library" | "encourage" | "faith";
 
 export default function TheDJCaresPage() {
   const [dark, setDark] = useState(true);
@@ -48,6 +49,7 @@ export default function TheDJCaresPage() {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [libFilter, setLibFilter] = useState("All");
   const [getzVideo, setGetzVideo] = useState<LifeEssentialsPrinciple | null>(null);
+  const [faithVid, setFaithVid] = useState<{ youtubeId: string; title: string } | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("djc-theme");
@@ -79,6 +81,7 @@ export default function TheDJCaresPage() {
 
   const tabs: { id: Tab; label: string; emoji: string }[] = [
     { id: "library", label: "Library", emoji: "📚" },
+    { id: "faith", label: "Faith Videos", emoji: "🎬" },
     { id: "encourage", label: "Encouragement", emoji: "❤️" },
   ];
 
@@ -313,6 +316,70 @@ export default function TheDJCaresPage() {
           </>
         )}
 
+        {/* Faith Videos tab — the Faith Playlist as watchable videos, by mood */}
+        {tab === "faith" && (
+          <>
+            <p style={{ fontSize: 16, color: sub, marginBottom: 6 }}>
+              The Faith Playlist as videos — sorted by mood. Tap any song to play it right here.
+            </p>
+            <p style={{ fontSize: 13, color: sub, marginBottom: 24 }}>
+              Prefer the full 147-song mix?{" "}
+              <a href="https://music.apple.com/us/playlist/faith-playlist/pl.u-2aoqXjzsNqgmY7" target="_blank" rel="noopener noreferrer" style={{ color: "#A78BFA", fontWeight: 800, textDecoration: "none" }}>
+                Open the Faith Playlist on Apple Music →
+              </a>
+            </p>
+
+            {FAITH_THEMES.map(theme => (
+              <section key={theme.key} style={{ marginBottom: 40 }}>
+                <h3 style={{ fontSize: 22, fontWeight: 900, color: text, margin: "0 0 4px" }}>
+                  {theme.emoji} {theme.label}
+                </h3>
+                <p style={{ fontSize: 14, color: sub, margin: "0 0 16px" }}>{theme.blurb}</p>
+
+                {theme.playlistId && (
+                  <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden", marginBottom: 16 }}>
+                    <iframe
+                      src={`https://www.youtube-nocookie.com/embed/videoseries?list=${theme.playlistId}&modestbranding=1&rel=0`}
+                      title={`${theme.label} playlist`}
+                      allow="encrypted-media; picture-in-picture; fullscreen"
+                      allowFullScreen
+                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+                    />
+                  </div>
+                )}
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 14 }}>
+                  {theme.videos.map(v => (
+                    <button
+                      key={v.youtubeId}
+                      onClick={() => setFaithVid({ youtubeId: v.youtubeId, title: `${v.title} — ${v.artist}` })}
+                      className="pop"
+                      style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, overflow: "hidden", cursor: "pointer", textAlign: "left", padding: 0 }}
+                    >
+                      <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`https://i.ytimg.com/vi/${v.youtubeId}/hqdefault.jpg`} alt={v.title} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                        <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34 }}>▶️</span>
+                      </div>
+                      <div style={{ padding: "12px 14px" }}>
+                        <p style={{ fontSize: 15, fontWeight: 800, color: text, margin: 0 }}>{v.title}</p>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: "#A78BFA", margin: "2px 0 0" }}>{v.artist}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))}
+
+            <div style={{ marginTop: 8, background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "20px 24px" }}>
+              <p style={{ fontSize: 14, fontWeight: 800, color: "#A78BFA", margin: "0 0 8px" }}>Want a whole theme to play end-to-end?</p>
+              <p style={{ fontSize: 14, color: sub, margin: 0, lineHeight: 1.65 }}>
+                Make a YouTube playlist for any mood (Hope, Praise, Joy…), send me the playlist link, and I&apos;ll embed the entire thing here — it plays in order and you edit it anytime in YouTube.
+              </p>
+            </div>
+          </>
+        )}
+
         <footer style={{ marginTop: 60, textAlign: "center", borderTop: `1px solid ${border}`, paddingTop: 28 }}>
           <p style={{ fontSize: 13, color: sub, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.10em", margin: 0 }}>
             © 2026 Open Mirror LLC · Follow Jesus. Love God. Pray.
@@ -340,6 +407,35 @@ export default function TheDJCaresPage() {
               <iframe
                 src={`https://www.youtube-nocookie.com/embed/${getzVideo.youtubeId}?autoplay=1&rel=0&modestbranding=1`}
                 title={getzVideo.principleTitle}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowFullScreen
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {faithVid && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setFaithVid(null)}
+          style={{ position: "fixed", inset: 0, zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.85)", padding: 16 }}
+        >
+          <div onClick={(ev) => ev.stopPropagation()} style={{ width: "100%", maxWidth: 720 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: "#A78BFA", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {faithVid.title}
+              </p>
+              <button onClick={() => setFaithVid(null)} style={{ flexShrink: 0, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 50, padding: "6px 16px", fontSize: 14, fontWeight: 800, color: "#fff", cursor: "pointer" }}>
+                Close ✕
+              </button>
+            </div>
+            <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${faithVid.youtubeId}?autoplay=1&rel=0&modestbranding=1`}
+                title={faithVid.title}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 allowFullScreen
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
