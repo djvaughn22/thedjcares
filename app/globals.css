@@ -3,3 +3,125 @@
 /* card hover pop */
 .pop { transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
 .pop:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(0,0,0,.5); }
+
+
+/* OPEN MIRROR FAMILY STYLE OVERRIDE START */
+:root {
+  --om-bg: #0b1220;
+  --om-surface: #141d2e;
+  --om-surface-2: #1c2740;
+  --om-inset: #0c1220;
+  --om-border: #26324c;
+  --om-text: #e8edf5;
+  --om-sub: #94a3b8;
+  --om-accent: #A78BFA;
+  --om-ink: #0b1220;
+}
+
+html,
+body {
+  background: var(--om-bg) !important;
+  color: var(--om-text) !important;
+}
+
+body {
+  min-height: 100vh;
+}
+
+main,
+[class*="min-h-screen"],
+[class*="bg-black"],
+[class*="bg-neutral-950"],
+[class*="bg-zinc-950"],
+[class*="bg-stone-950"],
+[class*="bg-[#0C0C0C]"],
+[class*="bg-[#000000]"],
+[style*="#0C0C0C"],
+[style*="#000000"],
+[style*="background: black"],
+[style*="background-color: black"] {
+  background: var(--om-bg) !important;
+  color: var(--om-text) !important;
+}
+
+[class*="bg-[#151515]"],
+[class*="bg-[#111111]"],
+[class*="bg-[#1C1C1C]"],
+[class*="bg-neutral-900"],
+[class*="bg-zinc-900"],
+[class*="bg-stone-900"],
+[style*="#151515"],
+[style*="#111111"],
+[style*="#1C1C1C"] {
+  background: var(--om-surface) !important;
+}
+
+[class*="bg-[#1F1F1F]"],
+[class*="bg-neutral-800"],
+[class*="bg-zinc-800"],
+[class*="bg-stone-800"],
+[style*="#1F1F1F"],
+[style*="#202020"],
+[style*="#262626"] {
+  background: var(--om-surface-2) !important;
+}
+
+[class*="border-[#262626]"],
+[class*="border-[#1E1E1E]"],
+[class*="border-neutral-"],
+[class*="border-zinc-"],
+[class*="border-stone-"],
+[style*="#262626"],
+[style*="#1E1E1E"] {
+  border-color: var(--om-border) !important;
+}
+
+[class*="text-[#F5F0E8]"],
+[class*="text-[#F8F5EF]"],
+[class*="text-white"],
+[style*="#F5F0E8"],
+[style*="#F8F5EF"] {
+  color: var(--om-text) !important;
+}
+
+[class*="text-[#9A9188]"],
+[class*="text-[#7A736B]"],
+[class*="text-neutral-"],
+[class*="text-zinc-"],
+[class*="text-stone-"],
+[style*="#9A9188"],
+[style*="#7A736B"] {
+  color: var(--om-sub) !important;
+}
+
+[class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+a,
+button {
+  border-color: var(--om-border);
+}
+
+button:not([disabled]),
+a[href] {
+  transition: transform .15s ease, background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+button:not([disabled]):hover,
+a[href]:hover {
+  transform: translateY(-1px);
+}
+
+.pop {
+  background: var(--om-surface) !important;
+  border-color: var(--om-border) !important;
+  box-shadow: none !important;
+}
+
+::selection {
+  background: var(--om-accent);
+  color: var(--om-ink);
+}
+/* OPEN MIRROR FAMILY STYLE OVERRIDE END */
