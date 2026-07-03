@@ -90,10 +90,10 @@ export default function TheDJCaresPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
           <div>
             {item.featured && (
-              <span style={{ fontSize: 11, fontWeight: 800, color: "#FB7185", textTransform: "uppercase", letterSpacing: "0.1em" }}>★ Featured</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#A78BFA", textTransform: "uppercase", letterSpacing: "0.1em" }}>★ Featured</span>
             )}
             <p style={{ fontSize: 20, fontWeight: 800, color: text, margin: "2px 0 2px" }}>{item.title}</p>
-            {item.author && <p style={{ fontSize: 14, fontWeight: 700, color: "#FB7185", margin: 0 }}>{item.author}</p>}
+            {item.author && <p style={{ fontSize: 14, fontWeight: 700, color: "#A78BFA", margin: 0 }}>{item.author}</p>}
           </div>
           <span style={{ fontSize: 11, fontWeight: 800, color: sub, textTransform: "uppercase", letterSpacing: "0.08em", flexShrink: 0, paddingTop: 3 }}>{kind}</span>
         </div>
@@ -145,16 +145,16 @@ export default function TheDJCaresPage() {
             href={`https://www.bible.com/search/bible?q=${encodeURIComponent(item.verse)}`}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ display: "inline-block", marginBottom: 12, fontSize: 13, fontWeight: 800, letterSpacing: "0.04em", color: "#FB7185", textDecoration: "none" }}
+            style={{ display: "inline-block", marginBottom: 12, fontSize: 13, fontWeight: 800, letterSpacing: "0.04em", color: "#A78BFA", textDecoration: "none" }}
           >
             📖 Read {item.verse} in the Bible →
           </a>
         )}
 
         {item.tags && item.tags.length > 0 && (
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
             {item.tags.map(t => (
-              <span key={t} style={{ fontSize: 11, fontWeight: 700, color: sub, background: dark ? "#1A1A1A" : "#F5F5F4", border: `1px solid ${border}`, borderRadius: 50, padding: "4px 10px" }}>#{t}</span>
+              <span key={t} style={{ fontSize: 11, fontWeight: 700, color: sub, letterSpacing: "0.03em" }}>#{t}</span>
             ))}
           </div>
         )}
@@ -164,11 +164,11 @@ export default function TheDJCaresPage() {
             {apple ? "↗ Open in Apple Music" : spotify ? "↗ Open in Spotify" : "↗ Open on YouTube"}
           </a>
         ) : item.search ? (
-          <a href={getWatchUrl(item)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, fontWeight: 800, color: "#FB7185", textDecoration: "none", letterSpacing: "0.04em" }}>
+          <a href={getWatchUrl(item)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, fontWeight: 800, color: "#A78BFA", textDecoration: "none", letterSpacing: "0.04em" }}>
             ▶ Watch on YouTube
           </a>
         ) : item.url ? (
-          <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, fontWeight: 800, color: "#FB7185", textDecoration: "none", letterSpacing: "0.04em" }}>
+          <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, fontWeight: 800, color: "#A78BFA", textDecoration: "none", letterSpacing: "0.04em" }}>
             🎧 Open →
           </a>
         ) : null}
@@ -190,11 +190,11 @@ export default function TheDJCaresPage() {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 32, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 32, flexWrap: "wrap" }}>
           {tabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
-              background: tab === t.id ? "#FB7185" : card,
-              border: `2px solid ${tab === t.id ? "#FB7185" : border}`,
+              background: tab === t.id ? "#A78BFA" : card,
+              border: `2px solid ${tab === t.id ? "#A78BFA" : border}`,
               borderRadius: 50, padding: "12px 22px",
               fontSize: 15, fontWeight: 800, cursor: "pointer",
               color: tab === t.id ? "#0C0C0C" : sub,
@@ -212,13 +212,13 @@ export default function TheDJCaresPage() {
               <p style={{ fontSize: 16, color: sub, lineHeight: 1.7, margin: "0 0 12px" }}>
                 A growing place for the messages, songs, playlists, and links I want to keep close and share with people who need encouragement.
               </p>
-              <p style={{ fontSize: 13, fontWeight: 800, color: "#FB7185", letterSpacing: "0.02em", margin: 0 }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: "#A78BFA", letterSpacing: "0.02em", margin: 0 }}>
                 Curated for encouragement. Always test every message against Scripture.
               </p>
             </div>
 
             {/* Category chips */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 28, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 28, flexWrap: "wrap" }}>
               {chips.map(label => {
                 const count = label === "All" ? DJ_CARES_LIBRARY.length : itemsIn(label).length;
                 const selected = libFilter === label;
@@ -228,7 +228,7 @@ export default function TheDJCaresPage() {
                     border: `2px solid ${selected ? activeBorder : border}`,
                     borderRadius: 50, padding: "9px 18px",
                     fontSize: 13, fontWeight: 800, cursor: "pointer",
-                    color: selected ? "#FB7185" : sub,
+                    color: selected ? "#A78BFA" : sub,
                   }}>{label} <span style={{ opacity: 0.7 }}>{count}</span></button>
                 );
               })}
@@ -256,14 +256,14 @@ export default function TheDJCaresPage() {
                 return (
                   <div key={i}>
                     {showDay && (
-                      <p style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.16em", color: "#FB7185", margin: i === 0 ? "0 0 10px" : "22px 0 10px" }}>
+                      <p style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.16em", color: "#A78BFA", margin: i === 0 ? "0 0 10px" : "22px 0 10px" }}>
                         {e.day}
                       </p>
                     )}
                     <div className="pop" style={{ background: copiedIdx === i ? active : card, border: `2px solid ${copiedIdx === i ? activeBorder : border}`, borderRadius: 18, overflow: "hidden" }}>
                       <button onClick={() => copyLine(e.text, e.label, i)} style={{ width: "100%", background: "none", border: "none", padding: "22px 24px", cursor: "pointer", textAlign: "left" }}>
                         <p style={{ fontSize: 18, fontWeight: 700, color: text, lineHeight: 1.65, margin: "0 0 8px" }}>&ldquo;{e.text}&rdquo;</p>
-                        <p style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: copiedIdx === i ? "#FB7185" : sub, margin: 0 }}>
+                        <p style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: copiedIdx === i ? "#A78BFA" : sub, margin: 0 }}>
                           {copiedIdx === i ? "✓ Copied!" : `— ${e.label}  ·  tap to copy`}
                         </p>
                       </button>
@@ -272,7 +272,7 @@ export default function TheDJCaresPage() {
                           href={bibleVerseUrl(e)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{ flex: 1, textAlign: "center", padding: "11px 16px", fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", color: "#FB7185", textDecoration: "none" }}
+                          style={{ flex: 1, textAlign: "center", padding: "11px 16px", fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", color: "#A78BFA", textDecoration: "none" }}
                         >
                           📖 Verse
                         </a>
@@ -280,7 +280,7 @@ export default function TheDJCaresPage() {
                           href={bibleChapterUrl(e)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{ flex: 1, textAlign: "center", padding: "11px 16px", fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", color: "#FB7185", textDecoration: "none", borderLeft: `1px solid ${border}` }}
+                          style={{ flex: 1, textAlign: "center", padding: "11px 16px", fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", color: "#A78BFA", textDecoration: "none", borderLeft: `1px solid ${border}` }}
                         >
                           📖 Chapter
                         </a>
@@ -291,10 +291,10 @@ export default function TheDJCaresPage() {
               })}
             </div>
 
-            <div style={{ marginTop: 36, background: dark ? "#0A1F12" : "#F0FDF4", border: `2px solid ${dark ? "#1A3A22" : "#BBF7D0"}`, borderRadius: 20, padding: "24px 28px" }}>
-              <p style={{ fontSize: 15, fontWeight: 800, color: "#4ADE80", margin: "0 0 10px" }}>Want TheDJCares to feature your church or ministry?</p>
+            <div style={{ marginTop: 36, background: dark ? "#1a1440" : "#f3f0ff", border: `2px solid ${dark ? "#33285c" : "#d9ccf5"}`, borderRadius: 20, padding: "24px 28px" }}>
+              <p style={{ fontSize: 15, fontWeight: 800, color: "#A78BFA", margin: "0 0 10px" }}>Want TheDJCares to feature your church or ministry?</p>
               <p style={{ fontSize: 14, color: sub, margin: "0 0 16px", lineHeight: 1.65 }}>If your church, ministry, or Christian organization wants to be featured, reach out.</p>
-              <a href="mailto:ask@openmirrorllc.com?subject=TheDJCares%20Feature%20Request" style={{ background: "#4ADE80", color: "#0C0C0C", borderRadius: 50, padding: "11px 24px", fontSize: 14, fontWeight: 800, textDecoration: "none", display: "inline-block" }}>Get In Touch</a>
+              <a href="mailto:ask@openmirrorllc.com?subject=TheDJCares%20Feature%20Request" style={{ background: "#A78BFA", color: "#0C0C0C", borderRadius: 50, padding: "11px 24px", fontSize: 14, fontWeight: 800, textDecoration: "none", display: "inline-block" }}>Get In Touch</a>
             </div>
           </>
         )}
