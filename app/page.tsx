@@ -9,6 +9,10 @@ import {
   isSpotifyItem,
   type LibraryItem,
 } from "./lib/djCaresLibrary";
+import {
+  getGeneGetzPrinciplesForVerse,
+  type LifeEssentialsPrinciple,
+} from "./lib/geneGetzLifeEssentials";
 
 // Daily Hope verses (mirrored from Cross Heart Pray, in day order). Each links to the
 // bible.com app for the verse and its full chapter. Version 206 = World English Bible.
@@ -43,6 +47,7 @@ export default function TheDJCaresPage() {
   const [tab, setTab] = useState<Tab>("library");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [libFilter, setLibFilter] = useState("All");
+  const [getzVideo, setGetzVideo] = useState<LifeEssentialsPrinciple | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("djc-theme");
@@ -253,6 +258,7 @@ export default function TheDJCaresPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {ENCOURAGE.map((e, i) => {
                 const showDay = i === 0 || ENCOURAGE[i - 1].day !== e.day;
+                const getz = getGeneGetzPrinciplesForVerse(e.code, e.chapter, e.verse).find(p => p.youtubeId);
                 return (
                   <div key={i}>
                     {showDay && (
@@ -285,6 +291,14 @@ export default function TheDJCaresPage() {
                           📖 Chapter
                         </a>
                       </div>
+                      {getz && (
+                        <button
+                          onClick={() => setGetzVideo(getz)}
+                          style={{ width: "100%", background: "none", border: "none", borderTop: `1px solid ${border}`, padding: "11px 16px", fontSize: 12, fontWeight: 800, letterSpacing: "0.04em", color: "#A78BFA", cursor: "pointer", textAlign: "center" }}
+                        >
+                          🎬 Watch Gene Getz
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -305,6 +319,35 @@ export default function TheDJCaresPage() {
           </p>
         </footer>
       </div>
+
+      {getzVideo?.youtubeId && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setGetzVideo(null)}
+          style={{ position: "fixed", inset: 0, zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.85)", padding: 16 }}
+        >
+          <div onClick={(ev) => ev.stopPropagation()} style={{ width: "100%", maxWidth: 720 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: "#A78BFA", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                Dr. Gene Getz · {getzVideo.principleTitle}
+              </p>
+              <button onClick={() => setGetzVideo(null)} style={{ flexShrink: 0, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 50, padding: "6px 16px", fontSize: 14, fontWeight: 800, color: "#fff", cursor: "pointer" }}>
+                Close ✕
+              </button>
+            </div>
+            <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${getzVideo.youtubeId}?autoplay=1&rel=0&modestbranding=1`}
+                title={getzVideo.principleTitle}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowFullScreen
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
