@@ -4,21 +4,23 @@ import { useEffect, useRef, useState } from "react";
 
 type Item = { label: string; href: string; note?: string; blank?: boolean };
 
+// Order: hub → faith apps → live sites → coming-soon → resources → still-being-
+// -figured-out (WatchedNotWatched / WhatAmIAI / Reflect) → PleaseBeReady last.
 const LINKS: Item[] = [
   { label: "Open Mirror Home", href: "https://openmirrorllc.com" },
   { label: "CrossHeartPray.com", href: "https://crossheartpray.com" },
   { label: "TheDJCares.com", href: "https://thedjcares.com" },
-  { label: "PleaseBeReady.com", href: "https://pleasebeready.com" },
   { label: "DontCloneMeTom.com", href: "https://dontclonemetom.com" },
   { label: "iDontCry.com", href: "https://idontcry.com" },
   { label: "StepInTheRing.com", href: "https://stepinthering.com" },
-  { label: "WatchedNotWatched.com", href: "https://watchednotwatched.com" },
   { label: "Fambookagram.com", href: "https://fambookagram.com", note: "Soon" },
   { label: "Friendbookagram.com", href: "https://friendbookagram.com", note: "Soon" },
-  { label: "WhatAmIAI.com", href: "https://whatamiai.com" },
-  { label: "Reflect", href: "https://openmirrorllc.com/reflect", note: "Quick" },
   { label: "About Open Mirror", href: "https://openmirrorllc.com/about-open-mirror" },
   { label: "Bible Reading Plan PDF", href: "https://openmirrorllc.com/resources/52-week-bible-reading-plan.pdf", note: "PDF", blank: true },
+  { label: "WatchedNotWatched.com", href: "https://watchednotwatched.com" },
+  { label: "WhatAmIAI.com", href: "https://whatamiai.com" },
+  { label: "Reflect", href: "https://openmirrorllc.com/reflect", note: "Quick" },
+  { label: "PleaseBeReady.com", href: "https://pleasebeready.com" },
 ];
 
 export default function OpenMirrorNav() {
@@ -37,9 +39,9 @@ export default function OpenMirrorNav() {
   }, [open]);
 
   return (
-    <header style={{ position: "sticky", top: 0, zIndex: 50, borderBottom: "1px solid #1E1E1E", background: "rgba(12,12,12,0.95)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}>
+    <header style={{ position: "sticky", top: 0, zIndex: 50, borderBottom: "1px solid #26324c", background: "#0b1220" }}>
       <div style={{ maxWidth: 680, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px" }}>
-        <a href="https://openmirrorllc.com" style={{ display: "inline-flex", alignItems: "baseline", gap: 8, fontSize: 16, fontWeight: 900, letterSpacing: "-0.01em", color: "#F5F0E8", textDecoration: "none" }}>
+        <a href="https://openmirrorllc.com" style={{ display: "inline-flex", alignItems: "baseline", gap: 8, fontSize: 16, fontWeight: 900, letterSpacing: "-0.01em", color: "#e8edf5", textDecoration: "none" }}>
           <span aria-hidden>🪞</span><span>Open Mirror</span>
         </a>
 
@@ -49,25 +51,25 @@ export default function OpenMirrorNav() {
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             onClick={() => setOpen((o) => !o)}
-            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", height: 36, width: 36, borderRadius: 50, border: "1px solid #262626", background: "#151515", color: "#F5F0E8", fontSize: 18, lineHeight: 1, cursor: "pointer" }}
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", height: 36, width: 36, borderRadius: 50, border: "1px solid #26324c", background: "#141d2e", color: "#e8edf5", fontSize: 18, lineHeight: 1, cursor: "pointer" }}
           >
             <span aria-hidden>{open ? "✕" : "☰"}</span>
           </button>
 
           {open && (
-            <nav style={{ position: "absolute", right: 0, marginTop: 12, width: 256, maxHeight: "80vh", overflowY: "auto", borderRadius: 16, border: "1px solid #262626", background: "#151515", padding: 8, boxShadow: "0 20px 40px rgba(0,0,0,0.5)" }}>
+            <nav style={{ position: "absolute", right: 0, marginTop: 12, width: 256, maxHeight: "80vh", overflowY: "auto", borderRadius: 16, border: "1px solid #26324c", background: "#141d2e", padding: 8, boxShadow: "0 20px 40px rgba(0,0,0,0.5)" }}>
               {LINKS.map((l) => (
                 <a
                   key={l.href}
                   href={l.href}
                   {...(l.blank ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                   onClick={() => setOpen(false)}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: 12, padding: "10px 14px", fontSize: 14, fontWeight: 700, color: "#F5F0E8", textDecoration: "none" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#1F1F1F")}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, borderRadius: 12, padding: "10px 14px", fontSize: 14, fontWeight: 700, color: "#e8edf5", textDecoration: "none" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#1c2740")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   <span>{l.label}</span>
-                  {l.note && <span style={{ fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em", color: "#7A736B" }}>{l.note}</span>}
+                  {l.note && <span style={{ fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em", color: "#94a3b8" }}>{l.note}</span>}
                 </a>
               ))}
             </nav>

@@ -56,13 +56,14 @@ export default function TheDJCaresPage() {
     });
   };
 
-  const bg = dark ? "#0C0C0C" : "#FEFCF9";
-  const text = dark ? "#F5F0E8" : "#1C1917";
-  const sub = dark ? "#8A8078" : "#57534E";
-  const card = dark ? "#141414" : "#FFFFFF";
-  const border = dark ? "#222" : "#E7E5E4";
-  const active = dark ? "#1F0A10" : "#FFF1F2";
-  const activeBorder = dark ? "#3A1520" : "#FECDD3";
+  // Cool, flat palette — matched to CrossHeartPray / Open Mirror so the sites feel connected.
+  const bg = dark ? "#0b1220" : "#eef2f7";
+  const text = dark ? "#e8edf5" : "#0f172a";
+  const sub = dark ? "#94a3b8" : "#475569";
+  const card = dark ? "#141d2e" : "#ffffff";
+  const border = dark ? "#26324c" : "#dbe2ea";
+  const active = dark ? "#1c2740" : "#eef4ff";
+  const activeBorder = dark ? "#33507e" : "#c7d7f5";
 
   // Categories in first-appearance order — drives the section headings and chips.
   const collections = Array.from(
