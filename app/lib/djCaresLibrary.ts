@@ -142,49 +142,53 @@ const inCollection = (collection: string, items: LibraryItem[]): LibraryItem[] =
 // ============================================================================
 export const DJ_CARES_LIBRARY: LibraryItem[] = [
   ...inCollection("Featured", [
-    { ...v("gospel-power-of-god", "The Gospel Is the Power of God", "Dr. David Jeremiah", "MtzBPkbFjwk", "Message", "gospel", "“The just shall live by faith.” — Habakkuk 2:4, carried into Romans 1:16–17. The gospel is the power of God for everyone who believes.", true), verse: "Romans 1:16-17" },
+    v("billy-graham-seoul", "Billy Graham in Seoul, South Korea", "Billy Graham · BGEA", "PQDLjd57vdE", "Message", "Gospel", "Billy Graham's 1973 Seoul Crusade is one of the clearest public examples of Gospel-first preaching reaching millions. Start here: Jesus, repentance, faith, and peace with God.", true),
   ]),
 
-  ...inCollection("Playlists", [
-    applePl("apple-faith-playlist", "Faith Playlist", "theDJcares", "faith-playlist/pl.u-2aoqXjzsNqgmY7", "Worship", "My hero playlist — the songs I keep coming back to. Press play and let faith rise.", true),
-    applePl("apple-christian-rap-essentials", "Christian Rap Essentials", "Apple Music", "christian-rap-essentials/pl.981a3c7a4e4641ceae33034bc51bdceb", "Hip-Hop", "Faith with bars — Gospel-driven hip-hop for the drive, the gym, and the grind. Press play.", true),
-    applePl("apple-todays-christian", "Today's Christian", "Apple Music", "todays-christian/pl.fecfa8a26ea44ad581d4fe501892c8ff", "Worship", "A great song can lift you up or get you over the hump. Press play — the whole playlist streams right here.", true),
-    applePl("apple-church-hymns", "Church Hymns", "theDJcares", "church-hymns/pl.u-oZyll6RTRo9g6J", "Hymns", "The old hymns that have carried the church for generations. Timeless, steady, and good for a quiet moment.", true),
-    applePl("apple-country-faith", "Country Faith", "Apple Music", "country-faith/pl.a1f19c594aa846c3898dd98dd99c8910", "Country", "Faith with a country heart — songs about home, grace, and holding on. Press play and let it ride.", true),
-    // ↓ add Apple/Spotify/YouTube playlists here (one line each)
+  ...inCollection("The Gospel", [
+    link("billy-graham-classics", "Billy Graham Classics", "Billy Graham · BGEA", "https://billygraham.org/classics", "Message", "Gospel", "Timeless crusade messages from Billy Graham — clear, Christ-centered preaching. Watch a full classic."),
+    link("peace-with-god", "Peace With God", "BGEA", "https://peacewithgod.net/", "Resource", "Gospel", "A gentle walk through how to have peace with God through Jesus. A good place to start, or to send a friend."),
   ]),
 
-  ...inCollection("Worship & Music", [
-    v("graves-into-gardens", "Graves Into Gardens", "Elevation Worship", "KwX1f2gYKZ4", "Music", "Worship", "One of the most powerful modern worship songs — turn it up."),
-    v("gratitude", "Gratitude", "Brandon Lake", "dQdfs5S6jyA", "Music", "Gratitude", "Simple, honest, and hits every time."),
-    v("way-maker", "Way Maker", "Sinach", "iJCV_2H9xD0", "Music", "Faith", "A declaration of faith over any hard season."),
-    v("king-of-kings", "King of Kings", "Hillsong Worship", "dQl4izxPeNU", "Music", "Worship", "A sweeping reminder of the whole gospel story."),
-    v("goodness-of-god", "Goodness of God", "Bethel Music / Jenn Johnson", "n0FBb6hnwTo", "Music", "Healing", "For when you need to remember He has been faithful."),
-    v("even-if", "Even If", "MercyMe", "B6fA35Ved-Y", "Music", "Healing", "Written from real pain. For the hard days."),
-    v("same-god", "Same God", "Elevation Worship", "LawxIZE9ePE", "Music", "Faith", "He was faithful then. He is faithful now."),
-    v("christ-be-all-around-me", "Christ Be All Around Me", "All Sons & Daughters", "cmge-ycIkoo", "Music", "Morning", "Slow, quiet, prayerful — good for morning."),
-    v("holy-water", "Holy Water", "We The Kingdom", "7KLQ2AXQmtA", "Music", "Grace", "About grace, honesty, and needing Jesus."),
-    v("i-can-only-imagine", "I Can Only Imagine", "MercyMe", "N_lrrq_opng", "Music", "Eternal", "A classic. If you don't know the story behind it, look it up."),
-    v("what-a-beautiful-name", "What a Beautiful Name", "Hillsong Worship", "nQWFzMvCfLE", "Music", "Worship", "One of the best modern hymns written in a generation."),
-    s("greater-things", "Greater Things", "Shawn McDonald", "Greater Things Shawn McDonald", "Music", "Prayer", "Quiet, prayerful, honest."),
+  ...inCollection("Bible Teaching", [
+    link("lwf-home", "Love Worth Finding", "Adrian Rogers · LWF", "https://www.lwf.org/", "Message", "Classic", "Adrian Rogers' clear, warm, Bible-first teaching — sermons, series, and daily study, all in one place."),
+    link("lwf-bottom-falls-out", "What to Do When the Bottom Falls Out", "Adrian Rogers · LWF", "https://www.lwf.org/sermons/video/what-to-do-when-the-bottom-falls-out-2140", "Message", "Classic", "Steady, hope-filled teaching for the hardest seasons — where to stand when everything shakes."),
+    link("lwf-biblical-faith", "Biblical Faith: What It Is and How to Have It", "Adrian Rogers · LWF", "https://www.lwf.org/sermons/video/biblical-faith-what-it-is-and-how-to-have-it-1749", "Message", "Bible", "What faith actually is, and how it grows — grounded in Scripture."),
+    link("lwf-prayer", "Prayer", "Adrian Rogers · LWF", "https://www.lwf.org/sermons/video/prayer-2064", "Message", "Prayer", "A plain, encouraging teaching on prayer and talking honestly with God."),
+    link("lwf-forever-family", "God's Forever Family", "Adrian Rogers · LWF", "https://www.lwf.org/sermons/audio/gods-forever-family-1497", "Message", "Gospel", "On belonging to God's family forever through Christ."),
+    link("lwf-edge-of-eternity", "Living on the Edge of Eternity", "Adrian Rogers · LWF", "https://www.lwf.org/sermon-outlines/living-on-the-edge-of-eternity-outline-and-transcript", "Lesson", "Revelation", "Outline and transcript — living today in the light of eternity."),
+    link("intouch-home", "In Touch Ministries", "Charles Stanley · In Touch", "https://www.intouch.org/", "Message", "Classic", "Charles Stanley's trusted teaching — sermons, articles, and daily encouragement."),
+    link("ttb-home", "Thru the Bible", "J. Vernon McGee", "https://www.ttb.org/", "Lesson", "Genesis to Revelation", "J. Vernon McGee's classic verse-by-verse walk through the whole Bible, Genesis to Revelation. Warm, simple, faithful."),
+    link("dj-second-coming", "Christ's Second Coming in God's Story of Redemption", "David Jeremiah · Turning Point", "https://davidjeremiah.blog/christs-second-coming-in-gods-story-of-redemption/", "Message", "Revelation", "Where the whole Bible is heading — Christ at the center of God's redemption story."),
+    link("dj-basics-of-bible", "Understand the Basics of the Bible", "David Jeremiah · Turning Point", "https://davidjeremiah.blog/understand-the-basics-of-the-bible/", "Lesson", "Genesis to Revelation", "A clear overview of the Bible's big story from Genesis to Revelation."),
+    link("dj-escape-coming-night", "Intro from Escape the Coming Night", "David Jeremiah · Turning Point", "https://davidjeremiah.blog/intro-from-escape-the-coming-night/", "Message", "Revelation", "An accessible introduction to Revelation, centered on Christ as the Alpha and Omega."),
   ]),
 
-  ...inCollection("Messages", [
-    v("biblical-habit-rewires-your-brain", "This Biblical Habit Rewires Your Brain", "", "JW6fd-ZWavs", "Message", "encouragement", "A reminder that repeated time with Scripture, prayer, and God-focused habits can reshape what we notice, how we respond, and where we turn when life gets heavy. Save this as encouragement, not pressure — one faithful habit at a time."),
-    v("dont-give-the-enemy-a-seat", "Don't Give the Enemy a Seat at Your Table", "Louie Giglio", "_mLgS63cObI", "Message", "Identity", "Powerful teaching on spiritual warfare and identity."),
-    v("the-prodigal-sons", "The Prodigal Sons", "Tim Keller", "lsTzXI7cJGA", "Message", "Grace", "The best sermon ever preached on Luke 15. Period."),
-    v("thats-not-who-you-are", "That's Not Who You Are", "Steven Furtick", "KQQMGSvUf2U", "Message", "Identity", "For anyone carrying someone else's label."),
-    v("forgotten-god", "Forgotten God", "Francis Chan", "sWMjg7CxIKk", "Message", "Spirit", "A sobering look at how the church often ignores the Holy Spirit."),
-    v("kingdom-man", "Kingdom Man", "Tony Evans", "xjNyrYmEiW0", "Message", "Purpose", "On identity, purpose, and being who God called you to be."),
-    v("why-i-believe-the-bible", "Why I Choose to Believe the Bible", "Voddie Baucham", "nMfKlqMNnw0", "Message", "Truth", "Thoughtful, direct, apologetics for real questions."),
+  ...inCollection("Prayer & Devotional", [
+    link("intouch-daily", "In Touch Daily Devotions", "Charles Stanley · In Touch", "https://www.intouch.org/read/daily-devotions", "Resource", "Daily", "A short, steady daily devotional to start the day in Scripture."),
+    link("our-daily-bread", "Our Daily Bread", "Our Daily Bread Ministries", "https://www.odbm.org/en/devotionals", "Resource", "Daily", "One of the most-loved daily devotionals — a verse, a short reflection, and a prayer."),
+    { id: "hallesby-prayer", title: "Classic Prayer Education: O. Hallesby's Prayer", author: "O. Hallesby", category: "Book", tags: ["Prayer"], summary: "A classic prayer resource about helplessness, faith, dependence, and talking honestly with God. No random copyrighted upload is linked here — find it through a library or trusted bookseller." },
   ]),
 
-  ...inCollection("Podcasts", [
-    link("bible-project-podcast", "The Bible Project Podcast", "BibleProject", "https://bibleproject.com/podcasts/", "Resource", "Bible", "Deep, thoughtful, and makes Scripture come alive. Start anywhere."),
-    link("carey-nieuwhof-podcast", "Carey Nieuwhof Leadership Podcast", "Carey Nieuwhof", "https://careynieuwhof.com/podcast/", "Resource", "Growth", "Faith, leadership, culture, and what it means to live with purpose."),
-    link("ask-pastor-john", "Ask Pastor John", "Desiring God / John Piper", "https://www.desiringgod.org/ask-pastor-john", "Resource", "Answers", "Honest answers to hard questions from John Piper."),
-    link("knowing-faith", "Knowing Faith", "Knowing Faith", "https://www.google.com/search?q=Knowing+Faith+podcast", "Resource", "Theology", "Theology for regular people. Warm, accessible, real."),
-    link("the-robcast", "The RobCast", "Rob Bell", "https://robbell.com/portfolio/robcast/", "Resource", "Contemplative", "Contemplative, wide-ranging conversations about faith and meaning."),
+  ...inCollection("Family & Home", [
+    link("allen-jackson-home", "Allen Jackson Ministries", "Pastor Allen Jackson", "https://allenjackson.com/", "Message", "Family", "Pastor Allen Jackson (not the country singer) — practical, Bible-first teaching for everyday faith and family."),
+    link("allen-jackson-tv", "Recent TV Broadcasts", "Pastor Allen Jackson", "https://allenjackson.com/watch/recent-tv-broadcasts/", "Message", "Family", "Recent broadcasts — TheDJCares-reviewed encouragement, not a blanket endorsement of every topical episode."),
+    link("allen-jackson-bible-reading", "Bible Reading Plan", "Pastor Allen Jackson", "https://allenjackson.com/bible-reading/", "Resource", "Bible", "A simple Bible-reading plan to keep you in the Word."),
+    link("dobson-home", "Dr. James Dobson Family Institute", "Dr. James Dobson", "https://www.drjamesdobson.org/", "Resource", "Family", "Trusted, faith-based help for marriage, parenting, and family life."),
+    link("dobson-broadcasts", "Family Talk Broadcasts", "Dr. James Dobson", "https://www.drjamesdobson.org/category/broadcasts/", "Resource", "Family", "Encouraging broadcasts on faith, marriage, and raising kids."),
+    link("dobson-marriage-parenting", "Marriage & Parenting", "Dr. James Dobson", "https://www.drjamesdobson.org/category/marriage-parenting/", "Resource", "Family", "Practical, biblical help for marriage and parenting."),
+    link("dobson-family-legacy", "Building a Family Legacy", "Dr. James Dobson", "https://www.drjamesdobson.org/broadcasts/building-a-family-legacy-part-1/", "Resource", "Family", "On leaving a legacy of faith for your children and grandchildren."),
+    link("dobson-minute", "The Dr. Dobson Minute", "Dr. James Dobson", "https://www.drjamesdobson.org/category/dobson-minute/", "Resource", "Family", "Quick, encouraging, one-minute family wisdom."),
+  ]),
+
+  ...inCollection("Hymns & Worship", [
+    applePl("apple-faith-playlist", "Faith Playlist", "theDJcares", "faith-playlist/pl.u-2aoqXjzsNqgmY7", "Reviewed", "TheDJCares-reviewed music encouragement — the songs I keep coming back to. Press play and let faith rise.", true),
+    applePl("apple-church-hymns", "Church Hymns", "theDJcares", "church-hymns/pl.u-oZyll6RTRo9g6J", "Hymn", "TheDJCares-reviewed music encouragement — the old hymns that have carried the church for generations.", true),
+    { id: "hymn-amazing-grace", title: "Amazing Grace", author: "John Newton (1779)", category: "Song", tags: ["Hymn"], summary: "“I once was lost, but now am found.” The great hymn of God's grace — worth singing slowly." },
+    { id: "hymn-how-great-thou-art", title: "How Great Thou Art", author: "Stuart K. Hine", category: "Song", tags: ["Hymn"], summary: "A hymn of awe at God's creation and salvation. “Then sings my soul…”" },
+    { id: "hymn-it-is-well", title: "It Is Well With My Soul", author: "Horatio Spafford (1873)", category: "Song", tags: ["Hymn"], summary: "Written in deep grief — peace with God even when everything else is shaking." },
+    { id: "hymn-blessed-assurance", title: "Blessed Assurance", author: "Fanny Crosby (1873)", category: "Song", tags: ["Hymn"], summary: "“Jesus is mine!” A joyful hymn of confidence and hope in Christ." },
+    { id: "hymn-great-is-thy-faithfulness", title: "Great Is Thy Faithfulness", author: "Thomas Chisholm (1923)", category: "Song", tags: ["Hymn"], summary: "“Morning by morning new mercies I see.” A hymn of God's steady faithfulness." },
   ]),
 ];
 

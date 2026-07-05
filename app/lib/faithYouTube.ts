@@ -21,18 +21,9 @@ export type FaithTheme = {
   videos: FaithVideo[];
 };
 
+// Only clean, non-controversial songs from official artist channels. Every id
+// below was verified live via YouTube oEmbed (200 + matching official title).
 export const FAITH_THEMES: FaithTheme[] = [
-  {
-    key: "praise",
-    label: "Praise",
-    emoji: "🙌",
-    blurb: "Lift it up — songs that put God first and the volume high.",
-    videos: [
-      { title: "What a Beautiful Name", artist: "Hillsong Worship", youtubeId: "nQWFzMvCfLE" },
-      { title: "King of Kings", artist: "Hillsong Worship", youtubeId: "dQl4izxPeNU" },
-      { title: "Graves Into Gardens", artist: "Elevation Worship", youtubeId: "KwX1f2gYKZ4" },
-    ],
-  },
   {
     key: "hope",
     label: "Hope",
@@ -40,7 +31,6 @@ export const FAITH_THEMES: FaithTheme[] = [
     blurb: "For the waiting seasons — He is still making a way.",
     videos: [
       { title: "Way Maker", artist: "Leeland", youtubeId: "iJCV_2H9xD0" },
-      { title: "Same God", artist: "Elevation Worship", youtubeId: "LawxIZE9ePE" },
       { title: "I Can Only Imagine", artist: "MercyMe", youtubeId: "N_lrrq_opng" },
     ],
   },
@@ -50,7 +40,6 @@ export const FAITH_THEMES: FaithTheme[] = [
     emoji: "✝️",
     blurb: "When you can't see it yet — trust Him anyway.",
     videos: [
-      { title: "Goodness of God", artist: "Bethel Music / Jenn Johnson", youtubeId: "n0FBb6hnwTo" },
       { title: "Even If", artist: "MercyMe", youtubeId: "B6fA35Ved-Y" },
     ],
   },
@@ -60,7 +49,6 @@ export const FAITH_THEMES: FaithTheme[] = [
     emoji: "😊",
     blurb: "Thankful songs to reset your whole day.",
     videos: [
-      { title: "Gratitude", artist: "Brandon Lake", youtubeId: "dQdfs5S6jyA" },
       { title: "Holy Water", artist: "We The Kingdom", youtubeId: "7KLQ2AXQmtA" },
     ],
   },
