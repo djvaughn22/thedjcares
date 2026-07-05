@@ -45,7 +45,7 @@ type Tab = "library" | "encourage" | "faith";
 
 export default function TheDJCaresPage() {
   const [dark, setDark] = useState(true);
-  const [tab, setTab] = useState<Tab>("library");
+  const [tab, setTab] = useState<Tab>("faith");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [libFilter, setLibFilter] = useState("All");
   const [getzVideo, setGetzVideo] = useState<LifeEssentialsPrinciple | null>(null);
@@ -80,8 +80,8 @@ export default function TheDJCaresPage() {
   const itemsIn = (c: string) => DJ_CARES_LIBRARY.filter(i => i.collection === c);
 
   const tabs: { id: Tab; label: string; emoji: string }[] = [
+    { id: "faith", label: "Music & Videos", emoji: "🎬" },
     { id: "library", label: "Library", emoji: "📚" },
-    { id: "faith", label: "Faith Videos", emoji: "🎬" },
     { id: "encourage", label: "Encouragement", emoji: "❤️" },
   ];
 
@@ -325,11 +325,42 @@ export default function TheDJCaresPage() {
         {/* Faith Videos tab — the Faith Playlist as watchable videos, by mood */}
         {tab === "faith" && (
           <>
-            <p style={{ fontSize: 16, color: sub, marginBottom: 6 }}>
-              The Faith Playlist as videos — sorted by mood. Tap any song to play it right here.
+            {/* Music playlists — TheDJCares-reviewed, streaming right here */}
+            <h3 style={{ fontSize: 22, fontWeight: 900, color: text, margin: "0 0 4px" }}>🎵 The Music</h3>
+            <p style={{ fontSize: 14, color: sub, margin: "0 0 16px" }}>
+              TheDJCares-reviewed playlists — press play, they stream right here.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: 12 }}>
+              <div style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, overflow: "hidden" }}>
+                <iframe
+                  src="https://embed.music.apple.com/us/playlist/church-hymns/pl.u-oZyll6RTRo9g6J"
+                  title="Church Hymns"
+                  loading="lazy"
+                  allow="autoplay *; encrypted-media *;"
+                  sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+                  style={{ width: "100%", height: 450, border: 0, background: "transparent" }}
+                />
+              </div>
+              <a
+                href="https://music.apple.com/us/playlist/faith-playlist/pl.u-2aoqXjzsNqgmY7"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, padding: 24, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", textDecoration: "none", minHeight: 220 }}
+              >
+                <div style={{ fontSize: 44, marginBottom: 10 }}>🎧</div>
+                <p style={{ fontSize: 20, fontWeight: 900, color: text, margin: "0 0 6px" }}>Faith Playlist</p>
+                <p style={{ fontSize: 14, color: sub, margin: "0 0 16px", lineHeight: 1.5 }}>My full faith mix — the songs I keep coming back to. Open and press play on Apple Music.</p>
+                <span style={{ background: "#A78BFA", color: "#0C0C0C", borderRadius: 50, padding: "10px 22px", fontSize: 14, fontWeight: 800 }}>Open on Apple Music →</span>
+              </a>
+            </div>
+            <p style={{ fontSize: 12, color: sub, margin: "0 0 44px" }}>Church Hymns streams right here. The full Faith Playlist opens on Apple Music.</p>
+
+            <h3 style={{ fontSize: 22, fontWeight: 900, color: text, margin: "0 0 4px" }}>🎬 The Videos</h3>
+            <p style={{ fontSize: 14, color: sub, marginBottom: 6 }}>
+              The Faith Playlist as watchable videos — sorted by mood. Tap any song to play it right here.
             </p>
             <p style={{ fontSize: 13, color: sub, marginBottom: 24 }}>
-              Prefer the full 147-song mix?{" "}
+              Prefer the full mix?{" "}
               <a href="https://music.apple.com/us/playlist/faith-playlist/pl.u-2aoqXjzsNqgmY7" target="_blank" rel="noopener noreferrer" style={{ color: "#A78BFA", fontWeight: 800, textDecoration: "none" }}>
                 Open the Faith Playlist on Apple Music →
               </a>

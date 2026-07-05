@@ -25,13 +25,26 @@ export type FaithTheme = {
 // below was verified live via YouTube oEmbed (200 + matching official title).
 export const FAITH_THEMES: FaithTheme[] = [
   {
+    key: "grace",
+    label: "Praise & Grace",
+    emoji: "🙌",
+    blurb: "Lift it up — the wonder of grace and who God is.",
+    videos: [
+      { title: "This Is Amazing Grace", artist: "Phil Wickham", youtubeId: "XFRjr_x-yxU" },
+      { title: "Amazing Grace (My Chains Are Gone)", artist: "Chris Tomlin", youtubeId: "Y-4NFvI5U9w" },
+      { title: "We Believe", artist: "Newsboys", youtubeId: "WjZ01FcK0yk" },
+    ],
+  },
+  {
     key: "hope",
     label: "Hope",
     emoji: "🌅",
     blurb: "For the waiting seasons — He is still making a way.",
     videos: [
+      { title: "Living Hope", artist: "Phil Wickham", youtubeId: "u-1fwZtKJSM" },
       { title: "Way Maker", artist: "Leeland", youtubeId: "iJCV_2H9xD0" },
       { title: "I Can Only Imagine", artist: "MercyMe", youtubeId: "N_lrrq_opng" },
+      { title: "Rise Up (Lazarus)", artist: "CAIN", youtubeId: "8RIZlNYl4ok" },
     ],
   },
   {
@@ -41,6 +54,30 @@ export const FAITH_THEMES: FaithTheme[] = [
     blurb: "When you can't see it yet — trust Him anyway.",
     videos: [
       { title: "Even If", artist: "MercyMe", youtubeId: "B6fA35Ved-Y" },
+      { title: "Praise You in This Storm", artist: "Casting Crowns", youtubeId: "0YUGwUgBvTU" },
+      { title: "My Jesus", artist: "Anne Wilson", youtubeId: "FW5o2uBeMWQ" },
+    ],
+  },
+  {
+    key: "freedom",
+    label: "Freedom & Breakthrough",
+    emoji: "⛓️",
+    blurb: "Chains fall, fear loses — He breaks what holds you.",
+    videos: [
+      { title: "Chain Breaker", artist: "Zach Williams", youtubeId: "cd_xxmXdQz4" },
+      { title: "Fear Is a Liar", artist: "Zach Williams", youtubeId: "1srs1YoTVzs" },
+      { title: "Who Am I", artist: "Casting Crowns", youtubeId: "C53GgUJ6y-Y" },
+    ],
+  },
+  {
+    key: "peace",
+    label: "Peace over Fear",
+    emoji: "🕊️",
+    blurb: "For anxious hearts — He stays, and He is near.",
+    videos: [
+      { title: "The God Who Stays", artist: "Matthew West", youtubeId: "QPwd_TQpsHY" },
+      { title: "You Say", artist: "Lauren Daigle", youtubeId: "sIaT8Jl2zpI" },
+      { title: "Christ Be All Around Me", artist: "All Sons & Daughters", youtubeId: "cmge-ycIkoo" },
     ],
   },
   {
@@ -50,15 +87,6 @@ export const FAITH_THEMES: FaithTheme[] = [
     blurb: "Thankful songs to reset your whole day.",
     videos: [
       { title: "Holy Water", artist: "We The Kingdom", youtubeId: "7KLQ2AXQmtA" },
-    ],
-  },
-  {
-    key: "peace",
-    label: "Peace over Fear",
-    emoji: "🕊️",
-    blurb: "For anxious hearts — He is all around you.",
-    videos: [
-      { title: "Christ Be All Around Me", artist: "All Sons & Daughters", youtubeId: "cmge-ycIkoo" },
     ],
   },
 ];
