@@ -33,6 +33,7 @@ export const FAITH_THEMES: FaithTheme[] = [
       { title: "This Is Amazing Grace", artist: "Phil Wickham", youtubeId: "XFRjr_x-yxU" },
       { title: "Amazing Grace (My Chains Are Gone)", artist: "Chris Tomlin", youtubeId: "Y-4NFvI5U9w" },
       { title: "We Believe", artist: "Newsboys", youtubeId: "WjZ01FcK0yk" },
+      { title: "Battle Belongs", artist: "Phil Wickham", youtubeId: "qtvQNzPHn-w" },
     ],
   },
   {
@@ -56,6 +57,7 @@ export const FAITH_THEMES: FaithTheme[] = [
       { title: "Even If", artist: "MercyMe", youtubeId: "B6fA35Ved-Y" },
       { title: "Praise You in This Storm", artist: "Casting Crowns", youtubeId: "0YUGwUgBvTU" },
       { title: "My Jesus", artist: "Anne Wilson", youtubeId: "FW5o2uBeMWQ" },
+      { title: "Just Be Held", artist: "Casting Crowns", youtubeId: "tIZitK6_IMQ" },
     ],
   },
   {
@@ -67,6 +69,7 @@ export const FAITH_THEMES: FaithTheme[] = [
       { title: "Chain Breaker", artist: "Zach Williams", youtubeId: "cd_xxmXdQz4" },
       { title: "Fear Is a Liar", artist: "Zach Williams", youtubeId: "1srs1YoTVzs" },
       { title: "Who Am I", artist: "Casting Crowns", youtubeId: "C53GgUJ6y-Y" },
+      { title: "Rescue Story", artist: "Zach Williams", youtubeId: "Q3aP5iuJITg" },
     ],
   },
   {
@@ -78,6 +81,7 @@ export const FAITH_THEMES: FaithTheme[] = [
       { title: "The God Who Stays", artist: "Matthew West", youtubeId: "QPwd_TQpsHY" },
       { title: "You Say", artist: "Lauren Daigle", youtubeId: "sIaT8Jl2zpI" },
       { title: "Christ Be All Around Me", artist: "All Sons & Daughters", youtubeId: "cmge-ycIkoo" },
+      { title: "Scars in Heaven", artist: "Casting Crowns", youtubeId: "qCdevloDE6E" },
     ],
   },
   {
@@ -87,6 +91,9 @@ export const FAITH_THEMES: FaithTheme[] = [
     blurb: "Thankful songs to reset your whole day.",
     videos: [
       { title: "Holy Water", artist: "We The Kingdom", youtubeId: "7KLQ2AXQmtA" },
+      { title: "GOOD DAY", artist: "Forrest Frank", youtubeId: "eO7-9WzLDZo" },
+      { title: "joy.", artist: "for KING & COUNTRY", youtubeId: "lA7n7TwPDmw" },
+      { title: "Counting My Blessings", artist: "Seph Schlueter", youtubeId: "aZjWYgq9QfM" },
     ],
   },
 ];

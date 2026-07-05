@@ -330,30 +330,26 @@ export default function TheDJCaresPage() {
             <p style={{ fontSize: 14, color: sub, margin: "0 0 16px" }}>
               TheDJCares-reviewed playlists — press play, they stream right here.
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: 12 }}>
-              <div style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, overflow: "hidden" }}>
-                <iframe
-                  src="https://embed.music.apple.com/us/playlist/church-hymns/pl.u-oZyll6RTRo9g6J"
-                  title="Church Hymns"
-                  loading="lazy"
-                  allow="autoplay *; encrypted-media *;"
-                  sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
-                  style={{ width: "100%", height: 450, border: 0, background: "transparent" }}
-                />
-              </div>
-              <a
-                href="https://music.apple.com/us/playlist/faith-playlist/pl.u-2aoqXjzsNqgmY7"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, padding: 24, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", textDecoration: "none", minHeight: 220 }}
-              >
-                <div style={{ fontSize: 44, marginBottom: 10 }}>🎧</div>
-                <p style={{ fontSize: 20, fontWeight: 900, color: text, margin: "0 0 6px" }}>Faith Playlist</p>
-                <p style={{ fontSize: 14, color: sub, margin: "0 0 16px", lineHeight: 1.5 }}>My full faith mix — the songs I keep coming back to. Open and press play on Apple Music.</p>
-                <span style={{ background: "#A78BFA", color: "#0C0C0C", borderRadius: 50, padding: "10px 22px", fontSize: 14, fontWeight: 800 }}>Open on Apple Music →</span>
-              </a>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: 44 }}>
+              {[
+                { title: "Faith Playlist", path: "faith-playlist/pl.u-2aoqXjzsNqgmY7" },
+                { title: "Christian Rap Essentials", path: "christian-rap-essentials/pl.981a3c7a4e4641ceae33034bc51bdceb" },
+                { title: "Today's Christian", path: "todays-christian/pl.fecfa8a26ea44ad581d4fe501892c8ff" },
+                { title: "Church Hymns", path: "church-hymns/pl.u-oZyll6RTRo9g6J" },
+                { title: "Country Faith", path: "country-faith/pl.a1f19c594aa846c3898dd98dd99c8910" },
+              ].map(pl => (
+                <div key={pl.path} style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, overflow: "hidden" }}>
+                  <iframe
+                    src={`https://embed.music.apple.com/us/playlist/${pl.path}`}
+                    title={pl.title}
+                    loading="lazy"
+                    allow="autoplay *; encrypted-media *;"
+                    sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+                    style={{ width: "100%", height: 450, border: 0, background: "transparent" }}
+                  />
+                </div>
+              ))}
             </div>
-            <p style={{ fontSize: 12, color: sub, margin: "0 0 44px" }}>Church Hymns streams right here. The full Faith Playlist opens on Apple Music.</p>
 
             <h3 style={{ fontSize: 22, fontWeight: 900, color: text, margin: "0 0 4px" }}>🎬 The Videos</h3>
             <p style={{ fontSize: 14, color: sub, marginBottom: 6 }}>
