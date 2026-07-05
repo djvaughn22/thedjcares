@@ -190,7 +190,23 @@ export default function TheDJCaresPage() {
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "36px 24px 80px" }}>
 
         <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{ fontSize: 44, marginBottom: 12 }}>🎵</div>
+          <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
+            <img
+              src="/isaiah-icon.jpg"
+              alt="Isaiah — theDJcares"
+              width={104}
+              height={104}
+              style={{
+                width: 104,
+                height: 104,
+                borderRadius: "50%",
+                objectFit: "cover",
+                border: "3px solid #A78BFA",
+                boxShadow:
+                  "0 0 0 5px rgba(167,139,250,0.16), 0 12px 34px rgba(0,0,0,0.5)",
+              }}
+            />
+          </div>
           <h1 style={{ fontSize: 40, fontWeight: 900, color: text, margin: "0 0 12px" }}>theDJcares</h1>
           <p style={{ fontSize: 18, color: sub, lineHeight: 1.7, maxWidth: 480, margin: "0 auto" }}>
             Curated music, sermons, podcasts, and encouragement — Gospel first. Hand-picked. No algorithm.
