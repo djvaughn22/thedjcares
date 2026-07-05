@@ -143,7 +143,6 @@ const inCollection = (collection: string, items: LibraryItem[]): LibraryItem[] =
 export const DJ_CARES_LIBRARY: LibraryItem[] = [
   ...inCollection("Featured", [
     { ...v("gospel-power-of-god", "The Gospel Is the Power of God", "Dr. David Jeremiah", "MtzBPkbFjwk", "Message", "gospel", "“The just shall live by faith.” — Habakkuk 2:4, carried into Romans 1:16–17. The gospel is the power of God for everyone who believes.", true), verse: "Romans 1:16-17" },
-    v("biblical-habit-rewires-your-brain", "This Biblical Habit Rewires Your Brain", "", "JW6fd-ZWavs", "Message", "encouragement", "A reminder that repeated time with Scripture, prayer, and God-focused habits can reshape what we notice, how we respond, and where we turn when life gets heavy. Save this as encouragement, not pressure — one faithful habit at a time.", true),
   ]),
 
   ...inCollection("Playlists", [
@@ -171,6 +170,7 @@ export const DJ_CARES_LIBRARY: LibraryItem[] = [
   ]),
 
   ...inCollection("Messages", [
+    v("biblical-habit-rewires-your-brain", "This Biblical Habit Rewires Your Brain", "", "JW6fd-ZWavs", "Message", "encouragement", "A reminder that repeated time with Scripture, prayer, and God-focused habits can reshape what we notice, how we respond, and where we turn when life gets heavy. Save this as encouragement, not pressure — one faithful habit at a time."),
     v("dont-give-the-enemy-a-seat", "Don't Give the Enemy a Seat at Your Table", "Louie Giglio", "_mLgS63cObI", "Message", "Identity", "Powerful teaching on spiritual warfare and identity."),
     v("the-prodigal-sons", "The Prodigal Sons", "Tim Keller", "lsTzXI7cJGA", "Message", "Grace", "The best sermon ever preached on Luke 15. Period."),
     v("thats-not-who-you-are", "That's Not Who You Are", "Steven Furtick", "KQQMGSvUf2U", "Message", "Identity", "For anyone carrying someone else's label."),
