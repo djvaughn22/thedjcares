@@ -333,10 +333,11 @@ export default function TheDJCaresPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: 44 }}>
               {[
                 { title: "Faith Playlist", path: "faith-playlist/pl.u-2aoqXjzsNqgmY7" },
-                { title: "Christian Rap Essentials", path: "christian-rap-essentials/pl.981a3c7a4e4641ceae33034bc51bdceb" },
                 { title: "Today's Christian", path: "todays-christian/pl.fecfa8a26ea44ad581d4fe501892c8ff" },
-                { title: "Church Hymns", path: "church-hymns/pl.u-oZyll6RTRo9g6J" },
+                { title: "Christian Rap Essentials", path: "christian-rap-essentials/pl.981a3c7a4e4641ceae33034bc51bdceb" },
+                { title: "Christian Workout", path: "christian-workout/pl.4f6345e9ab6f4782bd31250b74ec6b23" },
                 { title: "Country Faith", path: "country-faith/pl.a1f19c594aa846c3898dd98dd99c8910" },
+                { title: "Church Hymns", path: "church-hymns/pl.u-oZyll6RTRo9g6J" },
               ].map(pl => (
                 <div key={pl.path} style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, overflow: "hidden" }}>
                   <iframe
