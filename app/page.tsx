@@ -340,10 +340,6 @@ export default function TheDJCaresPage() {
                 { title: "Church Hymns", path: "church-hymns/pl.u-oZyll6RTRo9g6J" },
               ].map(pl => (
                 <div key={pl.path} style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, overflow: "hidden" }}>
-                  <div style={{ padding: "12px 16px", borderBottom: `1px solid ${border}` }}>
-                    <p style={{ fontSize: 15, fontWeight: 900, color: text, margin: 0 }}>{pl.title}</p>
-                    <p style={{ fontSize: 12, fontWeight: 800, color: "#A78BFA", margin: "2px 0 0", letterSpacing: "0.04em" }}>theDJcares</p>
-                  </div>
                   <iframe
                     src={`https://embed.music.apple.com/us/playlist/${pl.path}`}
                     title={pl.title}
