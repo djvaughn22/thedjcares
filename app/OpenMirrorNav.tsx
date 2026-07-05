@@ -8,19 +8,7 @@ type Item = { label: string; href: string; note?: string; blank?: boolean };
 // -figured-out (WatchedNotWatched / WhatAmIAI / Reflect) → PleaseBeReady last.
 const LINKS: Item[] = [
   { label: "Open Mirror Home", href: "https://openmirrorllc.com" },
-  { label: "CrossHeartPray.com", href: "https://crossheartpray.com" },
-  { label: "TheDJCares.com", href: "https://thedjcares.com" },
-  { label: "DontCloneMeTom.com", href: "https://dontclonemetom.com" },
-  { label: "iDontCry.com", href: "https://idontcry.com" },
-  { label: "StepInTheRing.com", href: "https://stepinthering.com" },
-  { label: "Fambookagram.com", href: "https://fambookagram.com", note: "Soon" },
-  { label: "Friendbookagram.com", href: "https://friendbookagram.com", note: "Soon" },
   { label: "About Open Mirror", href: "https://openmirrorllc.com/about-open-mirror" },
-  { label: "Bible Reading Plan PDF", href: "https://openmirrorllc.com/resources/52-week-bible-reading-plan.pdf", note: "PDF", blank: true },
-  { label: "WatchedNotWatched.com", href: "https://watchednotwatched.com" },
-  { label: "WhatAmIAI.com", href: "https://whatamiai.com" },
-  { label: "Reflect", href: "https://openmirrorllc.com/reflect", note: "Quick" },
-  { label: "PleaseBeReady.com", href: "https://pleasebeready.com" },
 ];
 
 export default function OpenMirrorNav() {
@@ -42,7 +30,7 @@ export default function OpenMirrorNav() {
     <header style={{ position: "sticky", top: 0, zIndex: 50, borderBottom: "1px solid #26324c", background: "#0b1220" }}>
       <div style={{ maxWidth: 680, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px" }}>
         <a href="https://openmirrorllc.com" style={{ display: "inline-flex", alignItems: "baseline", gap: 8, fontSize: 16, fontWeight: 900, letterSpacing: "-0.01em", color: "#e8edf5", textDecoration: "none" }}>
-          <span aria-hidden>🪞</span><span>Open Mirror</span>
+          <span>Open Mirror LLC</span>
         </a>
 
         <div ref={ref} style={{ position: "relative" }}>
