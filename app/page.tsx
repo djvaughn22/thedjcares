@@ -190,20 +190,17 @@ export default function TheDJCaresPage() {
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "36px 24px 80px" }}>
 
         <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
+          <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}>
             <img
               src="/isaiah-icon.jpg"
-              alt="Isaiah — theDJcares"
-              width={104}
-              height={104}
+              alt="Isaiah — theDJcares mascot"
+              width={184}
+              height={184}
               style={{
-                width: 104,
-                height: 104,
-                borderRadius: "50%",
-                objectFit: "cover",
-                border: "3px solid #A78BFA",
-                boxShadow:
-                  "0 0 0 5px rgba(167,139,250,0.16), 0 12px 34px rgba(0,0,0,0.5)",
+                width: 184,
+                height: 184,
+                borderRadius: 28,
+                boxShadow: "0 14px 40px rgba(0,0,0,0.5)",
               }}
             />
           </div>
