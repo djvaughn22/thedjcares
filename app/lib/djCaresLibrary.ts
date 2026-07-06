@@ -142,53 +142,39 @@ const inCollection = (collection: string, items: LibraryItem[]): LibraryItem[] =
 // ============================================================================
 export const DJ_CARES_LIBRARY: LibraryItem[] = [
   ...inCollection("Featured", [
-    v("billy-graham-seoul", "Billy Graham in Seoul, South Korea", "Billy Graham · BGEA", "PQDLjd57vdE", "Message", "Gospel", "Billy Graham's 1973 Seoul Crusade is one of the clearest public examples of Gospel-first preaching reaching millions. Start here: Jesus, repentance, faith, and peace with God.", true),
+    v("billy-graham-seoul", "Billy Graham in Seoul, South Korea", "Billy Graham · BGEA", "PQDLjd57vdE", "Message", "Gospel", "Billy Graham's 1973 Seoul Crusade is one of the clearest public examples of Gospel-first preaching reaching millions. Start here: Jesus, repentance, faith, and peace with God. Plays right here.", true),
   ]),
 
   ...inCollection("The Gospel", [
+    v("adrian-rogers-saving-grace", "The Gospel of His Saving Grace", "Adrian Rogers · Love Worth Finding", "23Iz4golt-I", "Message", "Gospel", "Adrian Rogers preaches the heart of the Gospel — the saving grace of Jesus. Plays right here."),
     link("billy-graham-classics", "Billy Graham Classics", "Billy Graham · BGEA", "https://billygraham.org/classics", "Message", "Gospel", "Timeless crusade messages from Billy Graham — clear, Christ-centered preaching. Watch a full classic."),
     link("peace-with-god", "Peace With God", "BGEA", "https://peacewithgod.net/", "Resource", "Gospel", "A gentle walk through how to have peace with God through Jesus. A good place to start, or to send a friend."),
-  ]),
-
-  ...inCollection("Bible Teaching", [
-    link("lwf-home", "Love Worth Finding", "Adrian Rogers · LWF", "https://www.lwf.org/", "Message", "Classic", "Adrian Rogers' clear, warm, Bible-first teaching — sermons, series, and daily study, all in one place."),
-    link("lwf-bottom-falls-out", "What to Do When the Bottom Falls Out", "Adrian Rogers · LWF", "https://www.lwf.org/sermons/video/what-to-do-when-the-bottom-falls-out-2140", "Message", "Classic", "Steady, hope-filled teaching for the hardest seasons — where to stand when everything shakes."),
-    link("lwf-biblical-faith", "Biblical Faith: What It Is and How to Have It", "Adrian Rogers · LWF", "https://www.lwf.org/sermons/video/biblical-faith-what-it-is-and-how-to-have-it-1749", "Message", "Bible", "What faith actually is, and how it grows — grounded in Scripture."),
-    link("lwf-prayer", "Prayer", "Adrian Rogers · LWF", "https://www.lwf.org/sermons/video/prayer-2064", "Message", "Prayer", "A plain, encouraging teaching on prayer and talking honestly with God."),
-    link("lwf-forever-family", "God's Forever Family", "Adrian Rogers · LWF", "https://www.lwf.org/sermons/audio/gods-forever-family-1497", "Message", "Gospel", "On belonging to God's family forever through Christ."),
-    link("lwf-edge-of-eternity", "Living on the Edge of Eternity", "Adrian Rogers · LWF", "https://www.lwf.org/sermon-outlines/living-on-the-edge-of-eternity-outline-and-transcript", "Lesson", "Revelation", "Outline and transcript — living today in the light of eternity."),
-    link("intouch-home", "In Touch Ministries", "Charles Stanley · In Touch", "https://www.intouch.org/", "Message", "Classic", "Charles Stanley's trusted teaching — sermons, articles, and daily encouragement."),
-    link("ttb-home", "Thru the Bible", "J. Vernon McGee", "https://www.ttb.org/", "Lesson", "Genesis to Revelation", "J. Vernon McGee's classic verse-by-verse walk through the whole Bible, Genesis to Revelation. Warm, simple, faithful."),
-    link("dj-second-coming", "Christ's Second Coming in God's Story of Redemption", "David Jeremiah · Turning Point", "https://davidjeremiah.blog/christs-second-coming-in-gods-story-of-redemption/", "Message", "Revelation", "Where the whole Bible is heading — Christ at the center of God's redemption story."),
-    link("dj-basics-of-bible", "Understand the Basics of the Bible", "David Jeremiah · Turning Point", "https://davidjeremiah.blog/understand-the-basics-of-the-bible/", "Lesson", "Genesis to Revelation", "A clear overview of the Bible's big story from Genesis to Revelation."),
-    link("dj-escape-coming-night", "Intro from Escape the Coming Night", "David Jeremiah · Turning Point", "https://davidjeremiah.blog/intro-from-escape-the-coming-night/", "Message", "Revelation", "An accessible introduction to Revelation, centered on Christ as the Alpha and Omega."),
-  ]),
-
-  ...inCollection("Prayer & Devotional", [
-    link("intouch-daily", "In Touch Daily Devotions", "Charles Stanley · In Touch", "https://www.intouch.org/read/daily-devotions", "Resource", "Daily", "A short, steady daily devotional to start the day in Scripture."),
-    link("our-daily-bread", "Our Daily Bread", "Our Daily Bread Ministries", "https://www.odbm.org/en/devotionals", "Resource", "Daily", "One of the most-loved daily devotionals — a verse, a short reflection, and a prayer."),
-    { id: "hallesby-prayer", title: "Classic Prayer Education: O. Hallesby's Prayer", author: "O. Hallesby", category: "Book", tags: ["Prayer"], summary: "A classic prayer resource about helplessness, faith, dependence, and talking honestly with God. No random copyrighted upload is linked here — find it through a library or trusted bookseller." },
-  ]),
-
-  ...inCollection("Family & Home", [
-    link("allen-jackson-home", "Allen Jackson Ministries", "Pastor Allen Jackson", "https://allenjackson.com/", "Message", "Family", "Pastor Allen Jackson (not the country singer) — practical, Bible-first teaching for everyday faith and family."),
-    link("allen-jackson-tv", "Recent TV Broadcasts", "Pastor Allen Jackson", "https://allenjackson.com/watch/recent-tv-broadcasts/", "Message", "Family", "Recent broadcasts — TheDJCares-reviewed encouragement, not a blanket endorsement of every topical episode."),
-    link("allen-jackson-bible-reading", "Bible Reading Plan", "Pastor Allen Jackson", "https://allenjackson.com/bible-reading/", "Resource", "Bible", "A simple Bible-reading plan to keep you in the Word."),
-    link("dobson-home", "Dr. James Dobson Family Institute", "Dr. James Dobson", "https://www.drjamesdobson.org/", "Resource", "Family", "Trusted, faith-based help for marriage, parenting, and family life."),
-    link("dobson-broadcasts", "Family Talk Broadcasts", "Dr. James Dobson", "https://www.drjamesdobson.org/category/broadcasts/", "Resource", "Family", "Encouraging broadcasts on faith, marriage, and raising kids."),
-    link("dobson-marriage-parenting", "Marriage & Parenting", "Dr. James Dobson", "https://www.drjamesdobson.org/category/marriage-parenting/", "Resource", "Family", "Practical, biblical help for marriage and parenting."),
-    link("dobson-family-legacy", "Building a Family Legacy", "Dr. James Dobson", "https://www.drjamesdobson.org/broadcasts/building-a-family-legacy-part-1/", "Resource", "Family", "On leaving a legacy of faith for your children and grandchildren."),
-    link("dobson-minute", "The Dr. Dobson Minute", "Dr. James Dobson", "https://www.drjamesdobson.org/category/dobson-minute/", "Resource", "Family", "Quick, encouraging, one-minute family wisdom."),
   ]),
 
   ...inCollection("Hymns & Worship", [
     applePl("apple-faith-playlist", "Faith Playlist", "theDJcares", "faith-playlist/pl.u-2aoqXjzsNqgmY7", "Reviewed", "TheDJCares-reviewed music encouragement — the songs I keep coming back to. Press play and let faith rise.", true),
     applePl("apple-church-hymns", "Church Hymns", "theDJcares", "church-hymns/pl.u-oZyll6RTRo9g6J", "Hymn", "TheDJCares-reviewed music encouragement — the old hymns that have carried the church for generations.", true),
-    { id: "hymn-amazing-grace", title: "Amazing Grace", author: "John Newton (1779)", category: "Song", tags: ["Hymn"], summary: "“I once was lost, but now am found.” The great hymn of God's grace — worth singing slowly." },
-    { id: "hymn-how-great-thou-art", title: "How Great Thou Art", author: "Stuart K. Hine", category: "Song", tags: ["Hymn"], summary: "A hymn of awe at God's creation and salvation. “Then sings my soul…”" },
-    { id: "hymn-it-is-well", title: "It Is Well With My Soul", author: "Horatio Spafford (1873)", category: "Song", tags: ["Hymn"], summary: "Written in deep grief — peace with God even when everything else is shaking." },
-    { id: "hymn-blessed-assurance", title: "Blessed Assurance", author: "Fanny Crosby (1873)", category: "Song", tags: ["Hymn"], summary: "“Jesus is mine!” A joyful hymn of confidence and hope in Christ." },
-    { id: "hymn-great-is-thy-faithfulness", title: "Great Is Thy Faithfulness", author: "Thomas Chisholm (1923)", category: "Song", tags: ["Hymn"], summary: "“Morning by morning new mercies I see.” A hymn of God's steady faithfulness." },
+    v("hymn-amazing-grace", "Amazing Grace", "John Newton · Reawaken Hymns", "aDmcdZTEU5E", "Song", "Hymn", "“I once was lost, but now am found.” The great hymn of God's grace — plays right here."),
+    v("hymn-how-great-thou-art", "How Great Thou Art", "Stuart K. Hine · Shane & Shane", "bjWZz90hj4I", "Song", "Hymn", "A hymn of awe at God's creation and salvation. “Then sings my soul…” Plays right here."),
+    v("hymn-it-is-well", "It Is Well With My Soul", "Horatio Spafford · Reawaken Hymns", "i4Mo9pkmd98", "Song", "Hymn", "Written in deep grief — peace with God even when everything else is shaking."),
+    v("hymn-blessed-assurance", "Blessed Assurance", "Fanny Crosby · Reawaken Hymns", "6GJF1ac37lI", "Song", "Hymn", "“Jesus is mine!” A joyful hymn of confidence and hope in Christ."),
+    v("hymn-great-is-thy-faithfulness", "Great Is Thy Faithfulness", "Thomas Chisholm · Reawaken Hymns", "lbDNkwcuBus", "Song", "Hymn", "“Morning by morning new mercies I see.” A hymn of God's steady faithfulness."),
+  ]),
+
+  ...inCollection("Podcasts", [
+    spot("ttb-podcast", "Thru the Bible", "J. Vernon McGee", "show/0WmJbQgQpokjpG3mbuW5bS", "Bible", "J. Vernon McGee's verse-by-verse journey through the whole Bible — press play and listen right here."),
+    spot("ttb-minute-with-mcgee", "A Minute with McGee", "J. Vernon McGee", "show/3zDZQj0UpJj86JokVMd5OH", "Daily", "Short daily Bible encouragement from Dr. McGee — a minute in the Word, playing right here."),
+  ]),
+
+  // Ministry home pages, grouped — one link each (no per-episode buttons).
+  ...inCollection("Trusted Ministries", [
+    link("min-lwf", "Love Worth Finding — Adrian Rogers", "Adrian Rogers", "https://www.oneplace.com/ministries/love-worth-finding/", "Message", "Ministry", "Adrian Rogers' clear, warm, Bible-first teaching — full sermons and daily broadcasts."),
+    link("min-intouch", "In Touch — Charles Stanley", "Charles Stanley", "https://www.intouch.org/", "Message", "Ministry", "Charles Stanley's trusted teaching — sermons, articles, and daily devotions."),
+    link("min-ttb", "Thru the Bible — J. Vernon McGee", "J. Vernon McGee", "https://www.ttb.org/", "Lesson", "Ministry", "The classic verse-by-verse walk through the whole Bible, Genesis to Revelation."),
+    link("min-turningpoint", "Turning Point — David Jeremiah", "David Jeremiah", "https://davidjeremiah.blog/", "Message", "Ministry", "David Jeremiah's teaching on the Bible's big story, with Christ at the center."),
+    link("min-allen-jackson", "Allen Jackson Ministries", "Pastor Allen Jackson", "https://allenjackson.com/", "Message", "Ministry", "Pastor Allen Jackson (not the country singer) — practical, Bible-first teaching, broadcasts, and a reading plan."),
+    link("min-dobson", "Dr. James Dobson Family Institute", "Dr. James Dobson", "https://www.drjamesdobson.org/", "Resource", "Ministry", "Trusted, faith-based help for marriage, parenting, and family life — broadcasts and the Dr. Dobson Minute."),
+    link("min-odb", "Our Daily Bread", "Our Daily Bread Ministries", "https://www.odbm.org/en/devotionals", "Resource", "Ministry", "One of the most-loved daily devotionals — a verse, a short reflection, and a prayer."),
   ]),
 ];
 
