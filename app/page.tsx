@@ -47,6 +47,7 @@ export default function TheDJCaresPage() {
   const [dark, setDark] = useState(true);
   const [tab, setTab] = useState<Tab>("faith");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [playerSyncVersion, setPlayerSyncVersion] = useState(0);
   const [libFilter, setLibFilter] = useState("All");
   const [getzVideo, setGetzVideo] = useState<LifeEssentialsPrinciple | null>(null);
   const [faithVid, setFaithVid] = useState<{ youtubeId: string; title: string } | null>(null);
@@ -327,8 +328,19 @@ export default function TheDJCaresPage() {
           <>
             {/* Music playlists — TheDJCares-reviewed, streaming right here */}
             <h3 style={{ fontSize: 22, fontWeight: 900, color: text, margin: "0 0 4px" }}>🎵 The Music</h3>
-            <p style={{ fontSize: 14, color: sub, margin: "0 0 16px" }}>
+            <p style={{ fontSize: 14, color: sub, margin: "0 0 10px" }}>
               TheDJCares-reviewed playlists — press play, they stream right here.
+            </p>
+            <p style={{ fontSize: 13, color: sub, margin: "0 0 16px" }}>
+              Apple Music member? Sign in on any one player, then{" "}
+              <button
+                type="button"
+                onClick={() => setPlayerSyncVersion(v => v + 1)}
+                style={{ background: "none", border: "none", padding: 0, font: "inherit", fontWeight: 800, color: "#A78BFA", cursor: "pointer", textDecoration: "underline" }}
+              >
+                sync the rest ↻
+              </button>{" "}
+              — no need to sign in seven times.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: 44 }}>
               {[
@@ -341,6 +353,7 @@ export default function TheDJCaresPage() {
               ].map(pl => (
                 <div key={pl.path} style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, overflow: "hidden" }}>
                   <iframe
+                    key={`${pl.path}-${playerSyncVersion}`}
                     src={`https://embed.music.apple.com/us/playlist/${pl.path}`}
                     title={pl.title}
                     loading="lazy"
