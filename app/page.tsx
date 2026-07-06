@@ -414,11 +414,6 @@ export default function TheDJCaresPage() {
           </>
         )}
 
-        <footer style={{ marginTop: 60, textAlign: "center", borderTop: `1px solid ${border}`, paddingTop: 28 }}>
-          <p style={{ fontSize: 13, color: sub, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.10em", margin: 0 }}>
-            © 2026 Open Mirror LLC · Follow Jesus. Love God. Pray.
-          </p>
-        </footer>
       </div>
 
       {getzVideo?.youtubeId && (
