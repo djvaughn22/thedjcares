@@ -1,3 +1,9 @@
 node_modules
 .next
 .vercel
+
+# local surgery backups (do not commit)
+.microsurgery-backups/
+.surgery-backups/
+*.backup
+*.before-*
