@@ -1,11 +1,20 @@
 "use client";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CANONICAL SOURCE — Open Mirror satellite nav (Stage A of the reusable-
+// component plan, docs/openmirror-audit/04-reusable-component-plan.md).
+//
+// Edit ONLY here: hub repo → packages/openmirror-ui/OpenMirrorNav.tsx
+// Then run: scripts/sync-ui.sh (copies this file into every satellite repo,
+// overwriting the copies there — never edit the copies in site repos).
+//
+// The hub's own full-family menu is separate: src/components/OpenMirrorNav.tsx
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { useEffect, useRef, useState } from "react";
 
 type Item = { label: string; href: string; note?: string; blank?: boolean };
 
-// Order: hub → faith apps → live sites → coming-soon → resources → still-being-
-// -figured-out (WatchedNotWatched / WhatAmIAI / Reflect) → PleaseBeReady last.
 const LINKS: Item[] = [
   { label: "Open Mirror Home", href: "https://openmirrorllc.com" },
   { label: "About Open Mirror", href: "https://openmirrorllc.com/about-open-mirror" },
