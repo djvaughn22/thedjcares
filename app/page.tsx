@@ -47,6 +47,7 @@ export default function TheDJCaresPage() {
   const [tab, setTab] = useState<Tab>("faith");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [playerSyncVersion, setPlayerSyncVersion] = useState(0);
+  const [openPlaylists, setOpenPlaylists] = useState<Record<string, boolean>>({});
   const [libFilter, setLibFilter] = useState("All");
   const [getzVideo, setGetzVideo] = useState<LifeEssentialsPrinciple | null>(null);
   const [faithVid, setFaithVid] = useState<{ youtubeId: string; title: string } | null>(null);
@@ -386,14 +387,34 @@ export default function TheDJCaresPage() {
                 <p style={{ fontSize: 14, color: sub, margin: "0 0 16px" }}>{theme.blurb}</p>
 
                 {theme.playlistId && (
-                  <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden", marginBottom: 16 }}>
-                    <iframe
-                      src={`https://www.youtube-nocookie.com/embed/videoseries?list=${theme.playlistId}&modestbranding=1&rel=0`}
-                      title={`${theme.label} playlist`}
-                      allow="encrypted-media; picture-in-picture; fullscreen"
-                      allowFullScreen
-                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
-                    />
+                  <div style={{ marginBottom: 16 }}>
+                    {openPlaylists[theme.key] ? (
+                      <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
+                        <iframe
+                          src={`https://www.youtube-nocookie.com/embed/videoseries?list=${theme.playlistId}&modestbranding=1&rel=0`}
+                          title={`${theme.label} playlist`}
+                          allow="encrypted-media; picture-in-picture; fullscreen"
+                          allowFullScreen
+                          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setOpenPlaylists(o => ({ ...o, [theme.key]: true }))}
+                        className="pop"
+                        style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", aspectRatio: "16 / 9", background: "#000", border: `2px solid ${border}`, borderRadius: 14, cursor: "pointer" }}
+                        aria-label={`Play the ${theme.label} playlist`}
+                      >
+                        <span style={{ fontSize: 44 }}>▶️</span>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>Play the {theme.label} playlist</span>
+                      </button>
+                    )}
+                    <p style={{ fontSize: 12, color: sub, margin: "8px 0 0", textAlign: "right" }}>
+                      If YouTube blocks playback here,{" "}
+                      <a href={`https://www.youtube.com/playlist?list=${theme.playlistId}`} target="_blank" rel="noopener noreferrer" style={{ color: "#A78BFA", fontWeight: 800, textDecoration: "none" }}>
+                        watch on YouTube →
+                      </a>
+                    </p>
                   </div>
                 )}
 
@@ -456,6 +477,19 @@ export default function TheDJCaresPage() {
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
               />
             </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
+              <p style={{ fontSize: 13, color: "#cbd5e1", margin: 0 }}>
+                If YouTube blocks playback here, open it directly.
+              </p>
+              <a
+                href={`https://www.youtube.com/watch?v=${getzVideo.youtubeId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ flexShrink: 0, background: "#A78BFA", color: "#0C0C0C", borderRadius: 50, padding: "8px 18px", fontSize: 13, fontWeight: 800, textDecoration: "none" }}
+              >
+                ▶ Watch on YouTube
+              </a>
+            </div>
           </div>
         </div>
       )}
@@ -484,6 +518,19 @@ export default function TheDJCaresPage() {
                 allowFullScreen
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
               />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
+              <p style={{ fontSize: 13, color: "#cbd5e1", margin: 0 }}>
+                If YouTube blocks playback here, open it directly.
+              </p>
+              <a
+                href={`https://www.youtube.com/watch?v=${faithVid.youtubeId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ flexShrink: 0, background: "#A78BFA", color: "#0C0C0C", borderRadius: 50, padding: "8px 18px", fontSize: 13, fontWeight: 800, textDecoration: "none" }}
+              >
+                ▶ Watch on YouTube
+              </a>
             </div>
           </div>
         </div>
