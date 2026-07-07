@@ -47,13 +47,19 @@ html[data-om-theme="light"] body {
 }
 
 /* Family surfaces */
-html[data-om-theme="light"] :is([class*="bg-[#0b1220]"], [class*="bg-slate-950"], [class*="bg-slate-900"], [style*="background: #0b1220"], [style*="background:#0b1220"]) {
+html[data-om-theme="light"] :is([class*="bg-[#0b1220]"], [class*="bg-slate-950"], [class*="bg-slate-900"]),
+html[data-om-theme="light"] [style*="background: #0b1220"],
+html[data-om-theme="light"] [style*="background:#0b1220"] {
   background-color: #eef2f7 !important;
 }
-html[data-om-theme="light"] :is([class*="bg-[#141d2e]"], [style*="background: #141d2e"], [style*="background:#141d2e"]) {
+html[data-om-theme="light"] [class*="bg-[#141d2e]"],
+html[data-om-theme="light"] [style*="background: #141d2e"],
+html[data-om-theme="light"] [style*="background:#141d2e"] {
   background-color: #ffffff !important;
 }
-html[data-om-theme="light"] :is([class*="bg-[#1c2740]"], [style*="background: #1c2740"], [style*="background:#1c2740"]) {
+html[data-om-theme="light"] [class*="bg-[#1c2740]"],
+html[data-om-theme="light"] [style*="background: #1c2740"],
+html[data-om-theme="light"] [style*="background:#1c2740"] {
   background-color: #eef4ff !important;
 }
 html[data-om-theme="light"] :is([class*="bg-[#0c1220]"], [class*="bg-[#07090f]"], [class*="bg-black/"], [class*="bg-slate-800"]) {
@@ -64,15 +70,30 @@ html[data-om-theme="light"] [class*="bg-white/"] {
 }
 
 /* Family borders */
-html[data-om-theme="light"] :is([class*="border-[#26324c]"], [class*="border-[#1c2740]"], [class*="border-white/"], [class*="border-slate-"], [style*="#26324c"]) {
+html[data-om-theme="light"] :is([class*="border-[#26324c]"], [class*="border-[#1c2740]"], [class*="border-white/"], [class*="border-slate-"]),
+html[data-om-theme="light"] [style*="#26324c"] {
   border-color: #dbe2ea !important;
 }
 
 /* Family text */
-html[data-om-theme="light"] :is([class*="text-[#e8edf5]"], [class*="text-white"], [class*="text-slate-1"], [class*="text-slate-2"], [class*="text-slate-3"], [style*="color: #e8edf5"], [style*="color:#e8edf5"]) {
+html[data-om-theme="light"] :is([class*="text-[#e8edf5]"], [class*="text-white"], [class*="text-slate-1"], [class*="text-slate-2"], [class*="text-slate-3"]) {
   color: #0f172a !important;
 }
-html[data-om-theme="light"] :is([class*="text-[#94a3b8]"], [class*="text-slate-4"], [class*="text-slate-5"], [class*="text-slate-6"], [class*="text-slate-7"], [style*="color: #94a3b8"], [style*="color:#94a3b8"]) {
+html[data-om-theme="light"] [style*="color: #e8edf5"],
+html[data-om-theme="light"] [style*="color:#e8edf5"] {
+  color: #0f172a !important;
+}
+/* Safety net: headings always dark on light. Accent spans inside keep their
+   own inline colors, so ".com" and "LLC" stay colorful. */
+html[data-om-theme="light"] :is(h1, h2, h3, h4) {
+  color: #0f172a !important;
+}
+html[data-om-theme="light"] main {
+  color: #0f172a;
+}
+html[data-om-theme="light"] :is([class*="text-[#94a3b8]"], [class*="text-slate-4"], [class*="text-slate-5"], [class*="text-slate-6"], [class*="text-slate-7"]),
+html[data-om-theme="light"] [style*="color: #94a3b8"],
+html[data-om-theme="light"] [style*="color:#94a3b8"] {
   color: #475569 !important;
 }
 html[data-om-theme="light"] :is([class*="text-emerald-5"], [class*="text-emerald-1"], [class*="text-emerald-2"]) {
