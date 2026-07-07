@@ -16,7 +16,7 @@ type Props = {
 
 export default function OpenMirrorFooter({ siteName, tagline }: Props) {
   return (
-    <footer style={{ marginTop: 60, textAlign: "center", borderTop: "1px solid #26324c", padding: "28px 20px 36px" }}>
+    <footer className="om-footer" style={{ marginTop: 60, textAlign: "center", borderTop: "1px solid #26324c", padding: "28px 20px 36px" }}>
       {siteName && (
         <p style={{ fontSize: 13, color: "#94a3b8", fontWeight: 700, margin: "0 0 6px" }}>
           © {new Date().getFullYear()} {siteName}
@@ -27,6 +27,8 @@ export default function OpenMirrorFooter({ siteName, tagline }: Props) {
         <a href="https://openmirrorllc.com" style={{ color: "#e8edf5", textDecoration: "none" }}>Open Mirror LLC</a>
         {" · "}
         <a href="https://openmirrorllc.com/about-open-mirror" style={{ color: "#94a3b8", textDecoration: "none" }}>About</a>
+        {" · "}
+        <a href="https://crossheartpray.com" style={{ color: "#94a3b8", textDecoration: "none" }}>✝️ CrossHeartPray</a>
       </p>
     </footer>
   );

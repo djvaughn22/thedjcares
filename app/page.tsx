@@ -51,9 +51,13 @@ export default function TheDJCaresPage() {
   const [getzVideo, setGetzVideo] = useState<LifeEssentialsPrinciple | null>(null);
   const [faithVid, setFaithVid] = useState<{ youtubeId: string; title: string } | null>(null);
 
+  // Follow the family ☀️/🌙 toggle in the Open Mirror bar.
   useEffect(() => {
-    const saved = localStorage.getItem("djc-theme");
-    if (saved) setDark(saved === "dark");
+    const follow = () =>
+      setDark(document.documentElement.dataset.omTheme !== "light");
+    follow();
+    window.addEventListener("om-theme", follow);
+    return () => window.removeEventListener("om-theme", follow);
   }, []);
 
   const copyLine = (text: string, source: string, i: number) => {
