@@ -35,6 +35,15 @@ const ENCOURAGE: { day: string; label: string; code: string; chapter: string; ve
   { day: "Saturday", label: "Proverbs 13:12", code: "PRO", chapter: "13", verse: "12", text: `Hope deferred makes the heart sick, but when longing is fulfilled, it is a tree of life.` },
 ];
 
+// Every faith video in site order — the clicked video plays first, then the
+// rest follow in order and wrap back to the start, like one big playlist.
+const ALL_FAITH_VIDEO_IDS = FAITH_THEMES.flatMap(t => t.videos.map(v => v.youtubeId));
+const faithPlaylistFrom = (id: string) => {
+  const i = ALL_FAITH_VIDEO_IDS.indexOf(id);
+  if (i < 0) return "";
+  return [...ALL_FAITH_VIDEO_IDS.slice(i + 1), ...ALL_FAITH_VIDEO_IDS.slice(0, i)].join(",");
+};
+
 const bibleVerseUrl = (v: { code: string; chapter: string; verse: string }) =>
   `https://www.bible.com/bible/206/${v.code}.${v.chapter}.${v.verse}.WEBUS`;
 const bibleChapterUrl = (v: { code: string; chapter: string }) =>
@@ -48,6 +57,7 @@ export default function TheDJCaresPage() {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [playerSyncVersion, setPlayerSyncVersion] = useState(0);
   const [openPlaylists, setOpenPlaylists] = useState<Record<string, boolean>>({});
+  const [playerReload, setPlayerReload] = useState(0);
   const [libFilter, setLibFilter] = useState("All");
   const [getzVideo, setGetzVideo] = useState<LifeEssentialsPrinciple | null>(null);
   const [faithVid, setFaithVid] = useState<{ youtubeId: string; title: string } | null>(null);
@@ -391,7 +401,7 @@ export default function TheDJCaresPage() {
                     {openPlaylists[theme.key] ? (
                       <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
                         <iframe
-                          src={`https://www.youtube-nocookie.com/embed/videoseries?list=${theme.playlistId}&modestbranding=1&rel=0`}
+                          src={`https://www.youtube.com/embed/videoseries?list=${theme.playlistId}&modestbranding=1&rel=0`}
                           title={`${theme.label} playlist`}
                           allow="encrypted-media; picture-in-picture; fullscreen"
                           allowFullScreen
@@ -470,7 +480,8 @@ export default function TheDJCaresPage() {
             </div>
             <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
               <iframe
-                src={`https://www.youtube-nocookie.com/embed/${getzVideo.youtubeId}?autoplay=1&rel=0&modestbranding=1`}
+                key={`${getzVideo.youtubeId}-${playerReload}`}
+                src={`https://www.youtube.com/embed/${getzVideo.youtubeId}?autoplay=1&rel=0&modestbranding=1`}
                 title={getzVideo.principleTitle}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 allowFullScreen
@@ -479,16 +490,32 @@ export default function TheDJCaresPage() {
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
               <p style={{ fontSize: 13, color: "#cbd5e1", margin: 0 }}>
-                If YouTube blocks playback here, open it directly.
+                Blocked or asked to sign in? Sign in on YouTube, then reload — you stay right here.
               </p>
-              <a
-                href={`https://www.youtube.com/watch?v=${getzVideo.youtubeId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ flexShrink: 0, background: "#A78BFA", color: "#0C0C0C", borderRadius: 50, padding: "8px 18px", fontSize: 13, fontWeight: 800, textDecoration: "none" }}
-              >
-                ▶ Watch on YouTube
-              </a>
+              <span style={{ display: "inline-flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
+                <a
+                  href="https://accounts.google.com/ServiceLogin?service=youtube"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "8px 16px", fontSize: 13, fontWeight: 800, textDecoration: "none" }}
+                >
+                  Sign in on YouTube
+                </a>
+                <button
+                  onClick={() => setPlayerReload(v => v + 1)}
+                  style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "8px 16px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}
+                >
+                  ↻ Reload player
+                </button>
+                <a
+                  href={`https://www.youtube.com/watch?v=${getzVideo.youtubeId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ background: "#A78BFA", color: "#0C0C0C", borderRadius: 50, padding: "8px 16px", fontSize: 13, fontWeight: 800, textDecoration: "none" }}
+                >
+                  ▶ Watch on YouTube
+                </a>
+              </span>
             </div>
           </div>
         </div>
@@ -512,25 +539,45 @@ export default function TheDJCaresPage() {
             </div>
             <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
               <iframe
-                src={`https://www.youtube-nocookie.com/embed/${faithVid.youtubeId}?autoplay=1&rel=0&modestbranding=1`}
+                key={`${faithVid.youtubeId}-${playerReload}`}
+                src={`https://www.youtube.com/embed/${faithVid.youtubeId}?autoplay=1&rel=0&modestbranding=1&loop=1&playlist=${faithPlaylistFrom(faithVid.youtubeId)}`}
                 title={faithVid.title}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 allowFullScreen
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
               />
             </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
+            <p style={{ fontSize: 12, color: "#94a3b8", margin: "8px 0 0" }}>
+              Videos keep playing in order, all the way around — like one big playlist.
+            </p>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
               <p style={{ fontSize: 13, color: "#cbd5e1", margin: 0 }}>
-                If YouTube blocks playback here, open it directly.
+                Blocked or asked to sign in? Sign in on YouTube, then reload — you stay right here.
               </p>
-              <a
-                href={`https://www.youtube.com/watch?v=${faithVid.youtubeId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ flexShrink: 0, background: "#A78BFA", color: "#0C0C0C", borderRadius: 50, padding: "8px 18px", fontSize: 13, fontWeight: 800, textDecoration: "none" }}
-              >
-                ▶ Watch on YouTube
-              </a>
+              <span style={{ display: "inline-flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
+                <a
+                  href="https://accounts.google.com/ServiceLogin?service=youtube"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "8px 16px", fontSize: 13, fontWeight: 800, textDecoration: "none" }}
+                >
+                  Sign in on YouTube
+                </a>
+                <button
+                  onClick={() => setPlayerReload(v => v + 1)}
+                  style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "8px 16px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}
+                >
+                  ↻ Reload player
+                </button>
+                <a
+                  href={`https://www.youtube.com/watch?v=${faithVid.youtubeId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ background: "#A78BFA", color: "#0C0C0C", borderRadius: 50, padding: "8px 16px", fontSize: 13, fontWeight: 800, textDecoration: "none" }}
+                >
+                  ▶ Watch on YouTube
+                </a>
+              </span>
             </div>
           </div>
         </div>
