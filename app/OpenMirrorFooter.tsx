@@ -35,7 +35,7 @@ export default function OpenMirrorFooter({ siteName, tagline, accent }: Props) {
         {" · "}
         <a href="https://openmirrorllc.com/about-open-mirror" style={{ color: "#94a3b8", textDecoration: "none" }}>About</a>
         {" · "}
-        <a href="https://crossheartpray.com" style={{ color: "#94a3b8", textDecoration: "none" }}>✝️ CrossHeartPray</a>
+        <a href="https://crossheartpray.com" aria-label="CrossHeartPray" title="CrossHeartPray" style={{ textDecoration: "none" }}>✝️ ❤️ 🙏</a>
       </p>
     </footer>
   );
