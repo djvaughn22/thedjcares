@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import OpenMirrorNav from "./OpenMirrorNav";
 import {
   DJ_CARES_LIBRARY,
   getEmbedUrl,
@@ -187,7 +186,6 @@ export default function TheDJCaresPage() {
 
   return (
     <main style={{ background: bg, minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      <OpenMirrorNav />
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "36px 24px 80px" }}>
 
         <div style={{ textAlign: "center", marginBottom: 40 }}>
