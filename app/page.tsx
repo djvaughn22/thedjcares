@@ -56,6 +56,9 @@ export default function TheDJCaresPage() {
   const [tab, setTab] = useState<Tab>("faith");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [playerSyncVersion, setPlayerSyncVersion] = useState(0);
+  // Re-keying every music embed reloads it — the only reliable way to stop
+  // Apple/Spotify/YouTube iframes when a video starts. One sound at a time.
+  const stopMusic = () => setPlayerSyncVersion(v => v + 1);
   const [openPlaylists, setOpenPlaylists] = useState<Record<string, boolean>>({});
   const [playerReload, setPlayerReload] = useState(0);
   const [libFilter, setLibFilter] = useState("All");
@@ -124,6 +127,7 @@ export default function TheDJCaresPage() {
         {/* Apple Music */}
         {embed && apple && (
           <iframe
+            key={`am-${item.title}-${playerSyncVersion}`}
             src={embed}
             title={item.title}
             loading="lazy"
@@ -136,6 +140,7 @@ export default function TheDJCaresPage() {
         {/* Spotify */}
         {embed && spotify && (
           <iframe
+            key={`sp-${item.title}-${playerSyncVersion}`}
             src={embed}
             title={item.title}
             loading="lazy"
@@ -149,6 +154,7 @@ export default function TheDJCaresPage() {
         {embed && !apple && !spotify && (
           <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", borderRadius: 14, overflow: "hidden", margin: "12px 0 14px", background: "#000" }}>
             <iframe
+              key={`yt-${item.title}-${playerSyncVersion}`}
               src={embed}
               title={item.title}
               loading="lazy"
@@ -316,7 +322,7 @@ export default function TheDJCaresPage() {
                       </div>
                       {getz && (
                         <button
-                          onClick={() => setGetzVideo(getz)}
+                          onClick={() => { stopMusic(); setGetzVideo(getz); }}
                           style={{ width: "100%", background: "none", border: "none", borderTop: `1px solid ${border}`, padding: "11px 16px", fontSize: 12, fontWeight: 800, letterSpacing: "0.04em", color: "#A78BFA", cursor: "pointer", textAlign: "center" }}
                         >
                           🎬 Watch Gene Getz
@@ -401,6 +407,7 @@ export default function TheDJCaresPage() {
                     {openPlaylists[theme.key] ? (
                       <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
                         <iframe
+                          key={`tpl-${theme.key}-${playerSyncVersion}`}
                           src={`https://www.youtube.com/embed/videoseries?list=${theme.playlistId}&modestbranding=1&rel=0`}
                           title={`${theme.label} playlist`}
                           allow="encrypted-media; picture-in-picture; fullscreen"
@@ -410,7 +417,7 @@ export default function TheDJCaresPage() {
                       </div>
                     ) : (
                       <button
-                        onClick={() => setOpenPlaylists(o => ({ ...o, [theme.key]: true }))}
+                        onClick={() => { stopMusic(); setOpenPlaylists(o => ({ ...o, [theme.key]: true })); }}
                         className="pop"
                         style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", aspectRatio: "16 / 9", background: "#000", border: `2px solid ${border}`, borderRadius: 14, cursor: "pointer" }}
                         aria-label={`Play the ${theme.label} playlist`}
@@ -432,7 +439,7 @@ export default function TheDJCaresPage() {
                   {theme.videos.map(v => (
                     <button
                       key={v.youtubeId}
-                      onClick={() => setFaithVid({ youtubeId: v.youtubeId, title: `${v.title} — ${v.artist}` })}
+                      onClick={() => { stopMusic(); setFaithVid({ youtubeId: v.youtubeId, title: `${v.title} — ${v.artist}` }); }}
                       className="pop"
                       style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, overflow: "hidden", cursor: "pointer", textAlign: "left", padding: 0 }}
                     >
