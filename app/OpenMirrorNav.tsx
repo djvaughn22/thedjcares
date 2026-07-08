@@ -20,7 +20,7 @@ const FAMILY = [
   { emoji: "🐶", name: "DontCloneMeTom", href: "https://dontclonemetom.com" },
   { emoji: "😂", name: "iDontCry", href: "https://idontcry.com" },
   { emoji: "🥊", name: "StepInTheRing", href: "https://stepinthering.com" },
-  { emoji: "⛷️", name: "SnowDoku", href: "https://snowdoku.com" },
+  { emoji: "🧩", name: "OpenDoku", href: "https://opendoku.com" },
   { emoji: "🤖", name: "WhatAmIAI", href: "https://whatamiai.com" },
   { emoji: "🧰", name: "PleaseBeReady", href: "https://pleasebeready.com" },
   { emoji: "🎬", name: "WatchedNotWatched", href: "https://watchednotwatched.com" },
