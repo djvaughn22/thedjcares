@@ -460,6 +460,20 @@ export default function TheDJCaresPage() {
           </>
         )}
 
+        {/* About TheDJCares — quiet card, every tab */}
+        <div style={{ background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "20px 22px", marginTop: 20 }}>
+          <p style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "#A78BFA", margin: "0 0 8px" }}>
+            About TheDJCares
+          </p>
+          <p style={{ fontSize: 14, color: sub, margin: 0, lineHeight: 1.7 }}>
+            TheDJCares is part of the Open Mirror family. It supports the heart behind{" "}
+            <a href="https://crossheartpray.com" target="_blank" rel="noopener noreferrer" style={{ color: "#A78BFA", fontWeight: 800, textDecoration: "none" }}>CrossHeartPray</a>{" "}
+            by gathering trusted Christian encouragement in one place: messages, music, prayer,
+            teaching, and resources that point people toward Jesus. It is a companion project —
+            simple, curated, and built to encourage.
+          </p>
+        </div>
+
       </div>
 
       {getzVideo?.youtubeId && (
