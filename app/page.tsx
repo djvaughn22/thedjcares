@@ -52,7 +52,7 @@ const bibleVerseUrl = (v: { code: string; chapter: string; verse: string }) =>
 const bibleChapterUrl = (v: { code: string; chapter: string }) =>
   `https://www.bible.com/bible/206/${v.code}.${v.chapter}.WEBUS`;
 
-type Tab = "library" | "encourage" | "faith";
+type Tab = "faith" | "library" | "encourage" | "request";
 
 // Shared "blocked / sign-in" help row for both video modals. Buttons wrap and
 // center on narrow screens so nothing gets pushed off the edge.
@@ -92,6 +92,21 @@ const spotifySearch = (item: LibraryItem) =>
   `https://open.spotify.com/search/${encodeURIComponent(`${item.title} ${item.author ?? ""}`.trim())}`;
 const appleSearch = (item: LibraryItem) =>
   `https://music.apple.com/us/search?term=${encodeURIComponent(`${item.title} ${item.author ?? ""}`.trim())}`;
+
+// Pre-filled request email — the dynamic pipeline. Everything is reviewed
+// Gospel-first (the CrossHeartPray rule) before it's added.
+const REQUEST_MAILTO =
+  "mailto:ask@openmirrorllc.com?subject=" +
+  encodeURIComponent("TheDJCares Request") +
+  "&body=" +
+  encodeURIComponent(
+    "What I'd love on TheDJCares:\n\n" +
+      "Title / name:\n" +
+      "Artist or speaker:\n" +
+      "Link (Apple Music, Spotify, or YouTube):\n" +
+      "Why it encourages:\n\n" +
+      "— I understand every request is reviewed Gospel-first before it's added. Thank you!"
+  );
 
 export default function TheDJCaresPage() {
   const [dark, setDark] = useState(true);
@@ -160,13 +175,19 @@ export default function TheDJCaresPage() {
   const collections = Array.from(
     new Set(DJ_CARES_LIBRARY.map(i => i.collection).filter(Boolean))
   ) as string[];
-  const chips = ["All", ...collections];
   const itemsIn = (c: string) => DJ_CARES_LIBRARY.filter(i => i.collection === c);
+  // Music collections live on the Music & Videos tab; everything else on Library.
+  const MUSIC_COLLECTIONS = ["Playlists"];
+  const musicCollections = collections.filter(c => MUSIC_COLLECTIONS.includes(c));
+  const libraryCollections = collections.filter(c => !MUSIC_COLLECTIONS.includes(c));
+  const libraryCount = DJ_CARES_LIBRARY.filter(i => i.collection && !MUSIC_COLLECTIONS.includes(i.collection)).length;
+  const chips = ["All", ...libraryCollections];
 
   const tabs: { id: Tab; label: string; emoji: string }[] = [
     { id: "faith", label: "Music & Videos", emoji: "🎬" },
     { id: "library", label: "Library", emoji: "📚" },
-    { id: "encourage", label: "Encouragement", emoji: "❤️" },
+    { id: "encourage", label: "Daily Hope", emoji: "📖" },
+    { id: "request", label: "Request", emoji: "💌" },
   ];
 
   // One card, same look for playlists, videos, sermons, and links.
@@ -339,7 +360,7 @@ export default function TheDJCaresPage() {
             {/* Category chips */}
             <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 28, flexWrap: "wrap" }}>
               {chips.map(label => {
-                const count = label === "All" ? DJ_CARES_LIBRARY.length : itemsIn(label).length;
+                const count = label === "All" ? libraryCount : itemsIn(label).length;
                 const selected = libFilter === label;
                 return (
                   <button key={label} onClick={() => setLibFilter(label)} style={{
@@ -354,7 +375,7 @@ export default function TheDJCaresPage() {
             </div>
 
             {/* Sections (All) or a single category */}
-            {(libFilter === "All" ? collections : [libFilter]).map(c => (
+            {(libFilter === "All" ? libraryCollections : [libFilter]).map(c => (
               <section key={c} style={{ marginBottom: 36 }}>
                 <h3 style={{ fontSize: 22, fontWeight: 900, color: text, margin: "0 0 16px" }}>{c}</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -419,11 +440,10 @@ export default function TheDJCaresPage() {
               })}
             </div>
 
-            <div style={{ marginTop: 36, background: dark ? "#1a1440" : "#f3f0ff", border: `2px solid ${dark ? "#33285c" : "#d9ccf5"}`, borderRadius: 20, padding: "24px 28px" }}>
-              <p style={{ fontSize: 15, fontWeight: 800, color: "#A78BFA", margin: "0 0 10px" }}>Want TheDJCares to feature your church or ministry?</p>
-              <p style={{ fontSize: 14, color: sub, margin: "0 0 16px", lineHeight: 1.65 }}>If your church, ministry, or Christian organization wants to be featured, reach out.</p>
-              <a href="mailto:ask@openmirrorllc.com?subject=TheDJCares%20Feature%20Request" style={{ background: "#A78BFA", color: "#0C0C0C", borderRadius: 50, padding: "11px 24px", fontSize: 14, fontWeight: 800, textDecoration: "none", display: "inline-block" }}>Get In Touch</a>
-            </div>
+            <button onClick={() => setTab("request")} className="pop" style={{ width: "100%", marginTop: 32, background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "18px 22px", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 14.5, fontWeight: 800, color: text }}>Have a song, sermon, or playlist to share?</span>
+              <span style={{ fontSize: 14, fontWeight: 900, color: "#A78BFA", flexShrink: 0 }}>💌 Request →</span>
+            </button>
           </>
         )}
 
@@ -446,27 +466,8 @@ export default function TheDJCaresPage() {
               </button>{" "}
               — no need to sign in seven times.
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: 44 }}>
-              {[
-                { title: "Faith Playlist", path: "faith-playlist/pl.u-2aoqXjzsNqgmY7" },
-                { title: "Today's Christian", path: "todays-christian/pl.fecfa8a26ea44ad581d4fe501892c8ff" },
-                { title: "Christian Rap Essentials", path: "christian-rap-essentials/pl.981a3c7a4e4641ceae33034bc51bdceb" },
-                { title: "Christian Workout", path: "christian-workout/pl.4f6345e9ab6f4782bd31250b74ec6b23" },
-                { title: "Country Faith", path: "country-faith/pl.a1f19c594aa846c3898dd98dd99c8910" },
-                { title: "Church Hymns", path: "church-hymns/pl.u-oZyll6RTRo9g6J" },
-              ].map(pl => (
-                <div key={pl.path} style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, overflow: "hidden" }}>
-                  <iframe
-                    key={`${pl.path}-${playerSyncVersion}`}
-                    src={`https://embed.music.apple.com/us/playlist/${pl.path}`}
-                    title={pl.title}
-                    loading="lazy"
-                    allow="autoplay *; encrypted-media *;"
-                    sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
-                    style={{ width: "100%", height: 450, border: 0, background: "transparent" }}
-                  />
-                </div>
-              ))}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 44 }}>
+              {musicCollections.flatMap(itemsIn).map(Card)}
             </div>
 
             <h3 style={{ fontSize: 22, fontWeight: 900, color: text, margin: "0 0 4px" }}>🎬 The Videos</h3>
@@ -543,11 +544,53 @@ export default function TheDJCaresPage() {
               </section>
             ))}
 
-            <div style={{ marginTop: 8, background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "20px 24px" }}>
-              <p style={{ fontSize: 14, fontWeight: 800, color: "#A78BFA", margin: "0 0 8px" }}>Want a whole theme to play end-to-end?</p>
-              <p style={{ fontSize: 14, color: sub, margin: 0, lineHeight: 1.65 }}>
-                Make a YouTube playlist for any mood (Hope, Praise, Joy…), send me the playlist link, and I&apos;ll embed the entire thing here — it plays in order and you edit it anytime in YouTube.
+            <button onClick={() => setTab("request")} className="pop" style={{ width: "100%", marginTop: 8, background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "18px 22px", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 14.5, fontWeight: 800, color: text }}>Have a playlist, song, or mood to add?</span>
+              <span style={{ fontSize: 14, fontWeight: 900, color: "#A78BFA", flexShrink: 0 }}>💌 Request →</span>
+            </button>
+          </>
+        )}
+
+        {/* Request tab — the dynamic pipeline: people send, DJ reviews Gospel-first, adds */}
+        {tab === "request" && (
+          <>
+            <div style={{ marginBottom: 20 }}>
+              <h2 style={{ fontSize: 26, fontWeight: 900, color: text, margin: "0 0 10px" }}>Request a song, sermon, or playlist</h2>
+              <p style={{ fontSize: 16, color: sub, lineHeight: 1.7, margin: 0 }}>
+                TheDJCares grows from what people share. Send a song, sermon, concert, podcast, or a whole playlist link — Apple Music, Spotify, or YouTube — and if it points people to Jesus, I&apos;ll add it here.
               </p>
+            </div>
+
+            <div style={{ background: dark ? "#1a1440" : "#f3f0ff", border: `2px solid ${dark ? "#33285c" : "#d9ccf5"}`, borderRadius: 18, padding: "18px 22px", marginBottom: 18 }}>
+              <p style={{ fontSize: 13, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: "#A78BFA", margin: "0 0 8px" }}>✝️ The one rule — Gospel first</p>
+              <p style={{ fontSize: 14.5, color: sub, margin: 0, lineHeight: 1.65 }}>
+                Every request is reviewed against Scripture, the same way{" "}
+                <a href="https://crossheartpray.com" target="_blank" rel="noopener noreferrer" style={{ color: "#A78BFA", fontWeight: 800, textDecoration: "none" }}>CrossHeartPray</a>{" "}
+                is built. Jesus is first, Scripture is the test. If it points people to Him, it goes in.
+              </p>
+            </div>
+
+            <div style={{ background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "20px 22px" }}>
+              <p style={{ fontSize: 13, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: "#A78BFA", margin: "0 0 14px" }}>What to send</p>
+              {([
+                ["🎵", "A song or artist", "Christian music that lifts people up."],
+                ["🎬", "A sermon or concert", "A message or worship night on YouTube."],
+                ["🎧", "A podcast", "Bible-first teaching worth sharing."],
+                ["📃", "A playlist link", "Apple Music, Spotify, or YouTube — I can embed the whole thing."],
+                ["⛪", "Your church or ministry", "Want to be featured? Send it along."],
+              ] as [string, string, string][]).map(([e, t, d]) => (
+                <div key={t} style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+                  <span style={{ fontSize: 20, flexShrink: 0 }}>{e}</span>
+                  <div>
+                    <p style={{ fontSize: 15, fontWeight: 800, color: text, margin: 0 }}>{t}</p>
+                    <p style={{ fontSize: 13.5, color: sub, margin: "2px 0 0", lineHeight: 1.5 }}>{d}</p>
+                  </div>
+                </div>
+              ))}
+              <a href={REQUEST_MAILTO} style={{ display: "inline-block", marginTop: 6, background: "#A78BFA", color: "#0C0C0C", borderRadius: 50, padding: "13px 28px", fontSize: 15, fontWeight: 900, textDecoration: "none" }}>
+                💌 Send your request
+              </a>
+              <p style={{ fontSize: 12.5, color: sub, margin: "12px 0 0", lineHeight: 1.5 }}>Opens your email to ask@openmirrorllc.com with a ready-to-fill template.</p>
             </div>
           </>
         )}

@@ -32,15 +32,6 @@ export type LibraryItem = {
   verse?: string; // scripture reference — renders a "Read in the Bible" link (e.g. "Romans 1:16-17")
 };
 
-// Top-level filter groups (chips). "All" is added in the UI.
-export const LIBRARY_FILTERS: { label: string; categories: LibraryCategory[] }[] = [
-  { label: "Messages", categories: ["Message", "Pastor"] },
-  { label: "Music", categories: ["Music", "Song"] },
-  { label: "Books", categories: ["Book"] },
-  { label: "Lessons", categories: ["Lesson"] },
-  { label: "Resources", categories: ["Resource"] },
-];
-
 const v = (
   id: string,
   title: string,
@@ -145,6 +136,16 @@ export const DJ_CARES_LIBRARY: LibraryItem[] = [
     v("billy-graham-seoul", "Billy Graham in Seoul, South Korea", "Billy Graham · BGEA", "PQDLjd57vdE", "Message", "Gospel", "Billy Graham's 1973 Seoul Crusade is one of the clearest public examples of Gospel-first preaching reaching millions. Start here: Jesus, repentance, faith, and peace with God. Plays right here.", true),
   ]),
 
+  // Music playlists — Apple Music embeds. Add one line here to add a playlist.
+  ...inCollection("Playlists", [
+    applePl("apple-faith-playlist", "Faith Playlist", "theDJcares", "faith-playlist/pl.u-2aoqXjzsNqgmY7", "Reviewed", "The songs I keep coming back to — TheDJCares-reviewed. Press play and let faith rise.", true),
+    applePl("apple-todays-christian", "Today's Christian", "theDJcares", "todays-christian/pl.fecfa8a26ea44ad581d4fe501892c8ff", "Worship", "Today's Christian music, hand-picked to encourage."),
+    applePl("apple-christian-rap", "Christian Rap Essentials", "theDJcares", "christian-rap-essentials/pl.981a3c7a4e4641ceae33034bc51bdceb", "Rap", "Faith-filled bars — Christian hip-hop that points to Jesus."),
+    applePl("apple-christian-workout", "Christian Workout", "theDJcares", "christian-workout/pl.4f6345e9ab6f4782bd31250b74ec6b23", "Energy", "High-energy worship to move to — eyes up while you push."),
+    applePl("apple-country-faith", "Country Faith", "theDJcares", "country-faith/pl.a1f19c594aa846c3898dd98dd99c8910", "Country", "Country music with a faithful heart."),
+    applePl("apple-church-hymns", "Church Hymns", "theDJcares", "church-hymns/pl.u-oZyll6RTRo9g6J", "Hymn", "The old hymns that have carried the church for generations."),
+  ]),
+
   ...inCollection("The Gospel", [
     v("adrian-rogers-saving-grace", "The Gospel of His Saving Grace", "Adrian Rogers · Love Worth Finding", "23Iz4golt-I", "Message", "Gospel", "Adrian Rogers preaches the heart of the Gospel — the saving grace of Jesus. Plays right here."),
     link("billy-graham-classics", "Billy Graham Classics", "Billy Graham · BGEA", "https://billygraham.org/classics", "Message", "Gospel", "Timeless crusade messages from Billy Graham — clear, Christ-centered preaching. Watch a full classic."),
@@ -152,8 +153,6 @@ export const DJ_CARES_LIBRARY: LibraryItem[] = [
   ]),
 
   ...inCollection("Hymns & Worship", [
-    applePl("apple-faith-playlist", "Faith Playlist", "theDJcares", "faith-playlist/pl.u-2aoqXjzsNqgmY7", "Reviewed", "TheDJCares-reviewed music encouragement — the songs I keep coming back to. Press play and let faith rise.", true),
-    applePl("apple-church-hymns", "Church Hymns", "theDJcares", "church-hymns/pl.u-oZyll6RTRo9g6J", "Hymn", "TheDJCares-reviewed music encouragement — the old hymns that have carried the church for generations.", true),
     v("hymn-amazing-grace", "Amazing Grace", "John Newton · Reawaken Hymns", "aDmcdZTEU5E", "Song", "Hymn", "“I once was lost, but now am found.” The great hymn of God's grace — plays right here."),
     v("hymn-how-great-thou-art", "How Great Thou Art", "Stuart K. Hine · Shane & Shane", "bjWZz90hj4I", "Song", "Hymn", "A hymn of awe at God's creation and salvation. “Then sings my soul…” Plays right here."),
     v("hymn-it-is-well", "It Is Well With My Soul", "Horatio Spafford · Reawaken Hymns", "i4Mo9pkmd98", "Song", "Hymn", "Written in deep grief — peace with God even when everything else is shaking."),
