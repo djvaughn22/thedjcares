@@ -76,6 +76,23 @@ function PlayerHelp({ watchUrl, onReload }: { watchUrl: string; onReload: () => 
   );
 }
 
+// A branded cover emoji for link-only cards (ministries, resources) that have
+// no player art to show — keeps every card looking finished.
+function coverEmoji(item: LibraryItem): string {
+  const c = item.category;
+  if (c === "Message" || c === "Pastor") return "🎙️";
+  if (c === "Book") return "📚";
+  if (c === "Lesson") return "📖";
+  if (c === "Resource") return "✝️";
+  return "🎧";
+}
+
+// Same title on both services so a non-subscriber can still find it.
+const spotifySearch = (item: LibraryItem) =>
+  `https://open.spotify.com/search/${encodeURIComponent(`${item.title} ${item.author ?? ""}`.trim())}`;
+const appleSearch = (item: LibraryItem) =>
+  `https://music.apple.com/us/search?term=${encodeURIComponent(`${item.title} ${item.author ?? ""}`.trim())}`;
+
 export default function TheDJCaresPage() {
   const [dark, setDark] = useState(true);
   const [tab, setTab] = useState<Tab>("faith");
@@ -173,6 +190,13 @@ export default function TheDJCaresPage() {
           <span style={{ fontSize: 11, fontWeight: 800, color: sub, textTransform: "uppercase", letterSpacing: "0.08em", flexShrink: 0, paddingTop: 3 }}>{kind}</span>
         </div>
 
+        {/* Branded cover for link-only items (ministries, resources) — no player art to show */}
+        {!embed && !item.search && (
+          <div style={{ position: "relative", width: "100%", height: 100, borderRadius: 14, margin: "12px 0 14px", overflow: "hidden", border: `1px solid ${border}`, background: `linear-gradient(135deg, ${dark ? "#2a2350" : "#e9e2ff"}, ${dark ? "#141d2e" : "#f6f2ff"})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: 46 }}>{coverEmoji(item)}</span>
+          </div>
+        )}
+
         {/* Apple Music */}
         {embed && apple && (
           <iframe
@@ -197,6 +221,18 @@ export default function TheDJCaresPage() {
             allowFullScreen
             style={{ width: "100%", height: spotifyHeight, border: 0, borderRadius: 14, overflow: "hidden", margin: "12px 0 14px" }}
           />
+        )}
+
+        {/* Not a subscriber? Offer the other service so everyone can listen. */}
+        {apple && (
+          <a href={spotifySearch(item)} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, margin: "0 0 14px", fontSize: 13, fontWeight: 800, color: "#1DB954", textDecoration: "none" }}>
+            🟢 No Apple Music? Find it on Spotify →
+          </a>
+        )}
+        {spotify && (
+          <a href={appleSearch(item)} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, margin: "0 0 14px", fontSize: 13, fontWeight: 800, color: "#FA57C1", textDecoration: "none" }}>
+            🍎 No Spotify? Find it on Apple Music →
+          </a>
         )}
 
         {/* YouTube video / playlist (responsive 16:9) */}
