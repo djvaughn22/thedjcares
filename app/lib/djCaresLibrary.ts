@@ -159,6 +159,8 @@ export const DJ_CARES_LIBRARY: LibraryItem[] = [
     v("hymn-it-is-well", "It Is Well With My Soul", "Horatio Spafford · Reawaken Hymns", "i4Mo9pkmd98", "Song", "Hymn", "Written in deep grief — peace with God even when everything else is shaking."),
     v("hymn-blessed-assurance", "Blessed Assurance", "Fanny Crosby · Reawaken Hymns", "6GJF1ac37lI", "Song", "Hymn", "“Jesus is mine!” A joyful hymn of confidence and hope in Christ."),
     v("hymn-great-is-thy-faithfulness", "Great Is Thy Faithfulness", "Thomas Chisholm · Reawaken Hymns", "lbDNkwcuBus", "Song", "Hymn", "“Morning by morning new mercies I see.” A hymn of God's steady faithfulness."),
+    v("song-lord-im-tired", "Lord I'm Tired But Don't Give Up On Me", "In the style of Chris Stapleton & Lauren Daigle · fan-made", "yely732kD3g", "Song", "Worship", "A prayer for the worn-out seasons — tired, but not letting go of God, and He's not letting go of you. Plays right here."),
+    v("song-there-was-jesus", "There Was Jesus", "Zach Williams & Dolly Parton", "37wV6D49iEY", "Song", "Worship", "Looking back at the hardest roads and seeing God was there the whole time. Plays right here."),
   ]),
 
   ...inCollection("Podcasts", [
