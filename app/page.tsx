@@ -222,14 +222,14 @@ export default function TheDJCaresPage() {
 
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div style={{ fontSize: 44, marginBottom: 12 }}>🎵</div>
-          <h1 style={{ fontSize: 40, fontWeight: 900, color: text, margin: "0 0 12px" }}>theDJcares<span style={{ color: "#A78BFA" }}>.com</span></h1>
+          <h1 style={{ fontSize: "clamp(1.9rem, 9vw, 2.5rem)", fontWeight: 900, color: text, margin: "0 0 12px" }}>theDJcares<span style={{ color: "#A78BFA" }}>.com</span></h1>
           <p style={{ fontSize: 18, color: sub, lineHeight: 1.7, maxWidth: 480, margin: "0 auto" }}>
             Curated music, sermons, and encouragement — Gospel first. Hand-picked. No algorithm.
           </p>
           <p style={{ fontSize: 14, color: sub, lineHeight: 1.6, maxWidth: 560, margin: "16px auto 0" }}>
             TheDJCares shares hand-picked encouragement, not blanket endorsements. Jesus is first, Scripture is the test, and every resource should point you back to God&apos;s Word, prayer, family, and real-life faith.
           </p>
-          <p style={{ fontSize: 12.5, color: "#A78BFA", fontWeight: 800, lineHeight: 1.5, maxWidth: 560, margin: "14px auto 0" }}>
+          <p className="hero-mobile-hide" style={{ fontSize: 12.5, color: "#A78BFA", fontWeight: 800, lineHeight: 1.5, maxWidth: 560, margin: "14px auto 0" }}>
             Updated library: Billy Graham Seoul • Adrian Rogers • Allen Jackson • Dr. James Dobson • David Jeremiah
           </p>
         </div>
