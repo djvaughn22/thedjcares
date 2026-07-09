@@ -191,10 +191,10 @@ export function getEmbedUrl(item: LibraryItem): string | null {
   if (item.appleEmbed) return item.appleEmbed;
   if (item.spotifyEmbed) return item.spotifyEmbed;
   if (item.embedUrl) return item.embedUrl;
-  if (item.playlistId) return `https://www.youtube-nocookie.com/embed/videoseries?list=${item.playlistId}`;
+  if (item.playlistId) return `https://www.youtube-nocookie.com/embed/videoseries?list=${item.playlistId}&cc_load_policy=1&cc_lang_pref=en`;
   if (!item.isVideo) return null;
   if (item.videoProvider === "youtube" && item.videoId) {
-    return `https://www.youtube-nocookie.com/embed/${item.videoId}`;
+    return `https://www.youtube-nocookie.com/embed/${item.videoId}?cc_load_policy=1&cc_lang_pref=en`;
   }
   return null;
 }

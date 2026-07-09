@@ -38,6 +38,9 @@ const ENCOURAGE: { day: string; label: string; code: string; chapter: string; ve
 // Every faith video in site order — the clicked video plays first, then the
 // rest follow in order and wrap back to the start, like one big playlist.
 const ALL_FAITH_VIDEO_IDS = FAITH_THEMES.flatMap(t => t.videos.map(v => v.youtubeId));
+const FLAT_FAITH_VIDS = FAITH_THEMES.flatMap(t =>
+  t.videos.map(v => ({ youtubeId: v.youtubeId, title: `${v.title} — ${v.artist}` }))
+);
 const faithPlaylistFrom = (id: string) => {
   const i = ALL_FAITH_VIDEO_IDS.indexOf(id);
   if (i < 0) return "";
@@ -73,6 +76,14 @@ export default function TheDJCaresPage() {
     window.addEventListener("om-theme", follow);
     return () => window.removeEventListener("om-theme", follow);
   }, []);
+
+  // ⏮ / ⏭ walk the faith videos in page order (wrapping); 🔁 replays.
+  const stepFaith = (dir: 1 | -1) => {
+    if (!faithVid) return;
+    const i = FLAT_FAITH_VIDS.findIndex(v => v.youtubeId === faithVid.youtubeId);
+    const n = FLAT_FAITH_VIDS[(i + dir + FLAT_FAITH_VIDS.length) % FLAT_FAITH_VIDS.length];
+    setFaithVid(n);
+  };
 
   const copyLine = (text: string, source: string, i: number) => {
     navigator.clipboard.writeText(`"${text}" — ${source}`).then(() => {
@@ -408,7 +419,7 @@ export default function TheDJCaresPage() {
                       <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
                         <iframe
                           key={`tpl-${theme.key}-${playerSyncVersion}`}
-                          src={`https://www.youtube.com/embed/videoseries?list=${theme.playlistId}&modestbranding=1&rel=0`}
+                          src={`https://www.youtube.com/embed/videoseries?list=${theme.playlistId}&modestbranding=1&rel=0&cc_load_policy=1&cc_lang_pref=en`}
                           title={`${theme.label} playlist`}
                           allow="encrypted-media; picture-in-picture; fullscreen"
                           allowFullScreen
@@ -502,7 +513,7 @@ export default function TheDJCaresPage() {
             <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
               <iframe
                 key={`${getzVideo.youtubeId}-${playerReload}`}
-                src={`https://www.youtube.com/embed/${getzVideo.youtubeId}?autoplay=1&rel=0&modestbranding=1`}
+                src={`https://www.youtube.com/embed/${getzVideo.youtubeId}?autoplay=1&rel=0&modestbranding=1&cc_load_policy=1&cc_lang_pref=en`}
                 title={getzVideo.principleTitle}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 allowFullScreen
@@ -561,7 +572,7 @@ export default function TheDJCaresPage() {
             <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
               <iframe
                 key={`${faithVid.youtubeId}-${playerReload}`}
-                src={`https://www.youtube.com/embed/${faithVid.youtubeId}?autoplay=1&rel=0&modestbranding=1&loop=1&playlist=${faithPlaylistFrom(faithVid.youtubeId)}`}
+                src={`https://www.youtube.com/embed/${faithVid.youtubeId}?autoplay=1&rel=0&modestbranding=1&cc_load_policy=1&cc_lang_pref=en&loop=1&playlist=${faithPlaylistFrom(faithVid.youtubeId)}`}
                 title={faithVid.title}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 allowFullScreen
@@ -571,6 +582,17 @@ export default function TheDJCaresPage() {
             <p style={{ fontSize: 12, color: "#94a3b8", margin: "8px 0 0" }}>
               Videos keep playing in order, all the way around — like one big playlist.
             </p>
+            <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+              <button onClick={() => stepFaith(-1)} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "9px 18px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+                ⏮ Previous
+              </button>
+              <button onClick={() => setPlayerReload(v => v + 1)} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "9px 18px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+                🔁 Replay
+              </button>
+              <button onClick={() => stepFaith(1)} style={{ background: "#A78BFA", border: "none", color: "#0C0C0C", borderRadius: 50, padding: "9px 18px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+                Next ⏭
+              </button>
+            </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
               <p style={{ fontSize: 13, color: "#cbd5e1", margin: 0 }}>
                 Blocked or asked to sign in? Sign in on YouTube, then reload — you stay right here.
