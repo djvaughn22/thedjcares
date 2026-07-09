@@ -99,6 +99,22 @@ export default function TheDJCaresPage() {
     return () => window.removeEventListener("om-theme", follow);
   }, []);
 
+  // Modal behavior — Escape closes, background scroll locked — matches the
+  // CrossHeartPray player so the Gene Getz / faith videos feel the same in both.
+  useEffect(() => {
+    if (!getzVideo && !faithVid) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setGetzVideo(null); setFaithVid(null); }
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [getzVideo, faithVid]);
+
   // ⏮ / ⏭ walk the faith videos in page order (wrapping); 🔁 replays.
   const stepFaith = (dir: 1 | -1) => {
     if (!faithVid) return;
