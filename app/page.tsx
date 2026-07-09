@@ -54,6 +54,28 @@ const bibleChapterUrl = (v: { code: string; chapter: string }) =>
 
 type Tab = "library" | "encourage" | "faith";
 
+// Shared "blocked / sign-in" help row for both video modals. Buttons wrap and
+// center on narrow screens so nothing gets pushed off the edge.
+function PlayerHelp({ watchUrl, onReload }: { watchUrl: string; onReload: () => void }) {
+  const pill: React.CSSProperties = {
+    borderRadius: 50, padding: "9px 16px", fontSize: 13, fontWeight: 800, cursor: "pointer",
+    textDecoration: "none", whiteSpace: "nowrap", border: "1px solid rgba(255,255,255,0.25)",
+    background: "rgba(255,255,255,0.1)", color: "#fff",
+  };
+  return (
+    <>
+      <p style={{ fontSize: 12, color: "#94a3b8", textAlign: "center", margin: "12px 0 0", lineHeight: 1.5 }}>
+        Blocked or asked to sign in? Sign in on YouTube, then reload — you stay right here.
+      </p>
+      <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+        <a href="https://accounts.google.com/ServiceLogin?service=youtube" target="_blank" rel="noopener noreferrer" style={pill}>Sign in on YouTube</a>
+        <button onClick={onReload} style={pill}>↻ Reload player</button>
+        <a href={watchUrl} target="_blank" rel="noopener noreferrer" style={{ ...pill, background: "#A78BFA", color: "#0C0C0C", border: "none" }}>▶ Watch on YouTube</a>
+      </div>
+    </>
+  );
+}
+
 export default function TheDJCaresPage() {
   const [dark, setDark] = useState(true);
   const [tab, setTab] = useState<Tab>("faith");
@@ -501,7 +523,7 @@ export default function TheDJCaresPage() {
           onClick={() => setGetzVideo(null)}
           style={{ position: "fixed", inset: 0, zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.85)", padding: 16 }}
         >
-          <div onClick={(ev) => ev.stopPropagation()} style={{ width: "100%", maxWidth: 720 }}>
+          <div onClick={(ev) => ev.stopPropagation()} style={{ width: "100%", maxWidth: 720, maxHeight: "calc(100dvh - 32px)", overflowY: "auto", background: "#0f1523", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 18, padding: 16 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
               <p style={{ fontSize: 13, fontWeight: 800, color: "#A78BFA", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 Dr. Gene Getz · {getzVideo.principleTitle}
@@ -520,35 +542,7 @@ export default function TheDJCaresPage() {
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
               />
             </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
-              <p style={{ fontSize: 13, color: "#cbd5e1", margin: 0 }}>
-                Blocked or asked to sign in? Sign in on YouTube, then reload — you stay right here.
-              </p>
-              <span style={{ display: "inline-flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
-                <a
-                  href="https://accounts.google.com/ServiceLogin?service=youtube"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "8px 16px", fontSize: 13, fontWeight: 800, textDecoration: "none" }}
-                >
-                  Sign in on YouTube
-                </a>
-                <button
-                  onClick={() => setPlayerReload(v => v + 1)}
-                  style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "8px 16px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}
-                >
-                  ↻ Reload player
-                </button>
-                <a
-                  href={`https://www.youtube.com/watch?v=${getzVideo.youtubeId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ background: "#A78BFA", color: "#0C0C0C", borderRadius: 50, padding: "8px 16px", fontSize: 13, fontWeight: 800, textDecoration: "none" }}
-                >
-                  ▶ Watch on YouTube
-                </a>
-              </span>
-            </div>
+            <PlayerHelp watchUrl={`https://www.youtube.com/watch?v=${getzVideo.youtubeId}`} onReload={() => setPlayerReload(v => v + 1)} />
           </div>
         </div>
       )}
@@ -560,7 +554,7 @@ export default function TheDJCaresPage() {
           onClick={() => setFaithVid(null)}
           style={{ position: "fixed", inset: 0, zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.85)", padding: 16 }}
         >
-          <div onClick={(ev) => ev.stopPropagation()} style={{ width: "100%", maxWidth: 720 }}>
+          <div onClick={(ev) => ev.stopPropagation()} style={{ width: "100%", maxWidth: 720, maxHeight: "calc(100dvh - 32px)", overflowY: "auto", background: "#0f1523", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 18, padding: 16 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
               <p style={{ fontSize: 13, fontWeight: 800, color: "#A78BFA", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {faithVid.title}
@@ -582,46 +576,18 @@ export default function TheDJCaresPage() {
             <p style={{ fontSize: 12, color: "#94a3b8", margin: "8px 0 0" }}>
               Videos keep playing in order, all the way around — like one big playlist.
             </p>
-            <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
-              <button onClick={() => stepFaith(-1)} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "9px 18px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+              <button onClick={() => stepFaith(-1)} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "9px 14px", fontSize: 14, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
                 ⏮ Previous
               </button>
-              <button onClick={() => setPlayerReload(v => v + 1)} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "9px 18px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+              <button onClick={() => setPlayerReload(v => v + 1)} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "9px 14px", fontSize: 14, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
                 🔁 Replay
               </button>
-              <button onClick={() => stepFaith(1)} style={{ background: "#A78BFA", border: "none", color: "#0C0C0C", borderRadius: 50, padding: "9px 18px", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+              <button onClick={() => stepFaith(1)} style={{ background: "#A78BFA", border: "none", color: "#0C0C0C", borderRadius: 50, padding: "9px 14px", fontSize: 14, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
                 Next ⏭
               </button>
             </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
-              <p style={{ fontSize: 13, color: "#cbd5e1", margin: 0 }}>
-                Blocked or asked to sign in? Sign in on YouTube, then reload — you stay right here.
-              </p>
-              <span style={{ display: "inline-flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
-                <a
-                  href="https://accounts.google.com/ServiceLogin?service=youtube"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "8px 16px", fontSize: 13, fontWeight: 800, textDecoration: "none" }}
-                >
-                  Sign in on YouTube
-                </a>
-                <button
-                  onClick={() => setPlayerReload(v => v + 1)}
-                  style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "8px 16px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}
-                >
-                  ↻ Reload player
-                </button>
-                <a
-                  href={`https://www.youtube.com/watch?v=${faithVid.youtubeId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ background: "#A78BFA", color: "#0C0C0C", borderRadius: 50, padding: "8px 16px", fontSize: 13, fontWeight: 800, textDecoration: "none" }}
-                >
-                  ▶ Watch on YouTube
-                </a>
-              </span>
-            </div>
+            <PlayerHelp watchUrl={`https://www.youtube.com/watch?v=${faithVid.youtubeId}`} onReload={() => setPlayerReload(v => v + 1)} />
           </div>
         </div>
       )}
