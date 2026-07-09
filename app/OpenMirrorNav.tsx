@@ -32,9 +32,9 @@ const FAMILY = [
 export default function OpenMirrorNav({ site }: { site?: string }) {
   return (
     <header className="om-bar" style={{ position: "sticky", top: 0, zIndex: 50, borderBottom: "1px solid #26324c", background: "#0b1220" }}>
-      <style>{`.om-menu summary::-webkit-details-marker{display:none}.om-menu summary::marker{content:""}.om-menu a:hover{background:#1c2740}`}</style>
+      <style>{`.om-menu summary::-webkit-details-marker{display:none}.om-menu summary::marker{content:""}.om-menu a:hover{background:#1c2740}@media (max-width:640px){.om-bar-label{display:none}}`}</style>
       <div style={{ maxWidth: 680, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px" }}>
-        <a href="https://openmirrorllc.com" style={{ display: "inline-flex", alignItems: "baseline", gap: 8, fontSize: 16, fontWeight: 900, letterSpacing: "-0.01em", color: "#e8edf5", textDecoration: "none" }}>
+        <a href="https://openmirrorllc.com" style={{ display: "inline-flex", alignItems: "baseline", gap: 8, fontSize: 16, fontWeight: 900, letterSpacing: "-0.01em", color: "#e8edf5", textDecoration: "none", whiteSpace: "nowrap" }}>
           <span>Open Mirror LLC</span>
         </a>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
