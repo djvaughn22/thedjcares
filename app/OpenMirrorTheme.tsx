@@ -165,7 +165,7 @@ export default function OpenMirrorThemeToggle() {
         aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
         title={theme === "dark" ? "Light mode" : "Dark mode"}
         className="om-theme-btn"
-        style={{ background: "none", border: "1px solid #26324c", borderRadius: 50, padding: "4px 10px", fontSize: 13, lineHeight: 1, cursor: "pointer", color: "#94a3b8" }}
+        style={{ background: "none", border: "1px solid #26324c", borderRadius: 50, padding: "8px 13px", fontSize: 15, lineHeight: 1, cursor: "pointer", color: "#94a3b8", minHeight: 40, touchAction: "manipulation" }}
       >
         {theme === "dark" ? "☀️" : "🌙"}
       </button>

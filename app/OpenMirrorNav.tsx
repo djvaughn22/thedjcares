@@ -47,7 +47,7 @@ export default function OpenMirrorNav({ site }: { site?: string }) {
           <details className="om-menu" style={{ position: "relative" }}>
             <summary
               aria-label="Open Mirror family menu"
-              style={{ listStyle: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 50, border: "1px solid #26324c", background: "#141d2e", color: "#e8edf5", padding: "7px 14px", fontSize: 13, fontWeight: 900 }}
+              style={{ listStyle: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 50, border: "1px solid #26324c", background: "#141d2e", color: "#e8edf5", padding: "10px 16px", fontSize: 14, fontWeight: 900, minHeight: 40, touchAction: "manipulation" }}
             >
               ☰ Menu
             </summary>
@@ -58,7 +58,7 @@ export default function OpenMirrorNav({ site }: { site?: string }) {
                 <a
                   key={f.href}
                   href={f.href}
-                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 9, color: "#e8edf5", fontSize: 14, fontWeight: 700, textDecoration: "none" }}
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 12px", minHeight: 44, boxSizing: "border-box", borderRadius: 9, color: "#e8edf5", fontSize: 14, fontWeight: 700, textDecoration: "none", touchAction: "manipulation" }}
                 >
                   <span aria-hidden="true">{f.emoji}</span>
                   <span>{f.name}</span>
