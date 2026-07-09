@@ -87,11 +87,38 @@ function coverEmoji(item: LibraryItem): string {
   return "🎧";
 }
 
-// Same title on both services so a non-subscriber can still find it.
+// Cover for link-only cards: the org's real logo (Google favicon service),
+// falling back to a branded tile if the logo can't load.
+function LinkCover({ item, dark, border }: { item: LibraryItem; dark: boolean; border: string }) {
+  const [failed, setFailed] = useState(false);
+  const showLogo = Boolean(item.logo) && !failed;
+  return (
+    <div style={{ width: "100%", height: 100, borderRadius: 14, margin: "12px 0 14px", overflow: "hidden", border: `1px solid ${border}`, display: "flex", alignItems: "center", justifyContent: "center", background: showLogo ? "#ffffff" : `linear-gradient(135deg, ${dark ? "#2a2350" : "#e9e2ff"}, ${dark ? "#141d2e" : "#f6f2ff"})` }}>
+      {showLogo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`https://www.google.com/s2/favicons?domain=${item.logo}&sz=128`}
+          alt={item.author ?? item.title}
+          onError={() => setFailed(true)}
+          style={{ height: 56, width: 56, objectFit: "contain" }}
+        />
+      ) : (
+        <span style={{ fontSize: 46 }}>{coverEmoji(item)}</span>
+      )}
+    </div>
+  );
+}
+
+// Same title on both services so a non-subscriber can still find it. Skip
+// "theDJcares" (DJ's own label, not an artist) so the search stays useful.
+const searchTerm = (item: LibraryItem) => {
+  const a = item.author && item.author !== "theDJcares" ? item.author : "";
+  return `${item.title} ${a}`.trim();
+};
 const spotifySearch = (item: LibraryItem) =>
-  `https://open.spotify.com/search/${encodeURIComponent(`${item.title} ${item.author ?? ""}`.trim())}`;
+  `https://open.spotify.com/search/${encodeURIComponent(searchTerm(item))}`;
 const appleSearch = (item: LibraryItem) =>
-  `https://music.apple.com/us/search?term=${encodeURIComponent(`${item.title} ${item.author ?? ""}`.trim())}`;
+  `https://music.apple.com/us/search?term=${encodeURIComponent(searchTerm(item))}`;
 
 // Pre-filled request email — the dynamic pipeline. Everything is reviewed
 // Gospel-first (the CrossHeartPray rule) before it's added.
@@ -211,12 +238,8 @@ export default function TheDJCaresPage() {
           <span style={{ fontSize: 11, fontWeight: 800, color: sub, textTransform: "uppercase", letterSpacing: "0.08em", flexShrink: 0, paddingTop: 3 }}>{kind}</span>
         </div>
 
-        {/* Branded cover for link-only items (ministries, resources) — no player art to show */}
-        {!embed && !item.search && (
-          <div style={{ position: "relative", width: "100%", height: 100, borderRadius: 14, margin: "12px 0 14px", overflow: "hidden", border: `1px solid ${border}`, background: `linear-gradient(135deg, ${dark ? "#2a2350" : "#e9e2ff"}, ${dark ? "#141d2e" : "#f6f2ff"})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 46 }}>{coverEmoji(item)}</span>
-          </div>
-        )}
+        {/* Cover for link-only items (ministries, resources): real logo, else branded tile */}
+        {!embed && !item.search && <LinkCover item={item} dark={dark} border={border} />}
 
         {/* Apple Music */}
         {embed && apple && (
@@ -246,8 +269,8 @@ export default function TheDJCaresPage() {
 
         {/* Not a subscriber? Offer the other service so everyone can listen. */}
         {apple && (
-          <a href={spotifySearch(item)} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, margin: "0 0 14px", fontSize: 13, fontWeight: 800, color: "#1DB954", textDecoration: "none" }}>
-            🟢 No Apple Music? Find it on Spotify →
+          <a href={item.spotifyAlt ?? spotifySearch(item)} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, margin: "0 0 14px", fontSize: 13, fontWeight: 800, color: "#1DB954", textDecoration: "none" }}>
+            {item.spotifyAlt ? "🟢 Prefer Spotify? Open the Spotify playlist →" : "🟢 No Apple Music? Find it on Spotify →"}
           </a>
         )}
         {spotify && (

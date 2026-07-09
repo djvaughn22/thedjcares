@@ -28,8 +28,10 @@ export type LibraryItem = {
   search?: string; // fallback: no verified embeddable id — link to a reliable YouTube search
   appleEmbed?: string; // embed.music.apple.com URL — plays Apple Music in-app
   spotifyEmbed?: string; // open.spotify.com/embed URL — plays Spotify in-app
+  spotifyAlt?: string; // a real Spotify playlist URL for the "also on Spotify" link (else a search)
   collection?: string; // the category/section this item shows under (set by inCollection)
   verse?: string; // scripture reference — renders a "Read in the Bible" link (e.g. "Romans 1:16-17")
+  logo?: string; // brand domain for a real logo on link cards (e.g. "intouch.org"); falls back to a branded tile
 };
 
 const v = (
@@ -65,6 +67,7 @@ const applePl = (
   tag: string,
   summary: string,
   featured = false,
+  spotifyAlt?: string,
 ): LibraryItem => ({
   id,
   title,
@@ -73,6 +76,7 @@ const applePl = (
   tags: [tag],
   summary,
   featured,
+  spotifyAlt,
   appleEmbed: `https://embed.music.apple.com/us/playlist/${path}`,
   url: `https://music.apple.com/us/playlist/${path}`,
 });
@@ -118,7 +122,8 @@ const link = (
   category: LibraryCategory,
   tag: string,
   summary: string,
-): LibraryItem => ({ id, title, author, category, tags: [tag], summary, url });
+  logo?: string,
+): LibraryItem => ({ id, title, author, category, tags: [tag], summary, url, logo });
 
 // Tag every item in a group with its collection (the category/section it shows under).
 const inCollection = (collection: string, items: LibraryItem[]): LibraryItem[] =>
@@ -138,8 +143,8 @@ export const DJ_CARES_LIBRARY: LibraryItem[] = [
 
   // Music playlists — Apple Music embeds. Add one line here to add a playlist.
   ...inCollection("Playlists", [
-    applePl("apple-faith-playlist", "Faith Playlist", "theDJcares", "faith-playlist/pl.u-2aoqXjzsNqgmY7", "Reviewed", "The songs I keep coming back to — TheDJCares-reviewed. Press play and let faith rise.", true),
-    applePl("apple-todays-christian", "Today's Christian", "theDJcares", "todays-christian/pl.fecfa8a26ea44ad581d4fe501892c8ff", "Worship", "Today's Christian music, hand-picked to encourage."),
+    applePl("apple-faith-playlist", "Faith Playlist", "theDJcares", "faith-playlist/pl.u-2aoqXjzsNqgmY7", "Reviewed", "The songs I keep coming back to — TheDJCares-reviewed. Press play and let faith rise.", true, "https://open.spotify.com/playlist/37i9dQZF1DXcb6CQIjdqKy"),
+    applePl("apple-todays-christian", "Today's Christian", "theDJcares", "todays-christian/pl.fecfa8a26ea44ad581d4fe501892c8ff", "Worship", "Today's Christian music, hand-picked to encourage.", false, "https://open.spotify.com/playlist/37i9dQZF1DX5SzTPIoCKiv"),
     applePl("apple-christian-rap", "Christian Rap Essentials", "theDJcares", "christian-rap-essentials/pl.981a3c7a4e4641ceae33034bc51bdceb", "Rap", "Faith-filled bars — Christian hip-hop that points to Jesus."),
     applePl("apple-christian-workout", "Christian Workout", "theDJcares", "christian-workout/pl.4f6345e9ab6f4782bd31250b74ec6b23", "Energy", "High-energy worship to move to — eyes up while you push."),
     applePl("apple-country-faith", "Country Faith", "theDJcares", "country-faith/pl.a1f19c594aa846c3898dd98dd99c8910", "Country", "Country music with a faithful heart."),
@@ -148,8 +153,8 @@ export const DJ_CARES_LIBRARY: LibraryItem[] = [
 
   ...inCollection("The Gospel", [
     v("adrian-rogers-saving-grace", "The Gospel of His Saving Grace", "Adrian Rogers · Love Worth Finding", "23Iz4golt-I", "Message", "Gospel", "Adrian Rogers preaches the heart of the Gospel — the saving grace of Jesus. Plays right here."),
-    link("billy-graham-classics", "Billy Graham Classics", "Billy Graham · BGEA", "https://billygraham.org/classics", "Message", "Gospel", "Timeless crusade messages from Billy Graham — clear, Christ-centered preaching. Watch a full classic."),
-    link("peace-with-god", "Peace With God", "BGEA", "https://peacewithgod.net/", "Resource", "Gospel", "A gentle walk through how to have peace with God through Jesus. A good place to start, or to send a friend."),
+    link("billy-graham-classics", "Billy Graham Classics", "Billy Graham · BGEA", "https://billygraham.org/classics", "Message", "Gospel", "Timeless crusade messages from Billy Graham — clear, Christ-centered preaching. Watch a full classic.", "billygraham.org"),
+    link("peace-with-god", "Peace With God", "BGEA", "https://peacewithgod.net/", "Resource", "Gospel", "A gentle walk through how to have peace with God through Jesus. A good place to start, or to send a friend.", "peacewithgod.net"),
   ]),
 
   ...inCollection("Hymns & Worship", [
@@ -169,13 +174,13 @@ export const DJ_CARES_LIBRARY: LibraryItem[] = [
 
   // Ministry home pages, grouped — one link each (no per-episode buttons).
   ...inCollection("Trusted Ministries", [
-    link("min-lwf", "Love Worth Finding — Adrian Rogers", "Adrian Rogers", "https://www.oneplace.com/ministries/love-worth-finding/", "Message", "Ministry", "Adrian Rogers' clear, warm, Bible-first teaching — full sermons and daily broadcasts."),
-    link("min-intouch", "In Touch — Charles Stanley", "Charles Stanley", "https://www.intouch.org/", "Message", "Ministry", "Charles Stanley's trusted teaching — sermons, articles, and daily devotions."),
-    link("min-ttb", "Thru the Bible — J. Vernon McGee", "J. Vernon McGee", "https://www.ttb.org/", "Lesson", "Ministry", "The classic verse-by-verse walk through the whole Bible, Genesis to Revelation."),
-    link("min-turningpoint", "Turning Point — David Jeremiah", "David Jeremiah", "https://davidjeremiah.blog/", "Message", "Ministry", "David Jeremiah's teaching on the Bible's big story, with Christ at the center."),
-    link("min-allen-jackson", "Allen Jackson Ministries", "Pastor Allen Jackson", "https://allenjackson.com/", "Message", "Ministry", "Pastor Allen Jackson (not the country singer) — practical, Bible-first teaching, broadcasts, and a reading plan."),
-    link("min-dobson", "Dr. James Dobson Family Institute", "Dr. James Dobson", "https://www.drjamesdobson.org/", "Resource", "Ministry", "Trusted, faith-based help for marriage, parenting, and family life — broadcasts and the Dr. Dobson Minute."),
-    link("min-odb", "Our Daily Bread", "Our Daily Bread Ministries", "https://www.odbm.org/en/devotionals", "Resource", "Ministry", "One of the most-loved daily devotionals — a verse, a short reflection, and a prayer."),
+    link("min-lwf", "Love Worth Finding — Adrian Rogers", "Adrian Rogers", "https://www.oneplace.com/ministries/love-worth-finding/", "Message", "Ministry", "Adrian Rogers' clear, warm, Bible-first teaching — full sermons and daily broadcasts.", "lwf.org"),
+    link("min-intouch", "In Touch — Charles Stanley", "Charles Stanley", "https://www.intouch.org/", "Message", "Ministry", "Charles Stanley's trusted teaching — sermons, articles, and daily devotions.", "intouch.org"),
+    link("min-ttb", "Thru the Bible — J. Vernon McGee", "J. Vernon McGee", "https://www.ttb.org/", "Lesson", "Ministry", "The classic verse-by-verse walk through the whole Bible, Genesis to Revelation.", "ttb.org"),
+    link("min-turningpoint", "Turning Point — David Jeremiah", "David Jeremiah", "https://davidjeremiah.blog/", "Message", "Ministry", "David Jeremiah's teaching on the Bible's big story, with Christ at the center.", "davidjeremiah.org"),
+    link("min-allen-jackson", "Allen Jackson Ministries", "Pastor Allen Jackson", "https://allenjackson.com/", "Message", "Ministry", "Pastor Allen Jackson (not the country singer) — practical, Bible-first teaching, broadcasts, and a reading plan.", "allenjackson.com"),
+    link("min-dobson", "Dr. James Dobson Family Institute", "Dr. James Dobson", "https://www.drjamesdobson.org/", "Resource", "Ministry", "Trusted, faith-based help for marriage, parenting, and family life — broadcasts and the Dr. Dobson Minute.", "drjamesdobson.org"),
+    link("min-odb", "Our Daily Bread", "Our Daily Bread Ministries", "https://www.odbm.org/en/devotionals", "Resource", "Ministry", "One of the most-loved daily devotionals — a verse, a short reflection, and a prayer.", "odb.org"),
   ]),
 ];
 
