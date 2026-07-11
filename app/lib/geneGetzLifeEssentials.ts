@@ -1709,6 +1709,28 @@ export function formatPrincipleRange(p: LifeEssentialsPrinciple): string {
   return `${p.startChapter}:${p.startVerse}-${p.endChapter}:${p.endVerse}`;
 }
 
+// The whole series in canon order, but only entries with a playable in-app
+// video. Powers ⏮/⏭ in the video player so viewers can keep watching without
+// closing and hunting for the next principle.
+const PLAYABLE_PRINCIPLES = LIFE_ESSENTIALS_PRINCIPLES.filter((p) => p.youtubeId);
+
+export function getAdjacentPlayablePrinciple(
+  current: LifeEssentialsPrinciple,
+  dir: 1 | -1,
+): LifeEssentialsPrinciple | null {
+  if (PLAYABLE_PRINCIPLES.length < 2) return null;
+  const i = PLAYABLE_PRINCIPLES.findIndex(
+    (p) =>
+      p.code === current.code &&
+      p.principleNumber === current.principleNumber &&
+      p.startChapter === current.startChapter &&
+      p.startVerse === current.startVerse,
+  );
+  if (i < 0) return null;
+  const n = PLAYABLE_PRINCIPLES.length;
+  return PLAYABLE_PRINCIPLES[(i + dir + n) % n];
+}
+
 export function seededPrincipleBooks(): string[] {
   const seen: string[] = [];
   for (const p of LIFE_ESSENTIALS_PRINCIPLES) if (!seen.includes(p.book)) seen.push(p.book);

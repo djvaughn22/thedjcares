@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   DJ_CARES_LIBRARY,
   getEmbedUrl,
@@ -9,6 +9,7 @@ import {
   type LibraryItem,
 } from "./lib/djCaresLibrary";
 import {
+  getAdjacentPlayablePrinciple,
   getGeneGetzPrinciplesForVerse,
   type LifeEssentialsPrinciple,
 } from "./lib/geneGetzLifeEssentials";
@@ -41,11 +42,24 @@ const ALL_FAITH_VIDEO_IDS = FAITH_THEMES.flatMap(t => t.videos.map(v => v.youtub
 const FLAT_FAITH_VIDS = FAITH_THEMES.flatMap(t =>
   t.videos.map(v => ({ youtubeId: v.youtubeId, title: `${v.title} — ${v.artist}` }))
 );
-const faithPlaylistFrom = (id: string) => {
-  const i = ALL_FAITH_VIDEO_IDS.indexOf(id);
+const faithPlaylistFrom = (id: string, order: string[] = ALL_FAITH_VIDEO_IDS) => {
+  const i = order.indexOf(id);
   if (i < 0) return "";
-  return [...ALL_FAITH_VIDEO_IDS.slice(i + 1), ...ALL_FAITH_VIDEO_IDS.slice(0, i)].join(",");
+  return [...order.slice(i + 1), ...order.slice(0, i)].join(",");
 };
+
+// Fisher–Yates — a fair shuffle for shuffle mode.
+const shuffleIds = (ids: string[]) => {
+  const a = [...ids];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+const faithTitleOf = (id: string) =>
+  FLAT_FAITH_VIDS.find(v => v.youtubeId === id)?.title ?? "";
 
 const bibleVerseUrl = (v: { code: string; chapter: string; verse: string }) =>
   `https://www.bible.com/bible/206/${v.code}.${v.chapter}.${v.verse}.WEBUS`;
@@ -70,7 +84,7 @@ function PlayerHelp({ watchUrl, onReload }: { watchUrl: string; onReload: () => 
       <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
         <a href="https://accounts.google.com/ServiceLogin?service=youtube" target="_blank" rel="noopener noreferrer" style={pill}>Sign in on YouTube</a>
         <button onClick={onReload} style={pill}>↻ Reload player</button>
-        <a href={watchUrl} target="_blank" rel="noopener noreferrer" style={{ ...pill, background: "#A78BFA", color: "#0C0C0C", border: "none" }}>▶ Watch on YouTube</a>
+        <a href={watchUrl} target="_blank" rel="noopener noreferrer" style={{ ...pill, background: "#dc2626", color: "#fff", border: "none" }}>▶ Watch on YouTube</a>
       </div>
     </>
   );
@@ -148,6 +162,12 @@ export default function TheDJCaresPage() {
   const [libFilter, setLibFilter] = useState("All");
   const [getzVideo, setGetzVideo] = useState<LifeEssentialsPrinciple | null>(null);
   const [faithVid, setFaithVid] = useState<{ youtubeId: string; title: string } | null>(null);
+  // When set, the faith player follows this shuffled order instead of page order.
+  const [shuffleOrder, setShuffleOrder] = useState<string[] | null>(null);
+  // The open modal's video box — only one modal shows at a time, so one ref
+  // serves both the Getz and faith players' ⛶ Fullscreen buttons.
+  const playerBoxRef = useRef<HTMLDivElement>(null);
+  const goFullscreen = () => playerBoxRef.current?.requestFullscreen?.();
 
   // Follow the family ☀️/🌙 toggle in the Open Mirror bar.
   useEffect(() => {
@@ -158,12 +178,15 @@ export default function TheDJCaresPage() {
     return () => window.removeEventListener("om-theme", follow);
   }, []);
 
-  // Modal behavior — Escape closes, background scroll locked — matches the
-  // CrossHeartPray player so the Gene Getz / faith videos feel the same in both.
+  // Modal behavior — Escape closes, ←/→ step through the series, background
+  // scroll locked — matches the CrossHeartPray player so the Gene Getz / faith
+  // videos feel the same in both.
   useEffect(() => {
     if (!getzVideo && !faithVid) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setGetzVideo(null); setFaithVid(null); }
+      if (e.key === "Escape") { setGetzVideo(null); setFaithVid(null); setShuffleOrder(null); }
+      if (e.key === "ArrowLeft") { if (getzVideo) stepGetz(-1); else stepFaith(-1); }
+      if (e.key === "ArrowRight") { if (getzVideo) stepGetz(1); else stepFaith(1); }
     };
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
@@ -172,14 +195,42 @@ export default function TheDJCaresPage() {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [getzVideo, faithVid]);
+  });
 
-  // ⏮ / ⏭ walk the faith videos in page order (wrapping); 🔁 replays.
+  // ⏮ / ⏭ walk the Gene Getz principles (wrapping) in canon order, so the
+  // series plays like one long study without closing the player.
+  const stepGetz = (dir: 1 | -1) => {
+    if (!getzVideo) return;
+    const next = getAdjacentPlayablePrinciple(getzVideo, dir);
+    if (next) setGetzVideo(next);
+  };
+
+  // ⏮ / ⏭ walk the faith videos (wrapping) in page order — or shuffled order
+  // when shuffle is on; 🔁 replays.
   const stepFaith = (dir: 1 | -1) => {
     if (!faithVid) return;
-    const i = FLAT_FAITH_VIDS.findIndex(v => v.youtubeId === faithVid.youtubeId);
-    const n = FLAT_FAITH_VIDS[(i + dir + FLAT_FAITH_VIDS.length) % FLAT_FAITH_VIDS.length];
-    setFaithVid(n);
+    const order = shuffleOrder ?? ALL_FAITH_VIDEO_IDS;
+    const i = order.indexOf(faithVid.youtubeId);
+    const nextId = order[(i + dir + order.length) % order.length];
+    setFaithVid({ youtubeId: nextId, title: faithTitleOf(nextId) });
+  };
+
+  // Closing the player also turns shuffle off, so the next open starts fresh.
+  const closeFaith = () => { setFaithVid(null); setShuffleOrder(null); };
+
+  // 🔀 Shuffle all: every song once, in a new random order, starting now.
+  const shuffleAll = () => {
+    stopMusic();
+    const order = shuffleIds(ALL_FAITH_VIDEO_IDS);
+    setShuffleOrder(order);
+    setFaithVid({ youtubeId: order[0], title: faithTitleOf(order[0]) });
+  };
+
+  // In-player toggle: on = current song first, the rest reshuffled; off = page order.
+  const toggleShuffle = () => {
+    if (!faithVid) return;
+    if (shuffleOrder) { setShuffleOrder(null); return; }
+    setShuffleOrder([faithVid.youtubeId, ...shuffleIds(ALL_FAITH_VIDEO_IDS.filter(id => id !== faithVid.youtubeId))]);
   };
 
   const copyLine = (text: string, source: string, i: number) => {
@@ -493,9 +544,14 @@ export default function TheDJCaresPage() {
               {musicCollections.flatMap(itemsIn).map(Card)}
             </div>
 
-            <h3 style={{ fontSize: 22, fontWeight: 900, color: text, margin: "0 0 4px" }}>🎬 The Videos</h3>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", margin: "0 0 4px" }}>
+              <h3 style={{ fontSize: 22, fontWeight: 900, color: text, margin: 0 }}>🎬 The Videos</h3>
+              <button onClick={shuffleAll} className="pop" style={{ background: "#A78BFA", border: "none", color: "#0C0C0C", borderRadius: 50, padding: "10px 20px", fontSize: 14, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap" }}>
+                🔀 Shuffle all
+              </button>
+            </div>
             <p style={{ fontSize: 14, color: sub, marginBottom: 6 }}>
-              The Faith Playlist as watchable videos — sorted by mood. Tap any song to play it right here.
+              The Faith Playlist as watchable videos — sorted by mood. Tap any song to play it right here, or hit Shuffle to play every song in a random order.
             </p>
             <p style={{ fontSize: 13, color: sub, marginBottom: 24 }}>
               Prefer the full mix?{" "}
@@ -641,24 +697,35 @@ export default function TheDJCaresPage() {
           onClick={() => setGetzVideo(null)}
           style={{ position: "fixed", inset: 0, zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.85)", padding: 16 }}
         >
-          <div onClick={(ev) => ev.stopPropagation()} style={{ width: "100%", maxWidth: 720, maxHeight: "calc(100dvh - 32px)", overflowY: "auto", background: "#0f1523", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 18, padding: 16 }}>
+          <div onClick={(ev) => ev.stopPropagation()} style={{ width: "100%", maxWidth: 960, maxHeight: "calc(100dvh - 32px)", overflowY: "auto", background: "#0f1523", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 18, padding: 16 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
               <p style={{ fontSize: 13, fontWeight: 800, color: "#A78BFA", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                Dr. Gene Getz · {getzVideo.principleTitle}
+                Dr. Gene Getz · Principle {getzVideo.principleNumber} · {getzVideo.principleTitle}
               </p>
               <button onClick={() => setGetzVideo(null)} style={{ flexShrink: 0, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 50, padding: "6px 16px", fontSize: 14, fontWeight: 800, color: "#fff", cursor: "pointer" }}>
                 Close ✕
               </button>
             </div>
-            <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
+            <div ref={playerBoxRef} style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
               <iframe
                 key={`${getzVideo.youtubeId}-${playerReload}`}
-                src={`https://www.youtube.com/embed/${getzVideo.youtubeId}?autoplay=1&rel=0&modestbranding=1&cc_load_policy=1&cc_lang_pref=en`}
+                src={`https://www.youtube.com/embed/${getzVideo.youtubeId}?autoplay=1&rel=0&controls=1&playsinline=1&fs=1&cc_load_policy=1&cc_lang_pref=en`}
                 title={getzVideo.principleTitle}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 allowFullScreen
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
               />
+            </div>
+            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+              <button onClick={() => stepGetz(-1)} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "9px 14px", fontSize: 14, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
+                ⏮ Previous
+              </button>
+              <button onClick={goFullscreen} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "9px 14px", fontSize: 14, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
+                ⛶ Fullscreen
+              </button>
+              <button onClick={() => stepGetz(1)} style={{ background: "#A78BFA", border: "none", color: "#0C0C0C", borderRadius: 50, padding: "9px 14px", fontSize: 14, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
+                Next ⏭
+              </button>
             </div>
             <PlayerHelp watchUrl={`https://www.youtube.com/watch?v=${getzVideo.youtubeId}`} onReload={() => setPlayerReload(v => v + 1)} />
           </div>
@@ -669,22 +736,22 @@ export default function TheDJCaresPage() {
         <div
           role="dialog"
           aria-modal="true"
-          onClick={() => setFaithVid(null)}
+          onClick={closeFaith}
           style={{ position: "fixed", inset: 0, zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.85)", padding: 16 }}
         >
-          <div onClick={(ev) => ev.stopPropagation()} style={{ width: "100%", maxWidth: 720, maxHeight: "calc(100dvh - 32px)", overflowY: "auto", background: "#0f1523", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 18, padding: 16 }}>
+          <div onClick={(ev) => ev.stopPropagation()} style={{ width: "100%", maxWidth: 960, maxHeight: "calc(100dvh - 32px)", overflowY: "auto", background: "#0f1523", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 18, padding: 16 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
               <p style={{ fontSize: 13, fontWeight: 800, color: "#A78BFA", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {faithVid.title}
               </p>
-              <button onClick={() => setFaithVid(null)} style={{ flexShrink: 0, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 50, padding: "6px 16px", fontSize: 14, fontWeight: 800, color: "#fff", cursor: "pointer" }}>
+              <button onClick={closeFaith} style={{ flexShrink: 0, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 50, padding: "6px 16px", fontSize: 14, fontWeight: 800, color: "#fff", cursor: "pointer" }}>
                 Close ✕
               </button>
             </div>
-            <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
+            <div ref={playerBoxRef} style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
               <iframe
-                key={`${faithVid.youtubeId}-${playerReload}`}
-                src={`https://www.youtube.com/embed/${faithVid.youtubeId}?autoplay=1&rel=0&modestbranding=1&cc_load_policy=1&cc_lang_pref=en&loop=1&playlist=${faithPlaylistFrom(faithVid.youtubeId)}`}
+                key={`${faithVid.youtubeId}-${playerReload}-${shuffleOrder ? "shuffle" : "order"}`}
+                src={`https://www.youtube.com/embed/${faithVid.youtubeId}?autoplay=1&rel=0&controls=1&playsinline=1&fs=1&cc_load_policy=1&cc_lang_pref=en&loop=1&playlist=${faithPlaylistFrom(faithVid.youtubeId, shuffleOrder ?? undefined)}`}
                 title={faithVid.title}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 allowFullScreen
@@ -692,14 +759,22 @@ export default function TheDJCaresPage() {
               />
             </div>
             <p style={{ fontSize: 12, color: "#94a3b8", margin: "8px 0 0" }}>
-              Videos keep playing in order, all the way around — like one big playlist.
+              {shuffleOrder
+                ? "Shuffle is on — every song plays once, in a random order."
+                : "Videos keep playing in order, all the way around — like one big playlist."}
             </p>
             <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
               <button onClick={() => stepFaith(-1)} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "9px 14px", fontSize: 14, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
                 ⏮ Previous
               </button>
+              <button onClick={toggleShuffle} style={{ background: shuffleOrder ? "#A78BFA" : "rgba(255,255,255,0.1)", border: shuffleOrder ? "none" : "1px solid rgba(255,255,255,0.25)", color: shuffleOrder ? "#0C0C0C" : "#fff", borderRadius: 50, padding: "9px 14px", fontSize: 14, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
+                {shuffleOrder ? "🔀 Shuffle on" : "🔀 Shuffle"}
+              </button>
               <button onClick={() => setPlayerReload(v => v + 1)} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "9px 14px", fontSize: 14, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
                 🔁 Replay
+              </button>
+              <button onClick={goFullscreen} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 50, padding: "9px 14px", fontSize: 14, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
+                ⛶ Fullscreen
               </button>
               <button onClick={() => stepFaith(1)} style={{ background: "#A78BFA", border: "none", color: "#0C0C0C", borderRadius: 50, padding: "9px 14px", fontSize: 14, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
                 Next ⏭
