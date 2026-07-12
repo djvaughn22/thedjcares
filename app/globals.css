@@ -4,6 +4,23 @@
 .pop { transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
 .pop:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(0,0,0,.5); }
 
+/* ── ACCESSIBILITY & MOTION (app-store polish, matches stepinthering) ── */
+button, a { touch-action: manipulation; }
+
+:focus-visible {
+  outline: 2px solid #A78BFA;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 
 /* OPEN MIRROR FAMILY STYLE OVERRIDE START */
 :root {

@@ -1,12 +1,31 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import OpenMirrorFooter from "./OpenMirrorFooter";
 import OpenMirrorNav from "./OpenMirrorNav";
 import Script from "next/script";
 
 export const metadata: Metadata = {
-  title: "TheDJCares",
+  metadataBase: new URL("https://thedjcares.com"),
+  title: {
+    default: "TheDJCares",
+    template: "%s",
+  },
   description: "Your digital disc jockey connecting you to uplifting music, sermons, podcasts, churches, charities, and gospel-centered resources.",
+  applicationName: "TheDJCares",
+  appleWebApp: { capable: true, title: "TheDJCares", statusBarStyle: "black-translucent" },
+  openGraph: {
+    title: "TheDJCares",
+    description: "Your digital disc jockey connecting you to uplifting music, sermons, podcasts, churches, charities, and gospel-centered resources.",
+    url: "https://thedjcares.com",
+    siteName: "TheDJCares",
+    type: "website",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0b1220",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
