@@ -14,6 +14,7 @@ import {
   type LifeEssentialsPrinciple,
 } from "./lib/geneGetzLifeEssentials";
 import { FAITH_THEMES } from "./lib/faithYouTube";
+import { track } from "./lib/analytics";
 
 // Daily Hope verses (mirrored from Cross Heart Pray, in day order). Each links to the
 // bible.com app for the verse and its full chapter. Version 206 = World English Bible.
@@ -202,7 +203,10 @@ export default function TheDJCaresPage() {
   const stepGetz = (dir: 1 | -1) => {
     if (!getzVideo) return;
     const next = getAdjacentPlayablePrinciple(getzVideo, dir);
-    if (next) setGetzVideo(next);
+    if (next) {
+      setGetzVideo(next);
+      track("media_play", { content_type: "getz_video", content_title: next.principleTitle, via: "prev_next" });
+    }
   };
 
   // ⏮ / ⏭ walk the faith videos (wrapping) in page order — or shuffled order
@@ -213,6 +217,7 @@ export default function TheDJCaresPage() {
     const i = order.indexOf(faithVid.youtubeId);
     const nextId = order[(i + dir + order.length) % order.length];
     setFaithVid({ youtubeId: nextId, title: faithTitleOf(nextId) });
+    track("media_play", { content_type: "faith_video", content_title: faithTitleOf(nextId), via: "prev_next" });
   };
 
   // Closing the player also turns shuffle off, so the next open starts fresh.
@@ -224,6 +229,7 @@ export default function TheDJCaresPage() {
     const order = shuffleIds(ALL_FAITH_VIDEO_IDS);
     setShuffleOrder(order);
     setFaithVid({ youtubeId: order[0], title: faithTitleOf(order[0]) });
+    track("media_play", { content_type: "faith_video", content_title: faithTitleOf(order[0]), via: "shuffle_all" });
   };
 
   // In-player toggle: on = current song first, the rest reshuffled; off = page order.
@@ -234,6 +240,7 @@ export default function TheDJCaresPage() {
   };
 
   const copyLine = (text: string, source: string, i: number) => {
+    track("share", { method: "copy", content_type: "verse", item_id: source });
     navigator.clipboard.writeText(`"${text}" — ${source}`).then(() => {
       setCopiedIdx(i);
       setTimeout(() => setCopiedIdx(null), 2000);
@@ -406,7 +413,7 @@ export default function TheDJCaresPage() {
         {/* Tabs */}
         <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 32, flexWrap: "wrap" }}>
           {tabs.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
+            <button key={t.id} onClick={() => { setTab(t.id); track("tab_view", { tab: t.id }); }} style={{
               background: tab === t.id ? "#A78BFA" : card,
               border: `2px solid ${tab === t.id ? "#A78BFA" : border}`,
               borderRadius: 50, padding: "12px 22px",
@@ -502,7 +509,7 @@ export default function TheDJCaresPage() {
                       </div>
                       {getz && (
                         <button
-                          onClick={() => { stopMusic(); setGetzVideo(getz); }}
+                          onClick={() => { stopMusic(); setGetzVideo(getz); track("media_play", { content_type: "getz_video", content_title: getz.principleTitle }); }}
                           style={{ width: "100%", background: "none", border: "none", borderTop: `1px solid ${border}`, padding: "11px 16px", fontSize: 12, fontWeight: 800, letterSpacing: "0.04em", color: "#A78BFA", cursor: "pointer", textAlign: "center" }}
                         >
                           🎬 Watch Gene Getz
@@ -582,7 +589,7 @@ export default function TheDJCaresPage() {
                       </div>
                     ) : (
                       <button
-                        onClick={() => { stopMusic(); setOpenPlaylists(o => ({ ...o, [theme.key]: true })); }}
+                        onClick={() => { stopMusic(); setOpenPlaylists(o => ({ ...o, [theme.key]: true })); track("playlist_open", { content_title: theme.key }); }}
                         className="pop"
                         style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", aspectRatio: "16 / 9", background: "#000", border: `2px solid ${border}`, borderRadius: 14, cursor: "pointer" }}
                         aria-label={`Play the ${theme.label} playlist`}
@@ -604,7 +611,7 @@ export default function TheDJCaresPage() {
                   {theme.videos.map(v => (
                     <button
                       key={v.youtubeId}
-                      onClick={() => { stopMusic(); setFaithVid({ youtubeId: v.youtubeId, title: `${v.title} — ${v.artist}` }); }}
+                      onClick={() => { stopMusic(); setFaithVid({ youtubeId: v.youtubeId, title: `${v.title} — ${v.artist}` }); track("media_play", { content_type: "faith_video", content_title: `${v.title} — ${v.artist}` }); }}
                       className="pop"
                       style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, overflow: "hidden", cursor: "pointer", textAlign: "left", padding: 0 }}
                     >
