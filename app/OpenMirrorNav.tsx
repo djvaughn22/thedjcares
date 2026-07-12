@@ -13,6 +13,8 @@
 
 import OpenMirrorThemeToggle from "./OpenMirrorTheme";
 
+// Same order as the hub homepage (src/lib/products.ts registry order),
+// with About next-to-last and PleaseBeReady pinned to the very bottom.
 const FAMILY = [
   { emoji: "🪞", name: "Open Mirror Home", href: "https://openmirrorllc.com" },
   { emoji: "✝️", name: "CrossHeartPray", href: "https://crossheartpray.com" },
@@ -21,12 +23,10 @@ const FAMILY = [
   { emoji: "😂", name: "iDontCry", href: "https://idontcry.com" },
   { emoji: "🥊", name: "StepInTheRing", href: "https://stepinthering.com" },
   { emoji: "🧩", name: "OpenDoku", href: "https://opendoku.com" },
-  { emoji: "🤖", name: "WhatAmIAI", href: "https://whatamiai.com" },
-  { emoji: "🧰", name: "PleaseBeReady", href: "https://pleasebeready.com" },
   { emoji: "🎬", name: "WatchedNotWatched", href: "https://watchednotwatched.com" },
-  { emoji: "👨‍👩‍👧‍👦", name: "Fambookagram", href: "https://fambookagram.com" },
-  { emoji: "🫂", name: "Friendbookagram", href: "https://friendbookagram.com" },
+  { emoji: "🤖", name: "WhatAmIAI", href: "https://whatamiai.com" },
   { emoji: "ℹ️", name: "About Open Mirror", href: "https://openmirrorllc.com/about-open-mirror" },
+  { emoji: "🧰", name: "PleaseBeReady", href: "https://pleasebeready.com" },
 ];
 
 export default function OpenMirrorNav({ site }: { site?: string }) {
