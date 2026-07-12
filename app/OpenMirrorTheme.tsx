@@ -62,7 +62,7 @@ html[data-om-theme="light"] [style*="background: #1c2740"],
 html[data-om-theme="light"] [style*="background:#1c2740"] {
   background-color: #eef4ff !important;
 }
-html[data-om-theme="light"] :is([class*="bg-[#0c1220]"], [class*="bg-[#07090f]"], [class*="bg-black/"], [class*="bg-slate-800"]) {
+html[data-om-theme="light"] :is([class*="bg-[#0c1220]"], [class*="bg-[#07090f]"], [class*="bg-[#0e1626]"], [class*="bg-black"], [class*="bg-slate-800"], [class*="bg-zinc-8"], [class*="bg-zinc-9"], [class*="bg-gray-8"], [class*="bg-gray-9"], [class*="bg-neutral-8"], [class*="bg-neutral-9"]) {
   background-color: #f1f5f9 !important;
 }
 html[data-om-theme="light"] [class*="bg-white/"] {
@@ -76,7 +76,7 @@ html[data-om-theme="light"] [style*="#26324c"] {
 }
 
 /* Family text */
-html[data-om-theme="light"] :is([class*="text-[#e8edf5]"], [class*="text-white"], [class*="text-slate-1"], [class*="text-slate-2"], [class*="text-slate-3"]) {
+html[data-om-theme="light"] :is([class*="text-[#e8edf5]"], [class*="text-white"], [class*="text-slate-1"], [class*="text-slate-2"], [class*="text-slate-3"], [class*="text-zinc-1"], [class*="text-zinc-2"], [class*="text-zinc-3"], [class*="text-gray-1"], [class*="text-gray-2"], [class*="text-gray-3"], [class*="text-neutral-1"], [class*="text-neutral-2"], [class*="text-neutral-3"]) {
   color: #0f172a !important;
 }
 html[data-om-theme="light"] [style*="color: #e8edf5"],
@@ -98,6 +98,145 @@ html[data-om-theme="light"] [style*="color:#94a3b8"] {
 }
 html[data-om-theme="light"] :is([class*="text-emerald-5"], [class*="text-emerald-1"], [class*="text-emerald-2"]) {
   color: #047857 !important;
+}
+
+/* Bright accent text is unreadable on light backgrounds - darken per accent. */
+html[data-om-theme="light"] :is([class*="text-[#38bdf8]" i], [style*="color:#38bdf8" i], [style*="color: #38bdf8" i]) {
+  color: #0369a1 !important;
+}
+html[data-om-theme="light"] :is([class*="text-[#22d3ee]" i], [style*="color:#22d3ee" i], [style*="color: #22d3ee" i]) {
+  color: #0e7490 !important;
+}
+html[data-om-theme="light"] :is([class*="text-[#60a5fa]" i], [style*="color:#60a5fa" i], [style*="color: #60a5fa" i]) {
+  color: #1d4ed8 !important;
+}
+html[data-om-theme="light"] :is([class*="text-[#93c5fd]" i], [style*="color:#93c5fd" i], [style*="color: #93c5fd" i]) {
+  color: #1d4ed8 !important;
+}
+html[data-om-theme="light"] :is([class*="text-[#e879f9]" i], [style*="color:#e879f9" i], [style*="color: #e879f9" i]) {
+  color: #a21caf !important;
+}
+html[data-om-theme="light"] :is([class*="text-[#f97316]" i], [style*="color:#f97316" i], [style*="color: #f97316" i]) {
+  color: #c2410c !important;
+}
+
+html[data-om-theme="light"] :is([class*="text-[#7dd3fc]" i], [style*="color:#7dd3fc" i], [style*="color: #7dd3fc" i]) {
+  color: #0369a1 !important;
+}
+html[data-om-theme="light"] :is([class*="text-[#c4b5fd]" i], [style*="color:#c4b5fd" i], [style*="color: #c4b5fd" i]) {
+  color: #6d28d9 !important;
+}
+html[data-om-theme="light"] :is([class*="text-[#c084fc]" i], [style*="color:#c084fc" i], [style*="color: #c084fc" i]) {
+  color: #7e22ce !important;
+}
+html[data-om-theme="light"] :is([class*="text-[#a78bfa]" i], [style*="color:#a78bfa" i], [style*="color: #a78bfa" i]) {
+  color: #6d28d9 !important;
+}
+html[data-om-theme="light"] :is([class*="text-[#818cf8]" i], [style*="color:#818cf8" i], [style*="color: #818cf8" i]) {
+  color: #4338ca !important;
+}
+html[data-om-theme="light"] :is([class*="text-[#34d399]" i], [style*="color:#34d399" i], [style*="color: #34d399" i]) {
+  color: #047857 !important;
+}
+html[data-om-theme="light"] :is([class*="text-[#2dd4bf]" i], [style*="color:#2dd4bf" i], [style*="color: #2dd4bf" i]) {
+  color: #0f766e !important;
+}
+
+/* Client re-renders serialize inline colors as rgb() - match that form too. */
+html[data-om-theme="light"] [style*="color: rgb(232, 237, 245)"] {
+  color: #0f172a !important;
+}
+html[data-om-theme="light"] [style*="color: rgb(148, 163, 184)"] {
+  color: #475569 !important;
+}
+html[data-om-theme="light"] [style*="color: rgb(56, 189, 248)"] {
+  color: #0369a1 !important;
+}
+html[data-om-theme="light"] [style*="color: rgb(34, 211, 238)"] {
+  color: #0e7490 !important;
+}
+html[data-om-theme="light"] [style*="color: rgb(96, 165, 250)"] {
+  color: #1d4ed8 !important;
+}
+html[data-om-theme="light"] [style*="color: rgb(147, 197, 253)"] {
+  color: #1d4ed8 !important;
+}
+html[data-om-theme="light"] [style*="color: rgb(232, 121, 249)"] {
+  color: #a21caf !important;
+}
+html[data-om-theme="light"] [style*="color: rgb(249, 115, 22)"] {
+  color: #c2410c !important;
+}
+html[data-om-theme="light"] [style*="color: rgb(125, 211, 252)"] {
+  color: #0369a1 !important;
+}
+html[data-om-theme="light"] [style*="color: rgb(196, 181, 253)"] {
+  color: #6d28d9 !important;
+}
+html[data-om-theme="light"] [style*="color: rgb(192, 132, 252)"] {
+  color: #7e22ce !important;
+}
+html[data-om-theme="light"] [style*="color: rgb(167, 139, 250)"] {
+  color: #6d28d9 !important;
+}
+html[data-om-theme="light"] [style*="color: rgb(129, 140, 248)"] {
+  color: #4338ca !important;
+}
+html[data-om-theme="light"] [style*="color: rgb(52, 211, 153)"] {
+  color: #047857 !important;
+}
+html[data-om-theme="light"] [style*="color: rgb(45, 212, 191)"] {
+  color: #0f766e !important;
+}
+
+/* Light Tailwind hue classes (100-500) are unreadable on light - darken per hue. */
+html[data-om-theme="light"] :is([class*="text-sky-1"], [class*="text-sky-2"], [class*="text-sky-3"], [class*="text-sky-4"], [class*="text-sky-5"]) {
+  color: #0369a1 !important;
+}
+html[data-om-theme="light"] :is([class*="text-blue-1"], [class*="text-blue-2"], [class*="text-blue-3"], [class*="text-blue-4"], [class*="text-blue-5"]) {
+  color: #1d4ed8 !important;
+}
+html[data-om-theme="light"] :is([class*="text-cyan-1"], [class*="text-cyan-2"], [class*="text-cyan-3"], [class*="text-cyan-4"], [class*="text-cyan-5"]) {
+  color: #0e7490 !important;
+}
+html[data-om-theme="light"] :is([class*="text-teal-1"], [class*="text-teal-2"], [class*="text-teal-3"], [class*="text-teal-4"], [class*="text-teal-5"]) {
+  color: #0f766e !important;
+}
+html[data-om-theme="light"] :is([class*="text-indigo-1"], [class*="text-indigo-2"], [class*="text-indigo-3"], [class*="text-indigo-4"], [class*="text-indigo-5"]) {
+  color: #4338ca !important;
+}
+html[data-om-theme="light"] :is([class*="text-violet-1"], [class*="text-violet-2"], [class*="text-violet-3"], [class*="text-violet-4"], [class*="text-violet-5"]) {
+  color: #6d28d9 !important;
+}
+html[data-om-theme="light"] :is([class*="text-purple-1"], [class*="text-purple-2"], [class*="text-purple-3"], [class*="text-purple-4"], [class*="text-purple-5"]) {
+  color: #7e22ce !important;
+}
+html[data-om-theme="light"] :is([class*="text-fuchsia-1"], [class*="text-fuchsia-2"], [class*="text-fuchsia-3"], [class*="text-fuchsia-4"], [class*="text-fuchsia-5"]) {
+  color: #a21caf !important;
+}
+html[data-om-theme="light"] :is([class*="text-green-1"], [class*="text-green-2"], [class*="text-green-3"], [class*="text-green-4"], [class*="text-green-5"]) {
+  color: #15803d !important;
+}
+html[data-om-theme="light"] :is([class*="text-lime-1"], [class*="text-lime-2"], [class*="text-lime-3"], [class*="text-lime-4"], [class*="text-lime-5"]) {
+  color: #4d7c0f !important;
+}
+html[data-om-theme="light"] :is([class*="text-amber-1"], [class*="text-amber-2"], [class*="text-amber-3"], [class*="text-amber-4"], [class*="text-amber-5"]) {
+  color: #b45309 !important;
+}
+html[data-om-theme="light"] :is([class*="text-yellow-1"], [class*="text-yellow-2"], [class*="text-yellow-3"], [class*="text-yellow-4"], [class*="text-yellow-5"]) {
+  color: #a16207 !important;
+}
+html[data-om-theme="light"] :is([class*="text-orange-1"], [class*="text-orange-2"], [class*="text-orange-3"], [class*="text-orange-4"], [class*="text-orange-5"]) {
+  color: #c2410c !important;
+}
+html[data-om-theme="light"] :is([class*="text-pink-1"], [class*="text-pink-2"], [class*="text-pink-3"], [class*="text-pink-4"], [class*="text-pink-5"]) {
+  color: #be185d !important;
+}
+html[data-om-theme="light"] :is([class*="text-rose-1"], [class*="text-rose-2"], [class*="text-rose-3"], [class*="text-rose-4"], [class*="text-rose-5"]) {
+  color: #be123c !important;
+}
+html[data-om-theme="light"] :is([class*="text-red-1"], [class*="text-red-2"], [class*="text-red-3"], [class*="text-red-4"], [class*="text-red-5"]) {
+  color: #b91c1c !important;
 }
 
 /* Soften heavy dark shadows on light */
@@ -131,6 +270,10 @@ html[data-om-theme="light"] .om-footer a {
 
 function applyTheme(theme: OmTheme) {
   document.documentElement.dataset.omTheme = theme;
+  // Keep the CrossHeartPray-style theme (data-chp-visual-theme CSS on the hub
+  // and CHP) in agreement so pages that mix both systems light up together.
+  document.documentElement.dataset.chpVisualTheme = theme;
+  window.localStorage.setItem("crossheartpray-visual-theme", theme);
 }
 
 export default function OpenMirrorThemeToggle() {
