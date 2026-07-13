@@ -7,3 +7,14 @@ node_modules
 .surgery-backups/
 *.backup
 *.before-*
+.next/
+out/
+build/
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+
+# env files — never commit real values
+.env*
+!.env.example
