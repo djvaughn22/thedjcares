@@ -16,6 +16,27 @@ import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "om-theme";
 
+// Refresh always starts the reader at the top. Browsers restore the previous
+// scroll position on reload, and history.scrollRestoration can't stop the
+// restore already in flight (the flag is read from the entry as the PREVIOUS
+// page left it). So on reload only, this clamps scroll to the top until the
+// load settles, then disarms. Back/forward keep their native position
+// restore, #anchor URLs still land on their target, and the clamp yields
+// immediately to any real user input.
+const SCROLL_TOP_ON_RELOAD_JS = `(function(){try{
+var n=performance.getEntriesByType("navigation")[0];
+if(!n||n.type!=="reload"||location.hash)return;
+var armed=true,poll;
+var disarm=function(){armed=false;clearInterval(poll);removeEventListener("scroll",clamp,true);};
+var clamp=function(){if(armed&&(window.scrollY||window.scrollX))window.scrollTo(0,0);};
+addEventListener("scroll",clamp,true);
+["wheel","touchstart","keydown","pointerdown"].forEach(function(t){addEventListener(t,disarm,{once:true,capture:true,passive:true});});
+window.scrollTo(0,0);
+poll=setInterval(clamp,100);
+addEventListener("load",function(){setTimeout(function(){clamp();disarm();},250);},{once:true});
+setTimeout(disarm,8000);
+}catch(e){}})();`.replace(/\n/g, "");
+
 export type OmTheme = "dark" | "light";
 
 const LIGHT_CSS = `
@@ -301,6 +322,7 @@ export default function OpenMirrorThemeToggle() {
 
   return (
     <>
+      <script dangerouslySetInnerHTML={{ __html: SCROLL_TOP_ON_RELOAD_JS }} />
       <style dangerouslySetInnerHTML={{ __html: LIGHT_CSS }} />
       <button
         type="button"
