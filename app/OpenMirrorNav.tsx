@@ -13,6 +13,21 @@
 
 import OpenMirrorThemeToggle from "./OpenMirrorTheme";
 
+// The <details> menu has no close-on-Escape or close-on-outside-click of its
+// own. This one document-level listener adds both (Escape also returns focus
+// to the ☰ button). Guarded so it binds once even if a page renders two bars.
+const MENU_CLOSE_JS = `(function(){try{
+if(window.__omMenuClose)return;window.__omMenuClose=1;
+var open=function(){return document.querySelector("details.om-menu[open]")};
+document.addEventListener("pointerdown",function(e){
+var d=open();if(d&&!d.contains(e.target))d.removeAttribute("open");
+},true);
+document.addEventListener("keydown",function(e){
+if(e.key!=="Escape")return;var d=open();if(!d)return;
+d.removeAttribute("open");var s=d.querySelector("summary");if(s)s.focus();
+});
+}catch(e){}})();`.replace(/\n/g, "");
+
 // Same order as the hub homepage (src/lib/products.ts registry order),
 // with About next-to-last and PleaseBeReady pinned to the very bottom.
 const FAMILY = [
@@ -33,6 +48,7 @@ export default function OpenMirrorNav({ site }: { site?: string }) {
   return (
     <header className="om-bar" style={{ position: "sticky", top: 0, zIndex: 50, borderBottom: "1px solid #26324c", background: "#0b1220" }}>
       <style>{`.om-menu summary::-webkit-details-marker{display:none}.om-menu summary::marker{content:""}.om-menu a:hover{background:#1c2740}@media (max-width:640px){.om-bar-label{display:none}}`}</style>
+      <script dangerouslySetInnerHTML={{ __html: MENU_CLOSE_JS }} />
       <div style={{ maxWidth: 680, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px" }}>
         <a href="https://openmirrorllc.com" style={{ display: "inline-flex", alignItems: "baseline", gap: 8, fontSize: 16, fontWeight: 900, letterSpacing: "-0.01em", color: "#e8edf5", textDecoration: "none", whiteSpace: "nowrap" }}>
           <span>Open Mirror LLC</span>

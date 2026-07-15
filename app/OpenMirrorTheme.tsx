@@ -37,6 +37,18 @@ addEventListener("load",function(){setTimeout(function(){clamp();disarm();},250)
 setTimeout(disarm,8000);
 }catch(e){}})();`.replace(/\n/g, "");
 
+// Apply the saved theme during HTML parse, before first paint, so light-mode
+// readers don't get a dark flash on every load. Runs where the nav renders
+// (top of <body>). Skips if a head script (CrossHeartPray's layout) already
+// set the theme — that script also handles ?theme= URL overrides and must win.
+const THEME_INIT_JS = `(function(){try{
+var d=document.documentElement;
+if(d.dataset.omTheme)return;
+var t=localStorage.getItem("om-theme")==="light"?"light":"dark";
+d.dataset.omTheme=t;
+if(!d.dataset.chpVisualTheme)d.dataset.chpVisualTheme=t;
+}catch(e){}})();`.replace(/\n/g, "");
+
 export type OmTheme = "dark" | "light";
 
 const LIGHT_CSS = `
@@ -322,6 +334,7 @@ export default function OpenMirrorThemeToggle() {
 
   return (
     <>
+      <script dangerouslySetInnerHTML={{ __html: THEME_INIT_JS }} />
       <script dangerouslySetInnerHTML={{ __html: SCROLL_TOP_ON_RELOAD_JS }} />
       <style dangerouslySetInnerHTML={{ __html: LIGHT_CSS }} />
       <button
