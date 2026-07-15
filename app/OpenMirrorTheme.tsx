@@ -316,6 +316,7 @@ export default function OpenMirrorThemeToggle() {
     const saved: OmTheme =
       window.localStorage.getItem(STORAGE_KEY) === "light" ? "light" : "dark";
     applyTheme(saved);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR renders the default; the saved theme can only be read from localStorage after mount
     setTheme(saved);
 
     const follow = () =>
