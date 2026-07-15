@@ -142,6 +142,3 @@ a[href]:hover {
   color: var(--om-ink);
 }
 /* OPEN MIRROR FAMILY STYLE OVERRIDE END */
-
-/* hide desktop-only hero flourish on small screens */
-@media (max-width:480px){.hero-mobile-hide{display:none;}}

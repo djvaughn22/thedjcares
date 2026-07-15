@@ -396,17 +396,10 @@ export default function TheDJCaresPage() {
     <main style={{ background: bg, minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "36px 24px 80px" }}>
 
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{ fontSize: 44, marginBottom: 12 }}>🎵</div>
-          <h1 style={{ fontSize: "clamp(1.9rem, 9vw, 2.5rem)", fontWeight: 900, color: text, margin: "0 0 12px" }}>theDJcares<span style={{ color: "#A78BFA" }}>.com</span></h1>
-          <p style={{ fontSize: 18, color: sub, lineHeight: 1.7, maxWidth: 480, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <h1 style={{ fontSize: "clamp(1.9rem, 9vw, 2.5rem)", fontWeight: 900, color: text, margin: "0 0 10px" }}>theDJcares<span style={{ color: "#A78BFA" }}>.com</span></h1>
+          <p style={{ fontSize: 15, color: sub, lineHeight: 1.6, maxWidth: 480, margin: "0 auto" }}>
             Curated music, sermons, and encouragement — Gospel first. Hand-picked. No algorithm.
-          </p>
-          <p style={{ fontSize: 14, color: sub, lineHeight: 1.6, maxWidth: 560, margin: "16px auto 0" }}>
-            TheDJCares shares hand-picked encouragement, not blanket endorsements. Jesus is first, Scripture is the test, and every resource should point you back to God&apos;s Word, prayer, family, and real-life faith.
-          </p>
-          <p className="hero-mobile-hide" style={{ fontSize: 12.5, color: "#A78BFA", fontWeight: 800, lineHeight: 1.5, maxWidth: 560, margin: "14px auto 0" }}>
-            Updated library: Billy Graham Seoul • Adrian Rogers • Allen Jackson • Dr. James Dobson • David Jeremiah
           </p>
         </div>
 
@@ -429,12 +422,9 @@ export default function TheDJCaresPage() {
         {tab === "library" && (
           <>
             <div style={{ marginBottom: 24 }}>
-              <h2 style={{ fontSize: 26, fontWeight: 900, color: text, margin: "0 0 10px" }}>Encouragement Library</h2>
-              <p style={{ fontSize: 16, color: sub, lineHeight: 1.7, margin: "0 0 12px" }}>
-                A growing place for the messages, songs, playlists, and links I want to keep close and share with people who need encouragement.
-              </p>
-              <p style={{ fontSize: 13, fontWeight: 800, color: "#A78BFA", letterSpacing: "0.02em", margin: 0 }}>
-                Curated for encouragement. Always test every message against Scripture.
+              <h2 style={{ fontSize: 26, fontWeight: 900, color: text, margin: "0 0 8px" }}>Encouragement Library</h2>
+              <p style={{ fontSize: 15, color: sub, lineHeight: 1.6, margin: 0 }}>
+                Messages, songs, playlists, and links to keep close and share.
               </p>
             </div>
 
