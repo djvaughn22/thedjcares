@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://thedjcares.com"),
   title: {
     default: "TheDJCares",
-    template: "%s",
+    template: "%s | TheDJCares",
   },
   description: "Your digital disc jockey connecting you to uplifting music, sermons, podcasts, churches, charities, and gospel-centered resources.",
   applicationName: "TheDJCares",
