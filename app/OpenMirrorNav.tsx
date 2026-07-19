@@ -1,48 +1,43 @@
 "use client";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CANONICAL SOURCE — Open Mirror satellite header (Stage A of the reusable-
-// component plan, docs/openmirror-audit/04-reusable-component-plan.md).
+// CANONICAL SOURCE — Open Mirror satellite header.
 //
 // Edit ONLY here: hub repo → packages/openmirror-ui/OpenMirrorNav.tsx
 // Then run: scripts/sync-ui.sh (copies this file into every satellite repo,
 // overwriting the copies there — never edit the copies in site repos).
-// NOTE: CrossHeartPray is a sync target on disk but renders its own
-// ChpProductNav; do not overwrite CHP. Sync every satellite EXCEPT CHP.
+// NOTE: CrossHeartPray renders its own ChpProductNav; sync-ui.sh already
+// syncs theme-only there.
 //
-// ☰ family menu on every satellite: anyone can get anywhere without going back
-// to the hub first. This is the shared, polished menu system — same compact
-// rhythm, positioning, and behaviour as the CrossHeartPray header (the family
-// reference): React-controlled open/close, real aria wiring, Escape + outside-
-// click + route-change close, focus moved into the menu on open and returned to
-// the trigger on close, and a body-scroll lock on phones. Layout is expressed
-// with inline styles + one scoped <style> block so it renders identically in
-// every satellite regardless of that repo's Tailwind content config.
+// Navigation model (2026-07-19): a satellite header belongs to the SATELLITE.
+// The brand on the left is the current site and goes to the site's own home.
+// The ☰ menu holds the site's own pages first, then exactly two family rows:
+// "All Open Mirror projects" (the hub is the directory) and a quiet
+// CrossHeartPray connection. No satellite repeats the whole product family.
+//
+// Each site passes its own rows:
+//   <OpenMirrorNav site="iDontCry.com" accent="#38BDF8"
+//     links={[{ emoji: "🎮", name: "Game Lab", href: "/games" }, …]} />
+//
+// A11y contract (unchanged): React-controlled open/close, real aria wiring,
+// Escape + outside-click + route-change close, focus into the menu on open and
+// back to the trigger on close, body-scroll lock on phones, 44px touch rows.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import OpenMirrorThemeToggle from "./OpenMirrorTheme";
 
-// Same order as the hub homepage (src/lib/products.ts registry order),
-// with About next-to-last and PleaseBeReady pinned to the very bottom.
-const FAMILY = [
-  { emoji: "🪞", name: "Open Mirror Home", href: "https://openmirrorllc.com" },
+export type OmNavLink = { emoji?: string; name: string; href: string };
+
+const FAMILY_TAIL: OmNavLink[] = [
+  { emoji: "🪞", name: "All Open Mirror projects", href: "https://openmirrorllc.com" },
   { emoji: "✝️", name: "CrossHeartPray", href: "https://crossheartpray.com" },
-  { emoji: "🎵", name: "TheDJCares", href: "https://thedjcares.com" },
-  { emoji: "🐶", name: "DontCloneMeTom", href: "https://dontclonemetom.com" },
-  { emoji: "😂", name: "iDontCry", href: "https://idontcry.com" },
-  { emoji: "🥊", name: "StepInTheRing", href: "https://stepinthering.com" },
-  { emoji: "🧩", name: "OpenDoku", href: "https://opendoku.com" },
-  { emoji: "🎬", name: "WatchedNotWatched", href: "https://watchednotwatched.com" },
-  { emoji: "🤖", name: "WhatAmIAI", href: "https://whatamiai.com" },
-  { emoji: "ℹ️", name: "About Open Mirror", href: "https://openmirrorllc.com/about-open-mirror" },
-  { emoji: "🧰", name: "PleaseBeReady", href: "https://pleasebeready.com" },
 ];
 
-// Scoped chrome the inline styles can't express: hover, focus rings, the mobile
-// label hide, the light-theme panel, and reduced-motion. Keyed to .om-menu-*
-// class names so it never leaks onto the rest of the page.
+// Scoped chrome the inline styles can't express: hover, focus rings, the
+// light-theme panel, and reduced-motion. Keyed to .om-menu-* class names so it
+// never leaks onto the rest of the page.
 const MENU_CSS = `
 .om-menu-btn{transition:background-color .15s ease,border-color .15s ease}
 .om-menu-btn:hover{background:#1c2740}
@@ -51,7 +46,8 @@ const MENU_CSS = `
 .om-menu-link:hover{background:#1c2740}
 .om-menu-link:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(148,163,184,.6)}
 .om-menu-link[aria-current="page"]{background:#1f2a44}
-@media (max-width:640px){.om-bar-label{display:none}.om-menu-btn-label{display:none}}
+.om-brand:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(148,163,184,.6);border-radius:8px}
+@media (max-width:640px){.om-menu-btn-label{display:none}}
 html[data-om-theme="light"] .om-menu-panel{background:#ffffff;border-color:#dbe2ea}
 html[data-om-theme="light"] .om-menu-link:hover{background:#eef2f7}
 html[data-om-theme="light"] .om-menu-link[aria-current="page"]{background:#eef2f7}
@@ -60,7 +56,18 @@ html[data-om-theme="light"] .om-menu-btn:hover{background:#f1f5f9}
 @media (prefers-reduced-motion:reduce){.om-menu-btn,.om-menu-link{transition:none}}
 `.trim();
 
-export default function OpenMirrorNav({ site }: { site?: string }) {
+export default function OpenMirrorNav({
+  site,
+  accent = "#94a3b8",
+  links = [],
+}: {
+  /** e.g. "iDontCry.com" — the current site; the brand links to its home */
+  site?: string;
+  /** the site's canonical accent — colors the ".com" in the brand */
+  accent?: string;
+  /** the site's own pages, in reading order (About last) */
+  links?: OmNavLink[];
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -68,10 +75,8 @@ export default function OpenMirrorNav({ site }: { site?: string }) {
   const menuRef = useRef<HTMLElement>(null);
   const menuId = useId();
 
-  // Highlight the current site's row (the label already names it up top; this
-  // gives the open menu a clear "you are here"). Compare on name, ignoring
-  // the ".com" the satellites pass in.
-  const currentName = site ? site.replace(/\.com$/i, "").toLowerCase() : "";
+  const hasCom = Boolean(site && site.endsWith(".com"));
+  const baseName = hasCom ? site!.slice(0, -4) : site;
 
   const closeMenu = () => setOpen(false);
 
@@ -121,6 +126,38 @@ export default function OpenMirrorNav({ site }: { site?: string }) {
     if (open) menuRef.current?.querySelector<HTMLElement>("a")?.focus();
   }, [open]);
 
+  const renderRow = (l: OmNavLink) => {
+    const active = !l.href.startsWith("http") && pathname === l.href;
+    return (
+      <a
+        key={l.href}
+        href={l.href}
+        className="om-menu-link"
+        aria-current={active ? "page" : undefined}
+        onClick={closeMenu}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          minHeight: 44,
+          boxSizing: "border-box",
+          borderRadius: 12,
+          padding: "10px 14px",
+          color: "#e8edf5",
+          fontSize: 14,
+          fontWeight: 600,
+          textDecoration: "none",
+          touchAction: "manipulation",
+        }}
+      >
+        <span aria-hidden="true" style={{ width: 20, flexShrink: 0, textAlign: "center", lineHeight: 1 }}>
+          {l.emoji ?? "·"}
+        </span>
+        <span style={{ minWidth: 0 }}>{l.name}</span>
+      </a>
+    );
+  };
+
   return (
     <header
       className="om-bar"
@@ -140,39 +177,42 @@ export default function OpenMirrorNav({ site }: { site?: string }) {
           padding: "12px 20px",
         }}
       >
+        {/* The brand is the CURRENT site and goes to its own home. */}
         <a
-          href="https://openmirrorllc.com"
+          href={site ? "/" : "https://openmirrorllc.com"}
+          className="om-brand"
           style={{
             display: "inline-flex",
             alignItems: "baseline",
-            gap: 8,
             fontSize: 16,
             fontWeight: 900,
             letterSpacing: "-0.01em",
             color: "#e8edf5",
             textDecoration: "none",
             whiteSpace: "nowrap",
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
-          <span>Open Mirror LLC</span>
+          {site ? (
+            <>
+              <span>{baseName}</span>
+              {hasCom ? <span style={{ color: accent }}>.com</span> : null}
+            </>
+          ) : (
+            <span>Open Mirror LLC</span>
+          )}
         </a>
 
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
-          {site ? (
-            <span
-              className="om-bar-label"
-              style={{ fontSize: 11, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.2em", color: "#94a3b8" }}
-            >
-              {site}
-            </span>
-          ) : null}
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
           <OpenMirrorThemeToggle />
 
           <button
             ref={buttonRef}
             type="button"
             className="om-menu-btn"
-            aria-label="Open Mirror family menu"
+            aria-label={site ? `${site} menu` : "Menu"}
             aria-haspopup="true"
             aria-expanded={open}
             aria-controls={menuId}
@@ -188,7 +228,9 @@ export default function OpenMirrorNav({ site }: { site?: string }) {
               padding: "10px 16px",
               fontSize: 14,
               fontWeight: 900,
-              minHeight: 40,
+              minHeight: 44,
+              minWidth: 44,
+              justifyContent: "center",
               cursor: "pointer",
               touchAction: "manipulation",
             }}
@@ -203,14 +245,14 @@ export default function OpenMirrorNav({ site }: { site?: string }) {
             <nav
               id={menuId}
               ref={menuRef}
-              aria-label="Open Mirror family"
+              aria-label={site ? `${site} menu` : "Menu"}
               className="om-menu-panel"
               style={{
                 position: "absolute",
                 right: 16,
                 top: "calc(100% + 8px)",
                 zIndex: 60,
-                width: 256,
+                width: 264,
                 maxWidth: "calc(100vw - 2rem)",
                 maxHeight: "min(70vh, 30rem)",
                 overflowY: "auto",
@@ -222,40 +264,11 @@ export default function OpenMirrorNav({ site }: { site?: string }) {
                 boxShadow: "0 20px 40px rgba(0,0,0,.4)",
               }}
             >
-              {FAMILY.map((f) => {
-                const active = currentName !== "" && f.name.toLowerCase() === currentName;
-                return (
-                  <a
-                    key={f.href}
-                    href={f.href}
-                    className="om-menu-link"
-                    aria-current={active ? "page" : undefined}
-                    onClick={closeMenu}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      minHeight: 44,
-                      boxSizing: "border-box",
-                      borderRadius: 12,
-                      padding: "10px 14px",
-                      color: "#e8edf5",
-                      fontSize: 14,
-                      fontWeight: 600,
-                      textDecoration: "none",
-                      touchAction: "manipulation",
-                    }}
-                  >
-                    <span
-                      aria-hidden="true"
-                      style={{ width: 20, flexShrink: 0, textAlign: "center", lineHeight: 1 }}
-                    >
-                      {f.emoji}
-                    </span>
-                    <span style={{ minWidth: 0 }}>{f.name}</span>
-                  </a>
-                );
-              })}
+              {links.map(renderRow)}
+              {links.length > 0 ? (
+                <div aria-hidden="true" style={{ margin: "8px 6px", borderTop: "1px solid #26324c" }} />
+              ) : null}
+              {FAMILY_TAIL.map(renderRow)}
             </nav>
           ) : null}
         </span>

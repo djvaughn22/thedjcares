@@ -51,10 +51,9 @@ export default function OpenMirrorFooter({ siteName, tagline, accent }: Props) {
         <a href="https://crossheartpray.com" aria-label="CrossHeartPray" title="CrossHeartPray" style={{ ...phrase, textDecoration: "none" }}>✝️ ❤️ 🙏</a>
       </p>
       <p style={{ fontSize: 11, color: "#64748b", fontWeight: 600, lineHeight: 1.8, margin: "10px auto 0", maxWidth: 520 }}>
-        <span style={phrase}>Open Mirror LLC is an independent company,</span>{" "}
-        <span style={phrase}>created and operated on personal time.</span>{" "}
-        <a href="https://openmirrorllc.com/about-open-mirror#disclaimer" style={{ ...phrase, color: "#64748b", textDecoration: "underline" }}>
-          Full disclaimer
+        <span style={phrase}>Open Mirror LLC is a small independent company.</span>{" "}
+        <a href="https://openmirrorllc.com/disclaimer" style={{ ...phrase, color: "#64748b", textDecoration: "underline" }}>
+          Disclaimer
         </a>
       </p>
     </footer>

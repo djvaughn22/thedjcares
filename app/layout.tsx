@@ -32,7 +32,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html suppressHydrationWarning lang="en">
       <body>
-        <OpenMirrorNav site="TheDJCares.com" />
+        <OpenMirrorNav
+          site="TheDJCares.com"
+          accent="#A78BFA"
+          links={[
+            { emoji: "🎧", name: "Now Spinning", href: "/" },
+            { emoji: "🎵", name: "Music", href: "/#music" },
+            { emoji: "📺", name: "Music Videos", href: "/#videos" },
+            { emoji: "🎙️", name: "Podcasts", href: "/#podcasts" },
+            { emoji: "⛪", name: "Sermons", href: "/#sermons" },
+            { emoji: "🌅", name: "Daily Encouragement", href: "/today" },
+            { emoji: "ℹ️", name: "About TheDJCares", href: "/#about" },
+          ]}
+        />
         {children}
         <OpenMirrorFooter siteName="TheDJCares.com" tagline="Follow Jesus. Love God. Pray." accent="#A78BFA" />
         <Script
