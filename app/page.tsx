@@ -210,13 +210,21 @@ export default function TheDJCaresPage() {
     background: selected ? active : "none",
     border: `2px solid ${selected ? activeBorder : border}`,
     borderRadius: 50,
-    padding: "10px 18px",
+    padding: "10px 8px",
     fontSize: 13.5,
     fontWeight: 800,
     cursor: "pointer",
     color: selected ? accent : sub,
-    whiteSpace: "nowrap",
+    textAlign: "center",
   });
+
+  // Symmetric option grids — every row full, every button the same size.
+  // minmax(0, 1fr) keeps long labels from stretching their column.
+  const optionGrid: React.CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: 8,
+  };
 
   const bigButton: React.CSSProperties = {
     background: accent,
@@ -331,12 +339,41 @@ export default function TheDJCaresPage() {
   };
 
   const VibeChips = ({ scope }: { scope?: Vibe[] }) => (
-    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+    <div style={{ ...optionGrid, marginBottom: 20 }}>
       {(scope ?? VIBES).map((v) => (
         <button key={v} onClick={() => setVibe(vibe === v ? null : v)} aria-pressed={vibe === v} style={pill(vibe === v)}>
           {v}
         </button>
       ))}
+    </div>
+  );
+
+  // One playlist card, artwork and all — the Apple player is always mounted
+  // (lazily loaded), so pressing play is a single tap like the old site.
+  const PlaylistCard = ({ p }: { p: MediaItem }) => (
+    <div key={p.id} className="pop" style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, padding: "16px 18px" }}>
+      <p style={{ fontSize: 16, fontWeight: 900, color: text, margin: 0 }}>{p.title}</p>
+      {p.summary && <p style={{ fontSize: 13, color: sub, margin: "3px 0 0" }}>{p.summary}</p>}
+      {p.appleEmbed && (
+        <iframe
+          src={p.appleEmbed}
+          title={p.title}
+          loading="lazy"
+          allow="autoplay *; encrypted-media *;"
+          sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+          style={{ width: "100%", height: 430, border: 0, borderRadius: 12, marginTop: 12, background: "transparent" }}
+        />
+      )}
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 10 }}>
+        <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
+          Open in Apple Music ↗
+        </a>
+        {p.spotifyAlt && (
+          <a href={p.spotifyAlt} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
+            Prefer Spotify? ↗
+          </a>
+        )}
+      </div>
     </div>
   );
 
@@ -465,7 +502,7 @@ export default function TheDJCaresPage() {
           <p style={{ fontSize: 12, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", color: sub, margin: "0 0 10px" }}>
             What should I spin?
           </p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          <div style={{ ...optionGrid, marginBottom: 12 }}>
             {SPIN_CATEGORIES.map((c) => (
               <button key={c.id} onClick={() => setCategory(c.id)} aria-pressed={category === c.id} style={pill(category === c.id)}>
                 {c.label}
@@ -475,7 +512,7 @@ export default function TheDJCaresPage() {
           <p style={{ fontSize: 12, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", color: sub, margin: "0 0 10px" }}>
             Choose a vibe <span style={{ fontWeight: 700, letterSpacing: 0, textTransform: "none" }}>(optional)</span>
           </p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div style={optionGrid}>
             {VIBES.map((v) => (
               <button key={v} onClick={() => setVibe(vibe === v ? null : v)} aria-pressed={vibe === v} style={pill(vibe === v)}>
                 {v}
@@ -506,7 +543,6 @@ export default function TheDJCaresPage() {
   const playlists = itemsOfType("playlist");
   const vibeFiltered = (items: MediaItem[]) => (vibe ? items.filter((i) => i.vibes.includes(vibe)) : items);
 
-  const [openPlaylists, setOpenPlaylists] = useState<Record<string, boolean>>({});
   const [sermonMinistry, setSermonMinistry] = useState<MinistryKey | null>(null);
 
   return (
@@ -522,8 +558,12 @@ export default function TheDJCaresPage() {
           </p>
         </div>
 
-        {/* navigation */}
-        <nav aria-label="Sections" style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 26, flexWrap: "wrap" }}>
+        {/* the hero deck comes before every button: always on Spin; on other
+            tabs it stays up top once something is playing */}
+        {(tab === "spin" || started) && deck}
+
+        {/* navigation — a symmetric 3×3 grid */}
+        <nav aria-label="Sections" style={{ ...optionGrid, maxWidth: 560, margin: "0 auto 26px" }}>
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -532,12 +572,13 @@ export default function TheDJCaresPage() {
               style={{
                 background: tab === t.id ? accent : card,
                 border: `2px solid ${tab === t.id ? accent : border}`,
-                borderRadius: 50,
-                padding: "11px 16px",
-                fontSize: 14,
+                borderRadius: 14,
+                padding: "12px 6px",
+                fontSize: 13.5,
                 fontWeight: 800,
                 cursor: "pointer",
                 color: tab === t.id ? ink : sub,
+                textAlign: "center",
               }}
             >
               <span aria-hidden>{t.emoji}</span> {t.label}
@@ -545,14 +586,11 @@ export default function TheDJCaresPage() {
           ))}
         </nav>
 
-        {/* the deck: always on Spin; elsewhere only once something is playing */}
-        {(tab === "spin" || started) && deck}
-
         {tab === "spin" && (
           <>
             <h2 style={sectionH}>Keep listening</h2>
             <p style={sectionSub}>Or head straight to a crate.</p>
-            <div style={{ ...grid, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", marginBottom: 30 }}>
+            <div style={{ ...optionGrid, marginBottom: 30 }}>
               {(
                 [
                   ["music", "🎵", "Music", `${songs.length} songs`],
@@ -560,19 +598,28 @@ export default function TheDJCaresPage() {
                   ["playlists", "🎶", "Playlists", `${playlists.length} Apple Music playlists`],
                   ["podcasts", "🎙️", "Podcasts", `${podcasts.length} shows`],
                   ["sermons", "✝️", "Sermons", `${sermons.length} messages`],
+                  ["ministries", "🏛️", "Ministries", `${MINISTRIES.length} trusted sources`],
                 ] as [Tab, string, string, string][]
               ).map(([id, emoji, label, count]) => (
-                <button key={id} onClick={() => goTab(id)} className="pop" style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, padding: "18px 14px", cursor: "pointer", textAlign: "center" }}>
-                  <span aria-hidden style={{ fontSize: 28, display: "block", marginBottom: 6 }}>{emoji}</span>
-                  <span style={{ fontSize: 15, fontWeight: 900, color: text, display: "block" }}>{label}</span>
-                  <span style={{ fontSize: 12.5, fontWeight: 700, color: sub }}>{count}</span>
+                <button key={id} onClick={() => goTab(id)} className="pop" style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, padding: "16px 8px", cursor: "pointer", textAlign: "center" }}>
+                  <span aria-hidden style={{ fontSize: 26, display: "block", marginBottom: 6 }}>{emoji}</span>
+                  <span style={{ fontSize: 14.5, fontWeight: 900, color: text, display: "block" }}>{label}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: sub }}>{count}</span>
                 </button>
+              ))}
+            </div>
+
+            <h2 style={sectionH}>The DJ&apos;s playlists</h2>
+            <p style={sectionSub}>Whole Apple Music mixes, reviewed song by song — press play, they stream right here.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 30 }}>
+              {playlists.map((p) => (
+                <PlaylistCard key={p.id} p={p} />
               ))}
             </div>
 
             <h2 style={sectionH}>Trusted ministries</h2>
             <p style={sectionSub}>Every sermon comes from these official ministries — nothing is pulled from an algorithm.</p>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 30 }}>
+            <div style={{ ...optionGrid, marginBottom: 30 }}>
               {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0).map((m) => (
                 <button key={m.key} onClick={() => goTab("ministries")} style={pill(false)}>
                   {m.speaker}
@@ -618,39 +665,7 @@ export default function TheDJCaresPage() {
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {playlists.map((p) => (
-                <div key={p.id} className="pop" style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, padding: "16px 18px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                    <div>
-                      <p style={{ fontSize: 16, fontWeight: 900, color: text, margin: 0 }}>{p.title}</p>
-                      {p.summary && <p style={{ fontSize: 13, color: sub, margin: "3px 0 0" }}>{p.summary}</p>}
-                    </div>
-                    {!openPlaylists[p.id] && (
-                      <button onClick={() => { setOpenPlaylists((o) => ({ ...o, [p.id]: true })); track("playlist_open", { content_title: p.title }); }} style={quietButton}>
-                        ▶ Show player
-                      </button>
-                    )}
-                  </div>
-                  {openPlaylists[p.id] && p.appleEmbed && (
-                    <iframe
-                      src={p.appleEmbed}
-                      title={p.title}
-                      loading="lazy"
-                      allow="autoplay *; encrypted-media *;"
-                      sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
-                      style={{ width: "100%", height: 430, border: 0, borderRadius: 12, marginTop: 12, background: "transparent" }}
-                    />
-                  )}
-                  <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 10 }}>
-                    <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
-                      Open in Apple Music ↗
-                    </a>
-                    {p.spotifyAlt && (
-                      <a href={p.spotifyAlt} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
-                        Prefer Spotify? ↗
-                      </a>
-                    )}
-                  </div>
-                </div>
+                <PlaylistCard key={p.id} p={p} />
               ))}
             </div>
           </>
