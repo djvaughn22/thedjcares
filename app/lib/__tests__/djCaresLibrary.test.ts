@@ -81,13 +81,34 @@ describe("library integrity", () => {
     for (const name of [
       "Billy Graham",
       "Adrian Rogers",
+      "Charles Stanley",
       "David Jeremiah",
-      "Allen Jackson",
-      "Rick Warren",
       "James Dobson",
+      "Allen Jackson",
+      "Greg Laurie",
     ]) {
       expect(speakers.has(name), `missing sermons from ${name}`).toBe(true);
     }
+  });
+
+  it("every approved minister has a deep catalog (~50 messages)", () => {
+    const counts = new Map<string, number>();
+    for (const i of LIBRARY) {
+      if (i.type === "sermon") counts.set(i.author, (counts.get(i.author) ?? 0) + 1);
+    }
+    for (const [name, n] of counts) {
+      expect(n, `${name} has only ${n} sermons`).toBeGreaterThanOrEqual(50);
+    }
+  });
+
+  it("no sermons remain from removed ministers", () => {
+    const speakers = new Set(LIBRARY.map((i) => i.author));
+    expect(speakers.has("Rick Warren")).toBe(false);
+  });
+
+  it("videoIds are unique — no duplicated content", () => {
+    const vids = LIBRARY.filter((i) => i.videoId).map((i) => i.videoId);
+    expect(new Set(vids).size).toBe(vids.length);
   });
 
   it("ministries have official https URLs and verification dates", () => {

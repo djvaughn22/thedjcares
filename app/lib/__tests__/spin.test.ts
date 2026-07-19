@@ -116,11 +116,13 @@ describe("history sizing", () => {
 });
 
 describe("real library pools", () => {
-  it("music leads: the music pool is the largest single type", () => {
-    const music = spinPool({ category: "music" }).length;
-    for (const t of ["podcast", "sermon", "playlist"] as const) {
-      expect(music).toBeGreaterThanOrEqual(spinPool({ category: t }).length);
-    }
+  it("every category has a healthy playable pool", () => {
+    expect(spinPool({ category: "music" }).length).toBeGreaterThanOrEqual(20);
+    expect(spinPool({ category: "videos" }).length).toBeGreaterThanOrEqual(10);
+    expect(spinPool({ category: "playlist" }).length).toBeGreaterThanOrEqual(5);
+    expect(spinPool({ category: "podcast" }).length).toBeGreaterThanOrEqual(2);
+    // The sermon catalog runs deep — ~50 per approved minister.
+    expect(spinPool({ category: "sermon" }).length).toBeGreaterThanOrEqual(300);
   });
 
   it("every ministry with sermons can be spun", () => {

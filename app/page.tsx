@@ -544,6 +544,7 @@ export default function TheDJCaresPage() {
   const vibeFiltered = (items: MediaItem[]) => (vibe ? items.filter((i) => i.vibes.includes(vibe)) : items);
 
   const [sermonMinistry, setSermonMinistry] = useState<MinistryKey | null>(null);
+  const [expandedSermons, setExpandedSermons] = useState<Record<string, boolean>>({});
   // The record shop window: which of the DJ's Apple Music playlists is open
   // up top. Faith Playlist leads.
   const [heroPlaylistId, setHeroPlaylistId] = useState("apple-faith-playlist");
@@ -658,18 +659,16 @@ export default function TheDJCaresPage() {
 
             <h2 style={sectionH}>✝️ Sermons</h2>
             <p style={sectionSub}>Tap a name and The DJ spins one of their messages — approved ministers, official channels only.</p>
-            <div style={{ ...optionGrid, marginBottom: 12 }}>
+            <div style={{ ...optionGrid, marginBottom: 30 }}>
               {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0).map((m) => (
                 <button key={m.key} onClick={() => spinMinistry(m.key)} style={pill(false)}>
                   {m.speaker}
                 </button>
               ))}
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginBottom: 30 }}>
-              <button onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={{ ...bigButton, padding: "13px 10px", fontSize: 15 }}>
-                🔀 Spin a sermon
+              <button onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={{ ...bigButton, borderRadius: 50, padding: "10px 8px", fontSize: 13.5 }}>
+                🔀 Surprise me
               </button>
-              <button onClick={() => goTab("sermons")} style={{ ...quietButton, padding: "13px 10px" }}>
+              <button onClick={() => goTab("sermons")} style={pill(false)}>
                 Browse all →
               </button>
             </div>
@@ -768,14 +767,9 @@ export default function TheDJCaresPage() {
 
         {tab === "sermons" && (
           <>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-              <h2 style={sectionH}>Sermons</h2>
-              <button onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe, ministry: sermonMinistry }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={bigButton}>
-                🔀 Spin a sermon
-              </button>
-            </div>
+            <h2 style={sectionH}>Sermons</h2>
             <p style={sectionSub}>Approved ministers, official channels, Christ at the center. Pick one, or let The DJ spin.</p>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+            <div style={{ ...optionGrid, marginBottom: 20 }}>
               <button onClick={() => setSermonMinistry(null)} aria-pressed={sermonMinistry === null} style={pill(sermonMinistry === null)}>
                 All ministries
               </button>
@@ -784,18 +778,31 @@ export default function TheDJCaresPage() {
                   {m.speaker}
                 </button>
               ))}
+              <button onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe, ministry: sermonMinistry }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={{ ...bigButton, borderRadius: 50, padding: "10px 8px", fontSize: 13.5 }}>
+                🔀 Spin a sermon
+              </button>
             </div>
-            {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0 && (sermonMinistry === null || sermonMinistry === m.key)).map((m) => (
-              <section key={m.key} style={{ marginBottom: 30 }}>
-                <h3 style={{ fontSize: 18, fontWeight: 900, color: text, margin: "0 0 2px" }}>{m.speaker}</h3>
-                <p style={{ fontSize: 13, color: sub, margin: "0 0 12px" }}>{m.name}</p>
-                <div style={grid}>
-                  {sermons.filter((s) => s.ministry === m.key).map((s) => (
-                    <MediaCard key={s.id} item={s} />
-                  ))}
-                </div>
-              </section>
-            ))}
+            {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0 && (sermonMinistry === null || sermonMinistry === m.key)).map((m) => {
+              const list = sermons.filter((s) => s.ministry === m.key);
+              const open = expandedSermons[m.key] || sermonMinistry === m.key;
+              const shown = open ? list : list.slice(0, 6);
+              return (
+                <section key={m.key} style={{ marginBottom: 30 }}>
+                  <h3 style={{ fontSize: 18, fontWeight: 900, color: text, margin: "0 0 2px" }}>{m.speaker}</h3>
+                  <p style={{ fontSize: 13, color: sub, margin: "0 0 12px" }}>{m.name} · {list.length} messages</p>
+                  <div style={grid}>
+                    {shown.map((s) => (
+                      <MediaCard key={s.id} item={s} />
+                    ))}
+                  </div>
+                  {!open && list.length > shown.length && (
+                    <button onClick={() => setExpandedSermons((e) => ({ ...e, [m.key]: true }))} style={{ ...quietButton, width: "100%", marginTop: 12 }}>
+                      Show all {list.length} from {m.speaker} →
+                    </button>
+                  )}
+                </section>
+              );
+            })}
           </>
         )}
 
