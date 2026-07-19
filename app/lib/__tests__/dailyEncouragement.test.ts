@@ -6,7 +6,7 @@ import {
   selectItemForDate,
   typeLabelFor,
 } from "../dailyEncouragement";
-import { DJ_CARES_LIBRARY } from "../djCaresLibrary";
+import { LIBRARY } from "../djCaresLibrary";
 import {
   addDaysToDateKey,
   captionMarkerForDate,
@@ -52,18 +52,18 @@ describe("deterministic rotation — no recent duplicates", () => {
   });
 
   it("offset chooses a different item (admin control)", () => {
-    const a = selectItemForDate("2026-07-12", DJ_CARES_LIBRARY, 0);
-    const b = selectItemForDate("2026-07-12", DJ_CARES_LIBRARY, 1);
+    const a = selectItemForDate("2026-07-12", LIBRARY, 0);
+    const b = selectItemForDate("2026-07-12", LIBRARY, 1);
     expect(a!.id).not.toBe(b!.id);
   });
 });
 
 describe("labels match content type", () => {
-  it("maps categories to matching daily labels", () => {
-    expect(typeLabelFor("Message")).toBe("Sermon of the Day");
-    expect(typeLabelFor("Song")).toBe("Song for Today");
-    expect(typeLabelFor("Music")).toBe("Playlist for Today");
-    expect(typeLabelFor("Lesson")).toBe("Teaching for Today");
+  it("maps media types to matching daily labels", () => {
+    expect(typeLabelFor("sermon")).toBe("Sermon of the Day");
+    expect(typeLabelFor("music")).toBe("Song for Today");
+    expect(typeLabelFor("playlist")).toBe("Playlist for Today");
+    expect(typeLabelFor("podcast")).toBe("Podcast for Today");
   });
 });
 
@@ -71,11 +71,11 @@ describe("caption parity", () => {
   it("caption carries marker, label, title, and attribution — and validates", () => {
     const item = selectItemForDate("2026-07-12")!;
     const caption = buildEncouragementCaption("2026-07-12", item);
-    const label = typeLabelFor(item.category);
+    const label = typeLabelFor(item.type);
 
     expect(caption.startsWith(captionMarkerForDate(DJC_BRAND, "2026-07-12"))).toBe(true);
     expect(caption).toContain(item.title);
-    expect(caption).toContain(item.author!);
+    expect(caption).toContain(item.author);
     expect(caption).toContain("TheDJCares.com/today");
 
     const post = {
@@ -92,7 +92,7 @@ describe("caption parity", () => {
       imagePath: "/api/social/daily-encouragement/2026-07-12.png",
       imageFileName: "daily-encouragement-2026-07-12-1080x1350.png",
       pagePath: "/today/2026-07-12",
-      parityKeys: [item.title, item.author ?? "", label],
+      parityKeys: [item.title, item.author, label],
     };
 
     expect(validateDailySocialPost(DJC_BRAND, post)).toEqual([]);

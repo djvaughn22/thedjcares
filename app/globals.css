@@ -1,5 +1,54 @@
 @import "tailwindcss";
 
+/* ── The DJ Cares player + deck ── */
+.djc-player iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* the record — gentle turntable motion, killed by the reduced-motion rule */
+@keyframes djc-spin-record {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.djc-record { border-radius: 50%; overflow: hidden; position: relative; }
+.djc-record.spinning { animation: djc-spin-record 7s linear infinite; }
+
+/* subtle equalizer while something is playing */
+@keyframes djc-eq {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+.djc-eq { display: inline-flex; align-items: flex-end; gap: 3px; height: 16px; }
+.djc-eq span {
+  width: 4px;
+  height: 100%;
+  border-radius: 2px;
+  background: #a78bfa;
+  transform: scaleY(0.3);
+  transform-origin: bottom;
+  animation: djc-eq 1.1s ease-in-out infinite;
+}
+.djc-eq span:nth-child(2) { animation-delay: 0.18s; }
+.djc-eq span:nth-child(3) { animation-delay: 0.36s; }
+.djc-eq span:nth-child(4) { animation-delay: 0.54s; }
+
+/* screen-reader-only announcements */
+.djc-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* card hover pop */
 .pop { transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
 .pop:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(0,0,0,.5); }

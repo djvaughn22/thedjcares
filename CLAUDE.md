@@ -1,8 +1,9 @@
 # TheDJCares (thedjcares.com)
 Christian community outreach (St. Louis first). **Stays Christian — never secularize.** Accent: **#A78BFA**.
-- Add playlists/sermons/podcasts via one-line entries in `app/lib/djCaresLibrary.ts`. DJ approves all content.
-- Verify every YouTube ID via oEmbed before shipping (dead-ID lesson).
-- Apple Music playlist embeds: one sign-in + the "sync the rest ↻" button re-mounts the players.
+- The whole approved library (music/playlists/podcasts/sermons/ministries/churches) lives in `app/lib/djCaresLibrary.ts` — one-line adds, `active: false` benches. DJ approves all content.
+- Verify every YouTube ID via oEmbed AND confirm the official channel before shipping (dead-ID + re-upload lessons).
+- The Now Spinning shuffle (`app/lib/spin.ts`) selects only from the approved library — never wire in YouTube recommendations.
+- Apple Music playlist embeds are lazy ("Show player") so the first load stays fast.
 
 ## Open Mirror family rules
 - One of 11 Open Mirror LLC sites (hub: openmirrorllc.com, repo djvaughn22/open-mirror). Baseline tag: `mvp-1`.

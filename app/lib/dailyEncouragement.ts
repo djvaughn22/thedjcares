@@ -19,11 +19,12 @@ import {
   type DailySocialPost,
 } from "./dailySocialCore";
 import {
-  DJ_CARES_LIBRARY,
+  activeItems,
   getEmbedUrl,
   getWatchUrl,
-  type LibraryCategory,
-  type LibraryItem,
+  LIBRARY,
+  type MediaItem,
+  type MediaType,
 } from "./djCaresLibrary";
 
 export const DJC_BRAND: DailySocialBrandConfig = {
@@ -37,20 +38,16 @@ export const DJC_BRAND: DailySocialBrandConfig = {
 };
 
 // The daily label always matches the selected content type.
-export function typeLabelFor(category: LibraryCategory): string {
-  switch (category) {
-    case "Message":
-    case "Pastor":
+export function typeLabelFor(type: MediaType): string {
+  switch (type) {
+    case "sermon":
       return "Sermon of the Day";
-    case "Song":
+    case "music":
       return "Song for Today";
-    case "Music":
+    case "playlist":
       return "Playlist for Today";
-    case "Lesson":
-      return "Teaching for Today";
-    case "Book":
-      return "Book for Today";
-    case "Resource":
+    case "podcast":
+      return "Podcast for Today";
     default:
       return "Encouragement for Today";
   }
@@ -58,10 +55,10 @@ export function typeLabelFor(category: LibraryCategory): string {
 
 // An item is eligible only when it has a real destination and DJ's own
 // title/attribution/summary — no placeholders, no unverified content.
-export function eligibleItems(items: LibraryItem[] = DJ_CARES_LIBRARY): LibraryItem[] {
+export function eligibleItems(items: MediaItem[] = LIBRARY): MediaItem[] {
   const seen = new Set<string>();
 
-  return items.filter((item) => {
+  return activeItems(items).filter((item) => {
     if (seen.has(item.id)) return false;
     seen.add(item.id);
 
@@ -80,9 +77,9 @@ export function eligibleItems(items: LibraryItem[] = DJ_CARES_LIBRARY): LibraryI
 // "choose another eligible item" control.
 export function selectItemForDate(
   dateKey: string,
-  items: LibraryItem[] = DJ_CARES_LIBRARY,
+  items: MediaItem[] = LIBRARY,
   offset = 0,
-): LibraryItem | null {
+): MediaItem | null {
   const eligible = eligibleItems(items).sort((a, b) => a.id.localeCompare(b.id));
   if (!eligible.length) return null;
 
@@ -91,8 +88,8 @@ export function selectItemForDate(
   return eligible[index];
 }
 
-export function buildEncouragementCaption(dateKey: string, item: LibraryItem): string {
-  const label = typeLabelFor(item.category);
+export function buildEncouragementCaption(dateKey: string, item: MediaItem): string {
+  const label = typeLabelFor(item.type);
 
   return [
     captionMarkerForDate(DJC_BRAND, dateKey),
@@ -112,7 +109,7 @@ export function buildEncouragementCaption(dateKey: string, item: LibraryItem): s
 
 export type DailyEncouragement = {
   post: DailySocialPost;
-  item: LibraryItem;
+  item: MediaItem;
   label: string;
   embedUrl: string | null;
   sourceUrl: string;
@@ -121,9 +118,9 @@ export type DailyEncouragement = {
 // Confirms the item's source still works before a real publish.
 // YouTube ids are checked via oEmbed (the library's own dead-id lesson);
 // other links must answer without a server error.
-export async function verifyItemSource(item: LibraryItem): Promise<string | null> {
+export async function verifyItemSource(item: MediaItem): Promise<string | null> {
   try {
-    if (item.videoProvider === "youtube" && item.videoId) {
+    if (item.videoId) {
       const res = await fetch(
         `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${item.videoId}`)}&format=json`,
       );
@@ -146,7 +143,7 @@ export async function buildDailyEncouragement(
     throw new Error(`Invalid date key: ${dateKey}`);
   }
 
-  const item = selectItemForDate(dateKey, DJ_CARES_LIBRARY, options.offset ?? 0);
+  const item = selectItemForDate(dateKey, LIBRARY, options.offset ?? 0);
   if (!item) {
     throw new Error("no eligible item in the curated library");
   }
@@ -158,7 +155,7 @@ export async function buildDailyEncouragement(
     }
   }
 
-  const label = typeLabelFor(item.category);
+  const label = typeLabelFor(item.type);
 
   return {
     item,
