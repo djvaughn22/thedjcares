@@ -67,6 +67,7 @@ export type MediaItem = {
   author: string; // artist, speaker, host, or show
   ministry?: MinistryKey;
   summary?: string; // DJ's short note — why it's here
+  shortTitle?: string; // compact label for filter pills
   url: string; // canonical official source
   videoId?: string; // YouTube (oEmbed-verified)
   musicVideo?: boolean; // music item that's a proper official music video
@@ -206,7 +207,8 @@ const sermon = (
   extra: Partial<MediaItem> = {},
 ) => yt(id, "sermon", title, author, videoId, vibes, { ministry, ...extra });
 
-const applePl = (id: string, title: string, path: string, vibes: Vibe[], extra: Partial<MediaItem> = {}): MediaItem => ({
+const applePl = (id: string, title: string, shortTitle: string, path: string, vibes: Vibe[], extra: Partial<MediaItem> = {}): MediaItem => ({
+  shortTitle,
   id,
   type: "playlist",
   title,
@@ -260,12 +262,12 @@ const MUSIC: MediaItem[] = [
 // PLAYLISTS — DJ-curated Apple Music playlists (with Spotify twins where set).
 // ---------------------------------------------------------------------------
 const PLAYLISTS: MediaItem[] = [
-  applePl("apple-faith-playlist", "Faith Playlist", "faith-playlist/pl.u-2aoqXjzsNqgmY7", ["Faith", "Worship"], { featured: true, spotifyAlt: "https://open.spotify.com/playlist/37i9dQZF1DXcb6CQIjdqKy", summary: "The songs I keep coming back to. Press play and let faith rise." }),
-  applePl("apple-todays-christian", "Today's Christian", "todays-christian/pl.fecfa8a26ea44ad581d4fe501892c8ff", ["Worship"], { spotifyAlt: "https://open.spotify.com/playlist/37i9dQZF1DX5SzTPIoCKiv", summary: "Today's Christian music, hand-picked to encourage." }),
-  applePl("apple-christian-rap", "Christian Rap Essentials", "christian-rap-essentials/pl.981a3c7a4e4641ceae33034bc51bdceb", ["Joy"], { summary: "Faith-filled bars that point to Jesus." }),
-  applePl("apple-christian-workout", "Christian Workout", "christian-workout/pl.4f6345e9ab6f4782bd31250b74ec6b23", ["Joy"], { summary: "High-energy worship to move to." }),
-  applePl("apple-country-faith", "Country Faith", "country-faith/pl.a1f19c594aa846c3898dd98dd99c8910", ["Hope"], { summary: "Country music with a faithful heart." }),
-  applePl("apple-church-hymns", "Church Hymns", "church-hymns/pl.u-oZyll6RTRo9g6J", ["Hymns"], { summary: "The old hymns that have carried the church for generations." }),
+  applePl("apple-faith-playlist", "Faith Playlist", "Faith", "faith-playlist/pl.u-2aoqXjzsNqgmY7", ["Faith", "Worship"], { featured: true, spotifyAlt: "https://open.spotify.com/playlist/37i9dQZF1DXcb6CQIjdqKy", summary: "The songs I keep coming back to. Press play and let faith rise." }),
+  applePl("apple-todays-christian", "Today's Christian", "Today's", "todays-christian/pl.fecfa8a26ea44ad581d4fe501892c8ff", ["Worship"], { spotifyAlt: "https://open.spotify.com/playlist/37i9dQZF1DX5SzTPIoCKiv", summary: "Today's Christian music, hand-picked to encourage." }),
+  applePl("apple-christian-rap", "Christian Rap Essentials", "Rap", "christian-rap-essentials/pl.981a3c7a4e4641ceae33034bc51bdceb", ["Joy"], { summary: "Faith-filled bars that point to Jesus." }),
+  applePl("apple-christian-workout", "Christian Workout", "Workout", "christian-workout/pl.4f6345e9ab6f4782bd31250b74ec6b23", ["Joy"], { summary: "High-energy worship to move to." }),
+  applePl("apple-country-faith", "Country Faith", "Country", "country-faith/pl.a1f19c594aa846c3898dd98dd99c8910", ["Hope"], { summary: "Country music with a faithful heart." }),
+  applePl("apple-church-hymns", "Church Hymns", "Hymns", "church-hymns/pl.u-oZyll6RTRo9g6J", ["Hymns"], { summary: "The old hymns that have carried the church for generations." }),
 ];
 
 // ---------------------------------------------------------------------------

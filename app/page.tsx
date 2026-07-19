@@ -82,7 +82,7 @@ export default function TheDJCaresPage() {
   const [tab, setTab] = useState<Tab>("spin");
 
   // --- deck state ---
-  const [category, setCategory] = useState<SpinCategory>("all");
+  const [category, setCategory] = useState<SpinCategory>("videos");
   const [vibe, setVibe] = useState<Vibe | null>(null);
   const [current, setCurrent] = useState<MediaItem | null>(null);
   const [started, setStarted] = useState(false); // player mounted?
@@ -544,6 +544,10 @@ export default function TheDJCaresPage() {
   const vibeFiltered = (items: MediaItem[]) => (vibe ? items.filter((i) => i.vibes.includes(vibe)) : items);
 
   const [sermonMinistry, setSermonMinistry] = useState<MinistryKey | null>(null);
+  // The record shop window: which of the DJ's Apple Music playlists is open
+  // up top. Faith Playlist leads.
+  const [heroPlaylistId, setHeroPlaylistId] = useState("apple-faith-playlist");
+  const heroPlaylist = playlists.find((p) => p.id === heroPlaylistId) ?? playlists[0];
 
   return (
     <main style={{ background: bg, minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -558,7 +562,49 @@ export default function TheDJCaresPage() {
           </p>
         </div>
 
-        {/* the hero deck comes before every button: always on Spin; on other
+        {/* the site opens with the DJ's music: Faith Playlist on Apple Music,
+            with one-tap filters for the other playlists */}
+        {tab === "spin" && heroPlaylist && (
+          <section aria-label="The Music" style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20 }}>
+            <p style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 12px" }}>
+              <span aria-hidden>🎶</span> The Music
+            </p>
+            <div style={{ ...optionGrid, marginBottom: 14 }}>
+              {playlists.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => { setHeroPlaylistId(p.id); track("playlist_open", { content_title: p.title }); }}
+                  aria-pressed={heroPlaylistId === p.id}
+                  style={pill(heroPlaylistId === p.id)}
+                >
+                  {p.shortTitle ?? p.title}
+                </button>
+              ))}
+            </div>
+            <p style={{ fontSize: 17, fontWeight: 900, color: text, margin: "0 0 2px" }}>{heroPlaylist.title}</p>
+            {heroPlaylist.summary && <p style={{ fontSize: 13.5, color: sub, margin: "0 0 12px", lineHeight: 1.55 }}>{heroPlaylist.summary}</p>}
+            <iframe
+              key={heroPlaylist.id}
+              src={heroPlaylist.appleEmbed}
+              title={heroPlaylist.title}
+              allow="autoplay *; encrypted-media *;"
+              sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+              style={{ width: "100%", height: 430, border: 0, borderRadius: 14, background: "transparent" }}
+            />
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 10 }}>
+              <a href={heroPlaylist.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
+                Open in Apple Music ↗
+              </a>
+              {heroPlaylist.spotifyAlt && (
+                <a href={heroPlaylist.spotifyAlt} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
+                  Prefer Spotify? ↗
+                </a>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* the spin deck sits right under the music: always on Spin; on other
             tabs it stays up top once something is playing */}
         {(tab === "spin" || started) && deck}
 
@@ -588,43 +634,44 @@ export default function TheDJCaresPage() {
 
         {tab === "spin" && (
           <>
-            <h2 style={sectionH}>Keep listening</h2>
-            <p style={sectionSub}>Or head straight to a crate.</p>
-            <div style={{ ...optionGrid, marginBottom: 30 }}>
-              {(
-                [
-                  ["music", "🎵", "Music", `${songs.length} songs`],
-                  ["videos", "🎬", "Music Videos", `${videos.length} YouTube videos`],
-                  ["playlists", "🎶", "Playlists", `${playlists.length} Apple Music playlists`],
-                  ["podcasts", "🎙️", "Podcasts", `${podcasts.length} shows`],
-                  ["sermons", "✝️", "Sermons", `${sermons.length} messages`],
-                  ["ministries", "🏛️", "Ministries", `${MINISTRIES.length} trusted sources`],
-                ] as [Tab, string, string, string][]
-              ).map(([id, emoji, label, count]) => (
-                <button key={id} onClick={() => goTab(id)} className="pop" style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, padding: "16px 8px", cursor: "pointer", textAlign: "center" }}>
-                  <span aria-hidden style={{ fontSize: 26, display: "block", marginBottom: 6 }}>{emoji}</span>
-                  <span style={{ fontSize: 14.5, fontWeight: 900, color: text, display: "block" }}>{label}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: sub }}>{count}</span>
-                </button>
+            <h2 style={sectionH}>🎙️ Podcasts</h2>
+            <p style={sectionSub}>Bible-first shows — press play, they stream right here.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 12 }}>
+              {podcasts.filter((p) => p.spotifyEmbed).map((p) => (
+                <div key={p.id} className="pop" style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, padding: "16px 18px" }}>
+                  <p style={{ fontSize: 16, fontWeight: 900, color: text, margin: 0 }}>{p.title}</p>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{p.author}</p>
+                  {p.summary && <p style={{ fontSize: 13, color: sub, margin: "4px 0 0", lineHeight: 1.5 }}>{p.summary}</p>}
+                  <iframe
+                    src={p.spotifyEmbed}
+                    title={p.title}
+                    loading="lazy"
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                    style={{ width: "100%", height: 232, border: 0, borderRadius: 12, marginTop: 12 }}
+                  />
+                </div>
               ))}
             </div>
+            <button onClick={() => goTab("podcasts")} style={{ ...quietButton, width: "100%", marginBottom: 30 }}>
+              All podcasts →
+            </button>
 
-            <h2 style={sectionH}>The DJ&apos;s playlists</h2>
-            <p style={sectionSub}>Whole Apple Music mixes, reviewed song by song — press play, they stream right here.</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 30 }}>
-              {playlists.map((p) => (
-                <PlaylistCard key={p.id} p={p} />
-              ))}
-            </div>
-
-            <h2 style={sectionH}>Trusted ministries</h2>
-            <p style={sectionSub}>Every sermon comes from these official ministries — nothing is pulled from an algorithm.</p>
-            <div style={{ ...optionGrid, marginBottom: 30 }}>
+            <h2 style={sectionH}>✝️ Sermons</h2>
+            <p style={sectionSub}>Tap a name and The DJ spins one of their messages — approved ministers, official channels only.</p>
+            <div style={{ ...optionGrid, marginBottom: 12 }}>
               {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0).map((m) => (
-                <button key={m.key} onClick={() => goTab("ministries")} style={pill(false)}>
+                <button key={m.key} onClick={() => spinMinistry(m.key)} style={pill(false)}>
                   {m.speaker}
                 </button>
               ))}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginBottom: 30 }}>
+              <button onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={{ ...bigButton, padding: "13px 10px", fontSize: 15 }}>
+                🔀 Spin a sermon
+              </button>
+              <button onClick={() => goTab("sermons")} style={{ ...quietButton, padding: "13px 10px" }}>
+                Browse all →
+              </button>
             </div>
 
             <button onClick={() => goTab("churches")} className="pop" style={{ width: "100%", background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "18px 22px", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
