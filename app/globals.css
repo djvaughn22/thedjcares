@@ -193,61 +193,166 @@ a[href]:hover {
 /* OPEN MIRROR FAMILY STYLE OVERRIDE END */
 
 
-/* ── OM_SOFT_CONTRAST (Jul 18 2026) ─ softened light palette, eyes-first.
-   No pure-white cards, no near-black ink. The doubled attribute beats the
-   family theme's injected <style> tag (same trick as the
-   html[data-om-theme="light"]:root pattern used elsewhere in the family). */
+
+
+/* ── OM_GREY_LIGHT (Jul 18 2026) ─ DJ: light mode must be dark grey.
+   No white surfaces anywhere — white survives only on tiny controls.
+   "Light" = the dark layout re-tinted neutral graphite, so accents keep
+   their dark-design brightness. The doubled attribute outranks the family
+   light theme's injected <style> tag on every rule it ships. */
 html[data-om-theme="light"][data-om-theme] {
-  background: #e8edf3 !important;
-  --om-bg: #e8edf3;
-  --om-surface: #f5f7fa;
-  --om-surface-2: #e9eff8;
-  --om-inset: #edf0f5;
-  --om-border: #d5dde6;
-  --om-text: #2b384e;
-  --om-sub: #5a6980;
-  --bg: #e8edf3;
-  --surface: #edf0f5;
-  --panel: #f5f7fa;
-  --panel2: #e9eff8;
-  --text: #2b384e;
-  --muted: #5a6980;
-  --background: #e8edf3;
-  --foreground: #2b384e;
+  color-scheme: dark;
+  background: #34383f !important;
+  --om-bg: #34383f;
+  --om-surface: #3e434b;
+  --om-surface-2: #484e57;
+  --om-inset: #2f333a;
+  --om-border: #545b64;
+  --om-text: #d3d6db;
+  --om-sub: #a2a8b0;
+  --bg: #34383f;
+  --surface: #2f333a;
+  --panel: #3e434b;
+  --panel2: #484e57;
+  --text: #d3d6db;
+  --muted: #a2a8b0;
+  --dim: #8f96a0;
+  --line: rgba(211, 214, 219, 0.12);
+  --line2: rgba(211, 214, 219, 0.2);
+  --background: #34383f;
+  --foreground: #d3d6db;
 }
 html[data-om-theme="light"][data-om-theme] body {
-  background: #e8edf3 !important;
-  color: #2b384e !important;
+  background: #34383f !important;
+  color: #d3d6db !important;
 }
-/* The injected light theme hardcodes these — re-point at the soft values. */
+
+/* Surfaces the injected light theme whitens — pin to graphite tokens. */
 html[data-om-theme="light"][data-om-theme] :is([class*="bg-[#0b1220]"], [class*="bg-slate-950"], [class*="bg-slate-900"]) {
-  background-color: #e8edf3 !important;
+  background-color: var(--om-bg) !important;
 }
 html[data-om-theme="light"][data-om-theme] [class*="bg-[#141d2e]"] {
-  background-color: #f5f7fa !important;
+  background-color: var(--om-surface) !important;
 }
 html[data-om-theme="light"][data-om-theme] [class*="bg-[#1c2740]"] {
-  background-color: #e9eff8 !important;
+  background-color: var(--om-surface-2) !important;
 }
 html[data-om-theme="light"][data-om-theme] :is([class*="bg-[#0c1220]"], [class*="bg-[#07090f]"], [class*="bg-[#0e1626]"], [class*="bg-black"], [class*="bg-slate-800"], [class*="bg-zinc-8"], [class*="bg-zinc-9"], [class*="bg-gray-8"], [class*="bg-gray-9"], [class*="bg-neutral-8"], [class*="bg-neutral-9"]) {
-  background-color: #edf0f5 !important;
+  background-color: var(--om-inset) !important;
 }
-html[data-om-theme="light"][data-om-theme] [class*="bg-white"] {
-  background-color: #f5f7fa !important;
+html[data-om-theme="light"][data-om-theme] [class*="bg-white/"] {
+  background-color: rgba(255, 255, 255, 0.07) !important;
 }
+html[data-om-theme="light"][data-om-theme] :is(article, section, div)[class*="bg-gradient"] {
+  background-image: none !important;
+  background-color: var(--om-surface) !important;
+}
+
+/* Borders */
+html[data-om-theme="light"][data-om-theme] :is([class*="border-[#26324c]"], [class*="border-[#1c2740]"], [class*="border-white/"], [class*="border-slate-"]) {
+  border-color: var(--om-border) !important;
+}
+
+/* Text: keep the soft light ink of the dark design. */
 html[data-om-theme="light"][data-om-theme] :is(h1, h2, h3, h4),
 html[data-om-theme="light"][data-om-theme] main,
-html[data-om-theme="light"][data-om-theme] :is([class*="text-[#e8edf5]"], [class*="text-white"], [class*="text-slate-1"], [class*="text-slate-2"], [class*="text-slate-3"], [class*="text-zinc-1"], [class*="text-zinc-2"], [class*="text-zinc-3"], [class*="text-gray-1"], [class*="text-gray-2"], [class*="text-gray-3"], [class*="text-neutral-1"], [class*="text-neutral-2"], [class*="text-neutral-3"]) {
-  color: #2b384e !important;
+html[data-om-theme="light"][data-om-theme] :is([class*="text-[#e8edf5]"], [class*="text-white"], [class*="text-slate-1"], [class*="text-slate-2"], [class*="text-slate-3"], [class*="text-zinc-1"], [class*="text-zinc-2"], [class*="text-zinc-3"], [class*="text-gray-1"], [class*="text-gray-2"], [class*="text-gray-3"], [class*="text-neutral-1"], [class*="text-neutral-2"], [class*="text-neutral-3"]),
+html[data-om-theme="light"][data-om-theme] [style*="color: #e8edf5"],
+html[data-om-theme="light"][data-om-theme] [style*="color:#e8edf5"],
+html[data-om-theme="light"][data-om-theme] [style*="color: rgb(232, 237, 245)"] {
+  color: var(--om-text) !important;
 }
-html[data-om-theme="light"][data-om-theme] :is([class*="text-[#94a3b8]"], [class*="text-slate-4"], [class*="text-slate-5"], [class*="text-slate-6"], [class*="text-slate-7"]) {
-  color: #5a6980 !important;
+html[data-om-theme="light"][data-om-theme] :is([class*="text-[#94a3b8]"], [class*="text-slate-4"], [class*="text-slate-5"], [class*="text-slate-6"], [class*="text-slate-7"]),
+html[data-om-theme="light"][data-om-theme] [style*="color: #94a3b8"],
+html[data-om-theme="light"][data-om-theme] [style*="color:#94a3b8"],
+html[data-om-theme="light"][data-om-theme] [style*="color: rgb(148, 163, 184)"] {
+  color: var(--om-sub) !important;
 }
+
+/* The light theme darkens every accent for white paper — restore the bright
+   dark-design accents; they are the readable ones on graphite. */
+html[data-om-theme="light"][data-om-theme] :is([class*="text-sky-1"], [class*="text-sky-2"], [class*="text-sky-3"], [class*="text-sky-4"], [class*="text-sky-5"], [class*="text-[#38bdf8]" i], [class*="text-[#7dd3fc]" i], [style*="color:#38bdf8" i], [style*="color: #38bdf8" i], [style*="color: rgb(56, 189, 248)"], [style*="color: rgb(125, 211, 252)"]) {
+  color: #7dd3fc !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-blue-1"], [class*="text-blue-2"], [class*="text-blue-3"], [class*="text-blue-4"], [class*="text-blue-5"], [class*="text-[#60a5fa]" i], [class*="text-[#93c5fd]" i], [style*="color:#60a5fa" i], [style*="color: #60a5fa" i], [style*="color: rgb(96, 165, 250)"], [style*="color: rgb(147, 197, 253)"]) {
+  color: #93c5fd !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-cyan-1"], [class*="text-cyan-2"], [class*="text-cyan-3"], [class*="text-cyan-4"], [class*="text-cyan-5"], [class*="text-[#22d3ee]" i], [style*="color:#22d3ee" i], [style*="color: #22d3ee" i], [style*="color: rgb(34, 211, 238)"]) {
+  color: #67e8f9 !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-teal-1"], [class*="text-teal-2"], [class*="text-teal-3"], [class*="text-teal-4"], [class*="text-teal-5"], [class*="text-[#2dd4bf]" i], [style*="color: rgb(45, 212, 191)"]) {
+  color: #5eead4 !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-indigo-1"], [class*="text-indigo-2"], [class*="text-indigo-3"], [class*="text-indigo-4"], [class*="text-indigo-5"], [class*="text-[#818cf8]" i], [style*="color: rgb(129, 140, 248)"]) {
+  color: #a5b4fc !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-violet-1"], [class*="text-violet-2"], [class*="text-violet-3"], [class*="text-violet-4"], [class*="text-violet-5"], [class*="text-[#a78bfa]" i], [class*="text-[#c4b5fd]" i], [style*="color: rgb(167, 139, 250)"], [style*="color: rgb(196, 181, 253)"]) {
+  color: #c4b5fd !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-purple-1"], [class*="text-purple-2"], [class*="text-purple-3"], [class*="text-purple-4"], [class*="text-purple-5"], [class*="text-[#c084fc]" i], [style*="color: rgb(192, 132, 252)"]) {
+  color: #d8b4fe !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-fuchsia-1"], [class*="text-fuchsia-2"], [class*="text-fuchsia-3"], [class*="text-fuchsia-4"], [class*="text-fuchsia-5"], [class*="text-[#e879f9]" i], [style*="color:#e879f9" i], [style*="color: #e879f9" i], [style*="color: rgb(232, 121, 249)"]) {
+  color: #f0abfc !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-emerald-1"], [class*="text-emerald-2"], [class*="text-emerald-3"], [class*="text-emerald-4"], [class*="text-emerald-5"], [class*="text-[#34d399]" i], [style*="color: rgb(52, 211, 153)"]) {
+  color: #6ee7b7 !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-green-1"], [class*="text-green-2"], [class*="text-green-3"], [class*="text-green-4"], [class*="text-green-5"]) {
+  color: #86efac !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-lime-1"], [class*="text-lime-2"], [class*="text-lime-3"], [class*="text-lime-4"], [class*="text-lime-5"]) {
+  color: #bef264 !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-amber-1"], [class*="text-amber-2"], [class*="text-amber-3"], [class*="text-amber-4"], [class*="text-amber-5"]) {
+  color: #fcd34d !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-yellow-1"], [class*="text-yellow-2"], [class*="text-yellow-3"], [class*="text-yellow-4"], [class*="text-yellow-5"]) {
+  color: #fde047 !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-orange-1"], [class*="text-orange-2"], [class*="text-orange-3"], [class*="text-orange-4"], [class*="text-orange-5"], [class*="text-[#f97316]" i], [style*="color:#f97316" i], [style*="color: #f97316" i], [style*="color: rgb(249, 115, 22)"]) {
+  color: #fdba74 !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-pink-1"], [class*="text-pink-2"], [class*="text-pink-3"], [class*="text-pink-4"], [class*="text-pink-5"]) {
+  color: #f9a8d4 !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-rose-1"], [class*="text-rose-2"], [class*="text-rose-3"], [class*="text-rose-4"], [class*="text-rose-5"]) {
+  color: #fda4af !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-red-1"], [class*="text-red-2"], [class*="text-red-3"], [class*="text-red-4"], [class*="text-red-5"]) {
+  color: #fca5a5 !important;
+}
+
+/* Shadows: quiet, dark. */
+html[data-om-theme="light"][data-om-theme] :is([class*="shadow-2xl"], [class*="shadow-xl"], [class*="shadow-lg"]) {
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Family chrome */
 html[data-om-theme="light"][data-om-theme] .om-bar {
-  background: #f5f7fa !important;
-  border-bottom-color: #d5dde6 !important;
+  background: var(--om-surface) !important;
+  border-bottom-color: var(--om-border) !important;
 }
 html[data-om-theme="light"][data-om-theme] .om-bar a {
-  color: #2b384e !important;
+  color: var(--om-text) !important;
 }
-/* END OM_SOFT_CONTRAST */
+html[data-om-theme="light"][data-om-theme] .om-bar .om-bar-label,
+html[data-om-theme="light"][data-om-theme] .om-theme-btn {
+  border-color: var(--om-border) !important;
+  color: var(--om-sub) !important;
+}
+html[data-om-theme="light"][data-om-theme] .om-footer {
+  border-top-color: var(--om-border) !important;
+}
+html[data-om-theme="light"][data-om-theme] .om-footer p,
+html[data-om-theme="light"][data-om-theme] .om-footer a {
+  color: var(--om-sub) !important;
+}
+html[data-om-theme="light"][data-om-theme] input,
+html[data-om-theme="light"][data-om-theme] textarea,
+html[data-om-theme="light"][data-om-theme] select {
+  background: var(--om-inset) !important;
+  border-color: var(--om-border) !important;
+  color: var(--om-text) !important;
+}
+/* END OM_GREY_LIGHT */
