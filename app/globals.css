@@ -51,7 +51,7 @@
 
 /* card hover pop */
 .pop { transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
-.pop:hover { transform: translateY(-3px); box-shadow: 0 14px 32px rgba(0,0,0,.5); }
+.pop:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,.28); }
 
 /* ── ACCESSIBILITY & MOTION (app-store polish, matches stepinthering) ── */
 button, a { touch-action: manipulation; }
@@ -73,12 +73,12 @@ button, a { touch-action: manipulation; }
 
 /* OPEN MIRROR FAMILY STYLE OVERRIDE START */
 :root {
-  --om-bg: #0b1220;
-  --om-surface: #141d2e;
-  --om-surface-2: #1c2740;
-  --om-inset: #0c1220;
-  --om-border: #26324c;
-  --om-text: #e8edf5;
+  --om-bg: #101a2c;
+  --om-surface: #182335;
+  --om-surface-2: #223048;
+  --om-inset: #111a2b;
+  --om-border: #2c3a56;
+  --om-text: #c9d3e3;
   --om-sub: #94a3b8;
   --om-accent: #A78BFA;
   --om-ink: #0b1220;
@@ -191,3 +191,63 @@ a[href]:hover {
   color: var(--om-ink);
 }
 /* OPEN MIRROR FAMILY STYLE OVERRIDE END */
+
+
+/* ── OM_SOFT_CONTRAST (Jul 18 2026) ─ softened light palette, eyes-first.
+   No pure-white cards, no near-black ink. The doubled attribute beats the
+   family theme's injected <style> tag (same trick as the
+   html[data-om-theme="light"]:root pattern used elsewhere in the family). */
+html[data-om-theme="light"][data-om-theme] {
+  background: #e8edf3 !important;
+  --om-bg: #e8edf3;
+  --om-surface: #f5f7fa;
+  --om-surface-2: #e9eff8;
+  --om-inset: #edf0f5;
+  --om-border: #d5dde6;
+  --om-text: #2b384e;
+  --om-sub: #5a6980;
+  --bg: #e8edf3;
+  --surface: #edf0f5;
+  --panel: #f5f7fa;
+  --panel2: #e9eff8;
+  --text: #2b384e;
+  --muted: #5a6980;
+  --background: #e8edf3;
+  --foreground: #2b384e;
+}
+html[data-om-theme="light"][data-om-theme] body {
+  background: #e8edf3 !important;
+  color: #2b384e !important;
+}
+/* The injected light theme hardcodes these — re-point at the soft values. */
+html[data-om-theme="light"][data-om-theme] :is([class*="bg-[#0b1220]"], [class*="bg-slate-950"], [class*="bg-slate-900"]) {
+  background-color: #e8edf3 !important;
+}
+html[data-om-theme="light"][data-om-theme] [class*="bg-[#141d2e]"] {
+  background-color: #f5f7fa !important;
+}
+html[data-om-theme="light"][data-om-theme] [class*="bg-[#1c2740]"] {
+  background-color: #e9eff8 !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="bg-[#0c1220]"], [class*="bg-[#07090f]"], [class*="bg-[#0e1626]"], [class*="bg-black"], [class*="bg-slate-800"], [class*="bg-zinc-8"], [class*="bg-zinc-9"], [class*="bg-gray-8"], [class*="bg-gray-9"], [class*="bg-neutral-8"], [class*="bg-neutral-9"]) {
+  background-color: #edf0f5 !important;
+}
+html[data-om-theme="light"][data-om-theme] [class*="bg-white"] {
+  background-color: #f5f7fa !important;
+}
+html[data-om-theme="light"][data-om-theme] :is(h1, h2, h3, h4),
+html[data-om-theme="light"][data-om-theme] main,
+html[data-om-theme="light"][data-om-theme] :is([class*="text-[#e8edf5]"], [class*="text-white"], [class*="text-slate-1"], [class*="text-slate-2"], [class*="text-slate-3"], [class*="text-zinc-1"], [class*="text-zinc-2"], [class*="text-zinc-3"], [class*="text-gray-1"], [class*="text-gray-2"], [class*="text-gray-3"], [class*="text-neutral-1"], [class*="text-neutral-2"], [class*="text-neutral-3"]) {
+  color: #2b384e !important;
+}
+html[data-om-theme="light"][data-om-theme] :is([class*="text-[#94a3b8]"], [class*="text-slate-4"], [class*="text-slate-5"], [class*="text-slate-6"], [class*="text-slate-7"]) {
+  color: #5a6980 !important;
+}
+html[data-om-theme="light"][data-om-theme] .om-bar {
+  background: #f5f7fa !important;
+  border-bottom-color: #d5dde6 !important;
+}
+html[data-om-theme="light"][data-om-theme] .om-bar a {
+  color: #2b384e !important;
+}
+/* END OM_SOFT_CONTRAST */
