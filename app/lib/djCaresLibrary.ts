@@ -223,12 +223,12 @@ const applePl = (id: string, title: string, path: string, vibes: Vibe[], extra: 
 // proper official music video (those also show under Music Videos).
 // ---------------------------------------------------------------------------
 const MUSIC: MediaItem[] = [
-  song("song-this-is-amazing-grace", "This Is Amazing Grace", "Phil Wickham", "XFRjr_x-yxU", ["Worship", "Gospel"], { musicVideo: true, duration: "4:59", featured: true, summary: "The wonder of grace, sung loud. A great first spin." }),
+  song("song-way-maker", "Way Maker", "Leeland", "iJCV_2H9xD0", ["Hope", "Worship"], { musicVideo: true, featured: true, summary: "Even when you don't see it, He's working. The first record on the deck." }),
+  song("song-this-is-amazing-grace", "This Is Amazing Grace", "Phil Wickham", "XFRjr_x-yxU", ["Worship", "Gospel"], { musicVideo: true, duration: "4:59", summary: "The wonder of grace, sung loud." }),
   song("song-living-hope", "Living Hope", "Phil Wickham", "u-1fwZtKJSM", ["Hope", "Gospel"], { musicVideo: true, summary: "“Hallelujah, praise the One who set me free.”" }),
   song("song-battle-belongs", "Battle Belongs", "Phil Wickham", "qtvQNzPHn-w", ["Faith", "Hope"], { musicVideo: true, summary: "When it's too heavy — the fight was never yours alone." }),
   song("song-chains-are-gone", "Amazing Grace (My Chains Are Gone)", "Chris Tomlin", "Y-4NFvI5U9w", ["Worship", "Gospel"], { musicVideo: true, summary: "The old hymn with a new chorus of freedom." }),
   song("song-we-believe", "We Believe", "Newsboys", "WjZ01FcK0yk", ["Faith", "Worship"], { musicVideo: true, summary: "A creed you can sing." }),
-  song("song-way-maker", "Way Maker", "Leeland", "iJCV_2H9xD0", ["Hope", "Worship"], { musicVideo: true, summary: "Even when you don't see it, He's working." }),
   song("song-i-can-only-imagine", "I Can Only Imagine", "MercyMe", "N_lrrq_opng", ["Hope", "Worship"], { musicVideo: true, summary: "The song that made a generation look up." }),
   song("song-rise-up-lazarus", "Rise Up (Lazarus)", "CAIN", "8RIZlNYl4ok", ["Hope", "Joy"], { musicVideo: true, summary: "Come out of that grave — a resurrection anthem." }),
   song("song-even-if", "Even If", "MercyMe", "B6fA35Ved-Y", ["Faith", "Peace"], { summary: "Hope that holds even when the healing doesn't come." }),

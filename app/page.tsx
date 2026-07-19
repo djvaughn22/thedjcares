@@ -38,6 +38,7 @@ const TABS = [
   { id: "spin", label: "Spin", emoji: "🎧" },
   { id: "music", label: "Music", emoji: "🎵" },
   { id: "videos", label: "Videos", emoji: "🎬" },
+  { id: "playlists", label: "Playlists", emoji: "🎶" },
   { id: "podcasts", label: "Podcasts", emoji: "🎙️" },
   { id: "sermons", label: "Sermons", emoji: "✝️" },
   { id: "ministries", label: "Ministries", emoji: "🏛️" },
@@ -51,6 +52,7 @@ const SPIN_CATEGORIES: { id: SpinCategory; label: string }[] = [
   { id: "all", label: "Everything" },
   { id: "music", label: "Music" },
   { id: "videos", label: "Music Videos" },
+  { id: "playlist", label: "Playlists" },
   { id: "podcast", label: "Podcasts" },
   { id: "sermon", label: "Sermons" },
 ];
@@ -554,7 +556,8 @@ export default function TheDJCaresPage() {
               {(
                 [
                   ["music", "🎵", "Music", `${songs.length} songs`],
-                  ["videos", "🎬", "Music Videos", `${videos.length} videos`],
+                  ["videos", "🎬", "Music Videos", `${videos.length} YouTube videos`],
+                  ["playlists", "🎶", "Playlists", `${playlists.length} Apple Music playlists`],
                   ["podcasts", "🎙️", "Podcasts", `${podcasts.length} shows`],
                   ["sermons", "✝️", "Sermons", `${sermons.length} messages`],
                 ] as [Tab, string, string, string][]
@@ -594,14 +597,25 @@ export default function TheDJCaresPage() {
             </div>
             <p style={sectionSub}>Hand-picked songs from official artist channels. Tap one and it plays right here.</p>
             <VibeChips />
-            <div style={{ ...grid, marginBottom: 34 }}>
+            <div style={{ ...grid, marginBottom: 24 }}>
               {vibeFiltered(songs).map((i) => (
                 <MediaCard key={i.id} item={i} />
               ))}
             </div>
+            <button onClick={() => goTab("playlists")} className="pop" style={{ width: "100%", background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "16px 20px", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 14.5, fontWeight: 800, color: text }}>Want a whole playlist instead?</span>
+              <span style={{ fontSize: 14, fontWeight: 900, color: accent, flexShrink: 0 }}>🎶 Playlists →</span>
+            </button>
+          </>
+        )}
 
-            <h2 style={sectionH}>Full playlists</h2>
-            <p style={sectionSub}>Whole playlists, reviewed by The DJ Cares — they stream right here with an Apple Music or Spotify account.</p>
+        {tab === "playlists" && (
+          <>
+            <h2 style={sectionH}>Playlists</h2>
+            <p style={sectionSub}>
+              The DJ&apos;s own Apple Music playlists — whole mixes, reviewed song by song. They stream right here with an
+              Apple Music account (Spotify twins linked where they exist).
+            </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {playlists.map((p) => (
                 <div key={p.id} className="pop" style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, padding: "16px 18px" }}>
@@ -650,7 +664,7 @@ export default function TheDJCaresPage() {
                 🔀 Spin videos
               </button>
             </div>
-            <p style={sectionSub}>Official music videos from the artists themselves.</p>
+            <p style={sectionSub}>Official YouTube music videos, straight from the artists&apos; own channels.</p>
             <VibeChips />
             <div style={grid}>
               {vibeFiltered(videos).map((i) => (
