@@ -17,7 +17,6 @@ import {
   LIBRARY,
   MINISTRIES,
   ministryByKey,
-  musicVideos,
   VIBES,
   type MediaItem,
   type Ministry,
@@ -38,7 +37,6 @@ const TABS = [
   { id: "spin", label: "Spin", emoji: "🎧" },
   { id: "music", label: "Music", emoji: "🎵" },
   { id: "videos", label: "Videos", emoji: "🎬" },
-  { id: "playlists", label: "Playlists", emoji: "🎶" },
   { id: "podcasts", label: "Podcasts", emoji: "🎙️" },
   { id: "sermons", label: "Sermons", emoji: "✝️" },
   { id: "ministries", label: "Ministries", emoji: "🏛️" },
@@ -109,6 +107,12 @@ export default function TheDJCaresPage() {
   useEffect(() => {
     const fromHash = () => {
       const h = window.location.hash.replace("#", "");
+      // Old #playlists links land on Music — that's where the playlists live now.
+      if (h === "playlists") {
+        setTab("music");
+        window.history.replaceState(null, "", "#music");
+        return;
+      }
       if (TABS.some((t) => t.id === h)) setTab(h as Tab);
     };
     fromHash();
@@ -537,7 +541,6 @@ export default function TheDJCaresPage() {
   };
 
   const songs = itemsOfType("music");
-  const videos = musicVideos();
   const podcasts = itemsOfType("podcast");
   const sermons = itemsOfType("sermon");
   const playlists = itemsOfType("playlist");
@@ -609,14 +612,16 @@ export default function TheDJCaresPage() {
             tabs it stays up top once something is playing */}
         {(tab === "spin" || started) && deck}
 
-        {/* navigation — a symmetric 3×3 grid */}
-        <nav aria-label="Sections" style={{ ...optionGrid, maxWidth: 560, margin: "0 auto 26px" }}>
-          {TABS.map((t) => (
+        {/* navigation — a symmetric grid: three rows, every row full
+            (8 tabs on 6 columns: 2-spans, then two 3-spans on the last row) */}
+        <nav aria-label="Sections" style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 8, maxWidth: 560, margin: "0 auto 26px" }}>
+          {TABS.map((t, idx) => (
             <button
               key={t.id}
               onClick={() => goTab(t.id)}
               aria-current={tab === t.id ? "page" : undefined}
               style={{
+                gridColumn: idx < 6 ? "span 2" : "span 3",
                 background: tab === t.id ? accent : card,
                 border: `2px solid ${tab === t.id ? accent : border}`,
                 borderRadius: 14,
@@ -684,36 +689,23 @@ export default function TheDJCaresPage() {
           <>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
               <h2 style={sectionH}>Music</h2>
-              <button onClick={() => { setCategory("music"); const p = spinPool({ category: "music", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={bigButton}>
+              <button onClick={() => { setCategory("playlist"); const p = spinPool({ category: "playlist" }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={bigButton}>
                 🔀 Spin music
               </button>
             </div>
-            <p style={sectionSub}>Hand-picked songs from official artist channels. Tap one and it plays right here.</p>
-            <VibeChips />
-            <div style={{ ...grid, marginBottom: 24 }}>
-              {vibeFiltered(songs).map((i) => (
-                <MediaCard key={i.id} item={i} />
-              ))}
-            </div>
-            <button onClick={() => goTab("playlists")} className="pop" style={{ width: "100%", background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "16px 20px", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-              <span style={{ fontSize: 14.5, fontWeight: 800, color: text }}>Want a whole playlist instead?</span>
-              <span style={{ fontSize: 14, fontWeight: 900, color: accent, flexShrink: 0 }}>🎶 Playlists →</span>
-            </button>
-          </>
-        )}
-
-        {tab === "playlists" && (
-          <>
-            <h2 style={sectionH}>Playlists</h2>
             <p style={sectionSub}>
-              The DJ&apos;s own Apple Music playlists — whole mixes, reviewed song by song. They stream right here with an
-              Apple Music account (Spotify twins linked where they exist).
+              The DJ&apos;s own Apple Music playlists — worship, hymns, country, rap, workout — whole mixes, reviewed song
+              by song. They stream right here with an Apple Music account (Spotify twins linked where they exist).
             </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 24 }}>
               {playlists.map((p) => (
                 <PlaylistCard key={p.id} p={p} />
               ))}
             </div>
+            <button onClick={() => goTab("videos")} className="pop" style={{ width: "100%", background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "16px 20px", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 14.5, fontWeight: 800, color: text }}>Want one song at a time instead?</span>
+              <span style={{ fontSize: 14, fontWeight: 900, color: accent, flexShrink: 0 }}>🎬 Videos →</span>
+            </button>
           </>
         )}
 
@@ -721,14 +713,14 @@ export default function TheDJCaresPage() {
           <>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
               <h2 style={sectionH}>Music Videos</h2>
-              <button onClick={() => { setCategory("videos"); const p = spinPool({ category: "videos", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={bigButton}>
+              <button onClick={() => { setCategory("music"); const p = spinPool({ category: "music", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={bigButton}>
                 🔀 Spin videos
               </button>
             </div>
-            <p style={sectionSub}>Official YouTube music videos, straight from the artists&apos; own channels.</p>
+            <p style={sectionSub}>Hand-picked songs and music videos from official artist channels. Tap one and it plays right here.</p>
             <VibeChips />
             <div style={grid}>
-              {vibeFiltered(videos).map((i) => (
+              {vibeFiltered(songs).map((i) => (
                 <MediaCard key={i.id} item={i} />
               ))}
             </div>
