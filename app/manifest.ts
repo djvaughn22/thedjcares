@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "TheDJCares",
     short_name: "TheDJCares",
     description:
-      "Your digital disc jockey connecting you to uplifting music, sermons, podcasts, churches, charities, and gospel-centered resources.",
+      "Your digital disc jockey connecting you to uplifting music, sermons, podcasts, ministries, churches, and gospel-centered resources.",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
