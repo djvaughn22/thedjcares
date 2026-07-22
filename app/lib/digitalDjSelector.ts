@@ -172,17 +172,22 @@ export function selectForDuration(
       continue;
     }
 
-    if (selected.length === 0 && pool.length > 0) {
-      // Nothing in the whole pool fits the request — take the shortest
-      // available full item as the honest closest match.
+    if (pool.length > 0) {
+      // Nothing fits the remainder. Find the shortest available item: an
+      // empty session takes it regardless (the honest closest match, marked
+      // truncated); a partly-filled session adds it only when a modest
+      // overshoot lands closer to the request than stopping short would.
       let best = 0;
       for (let i = 1; i < pool.length; i++) {
         if (estimateDuration(pool[i]) < estimateDuration(pool[best])) best = i;
       }
-      const [item] = pool.splice(best, 1);
-      selected.push(item);
-      elapsedSeconds += estimateDuration(item);
-      truncated = true;
+      const overshoot = elapsedSeconds + estimateDuration(pool[best]) - targetSeconds;
+      if (selected.length === 0 || overshoot <= targetSeconds * 0.25) {
+        const [item] = pool.splice(best, 1);
+        selected.push(item);
+        elapsedSeconds += estimateDuration(item);
+        if (selected.length === 1 && overshoot > 0) truncated = true;
+      }
     }
     break;
   }
