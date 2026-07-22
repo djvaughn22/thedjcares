@@ -624,43 +624,79 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
           </p>
         </div>
 
-        {/* Digital DJ: conversational media selector (server decides existence) */}
+        {/* Digital DJ console (server decides existence). Compact: identity,
+            the three dials it offers, artwork from the approved catalog, and
+            one clear way in. */}
         {digitalDjEnabled && tab === "spin" && (
           <section
-            style={{
-              background: accent,
-              color: ink,
-              border: "none",
-              borderRadius: 22,
-              padding: "20px 20px 22px",
-              marginBottom: 20,
-            }}
+            aria-label="Digital DJ"
+            style={{ background: card, border: `2px solid ${activeBorder}`, borderRadius: 22, padding: "18px 20px", marginBottom: 20 }}
           >
-            <p style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: ink, margin: "0 0 12px" }}>
-              <span aria-hidden>🎙️</span> Digital DJ
-            </p>
-            <p style={{ fontSize: 17, fontWeight: 900, color: ink, margin: "0 0 6px" }}>Tell the DJ what you need</p>
-            <p style={{ fontSize: 13.5, color: ink, margin: "0 0 14px", lineHeight: 1.55 }}>
-              How much time do you have? What kind of media? Tell us your mood. We'll spin something good from our approved catalog.
-            </p>
-            <a
-              href="/digital-dj"
-              onClick={() => track("digital_dj_homepage_click")}
-              style={{
-                display: "inline-block",
-                background: ink,
-                color: accent,
-                border: "none",
-                borderRadius: 50,
-                padding: "12px 24px",
-                fontSize: 15,
-                fontWeight: 900,
-                cursor: "pointer",
-                textDecoration: "none",
-              }}
-            >
-              Spin something for me
-            </a>
+            <div style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
+              <div style={{ flex: "1 1 250px", minWidth: 0 }}>
+                <p style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 8px" }}>
+                  <span className="djc-eq" aria-hidden>
+                    <span /><span /><span /><span />
+                  </span>
+                  Digital DJ
+                </p>
+                <p style={{ fontSize: 21, fontWeight: 900, color: text, margin: "0 0 4px" }}>What should we play?</p>
+                <p style={{ fontSize: 13.5, color: sub, margin: "0 0 12px", lineHeight: 1.55 }}>
+                  Choose your time and mood. The DJ will cue an approved session.
+                </p>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                  {[
+                    ["⏱", "5–60 min"],
+                    ["💜", "9 moods"],
+                    ["🎧", "Music · Videos · Sermons · Podcasts"],
+                  ].map(([emoji, label]) => (
+                    <span
+                      key={label}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 5, border: `2px solid ${border}`, borderRadius: 50, padding: "4px 10px", fontSize: 12, fontWeight: 800, color: sub }}
+                    >
+                      <span aria-hidden>{emoji}</span> {label}
+                    </span>
+                  ))}
+                </div>
+                <a
+                  href="/digital-dj"
+                  onClick={() => track("digital_dj_homepage_click")}
+                  style={{ display: "inline-block", background: accent, color: ink, borderRadius: 50, padding: "12px 24px", fontSize: 15, fontWeight: 900, textDecoration: "none", whiteSpace: "nowrap" }}
+                >
+                  🎛️ Cue my session
+                </a>
+              </div>
+              {/* A taste of the shelf: artwork from approved catalog records. */}
+              <div aria-hidden style={{ position: "relative", width: 150, height: 108, flexShrink: 0 }}>
+                {["song-my-jesus", "bg-seoul-1973", "song-way-maker"].map((id, i) => {
+                  const item = LIBRARY.find((x) => x.id === id);
+                  const art = item ? artworkUrl(item) : null;
+                  if (!art) return null;
+                  return (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={id}
+                      src={art}
+                      alt=""
+                      loading="lazy"
+                      width={116}
+                      height={65}
+                      style={{
+                        position: "absolute",
+                        top: i * 16,
+                        right: i * 14,
+                        width: 116,
+                        height: 65,
+                        objectFit: "cover",
+                        borderRadius: 10,
+                        border: `2px solid ${border}`,
+                        boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
           </section>
         )}
 
