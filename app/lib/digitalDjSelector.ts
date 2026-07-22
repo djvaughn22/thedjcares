@@ -53,15 +53,6 @@ export type DigitalDjResult = {
   truncated: boolean; // true if we hit duration limit mid-item
 };
 
-// Duration thresholds for each category (in seconds).
-const DURATION_SOFT_CAP: Record<string, number> = {
-  music: 300, // ~5 min each
-  music_video: 400,
-  playlist: 1800, // ~30 min
-  podcast: 600, // ~10 min
-  sermon: 1800, // ~30 min
-};
-
 // Parse duration string to seconds. Examples: "4:32" → 272, "1:08:02" → 3682
 export function parseDurationString(dur: string | undefined): number | null {
   if (!dur) return null;
@@ -212,9 +203,16 @@ export function selectMediaForDj(
   // Start with playable items.
   let candidates = activeItems(items).filter((i) => isPlayable(i));
 
-  // Filter by media type if specified.
+  // Filter by media type if specified. "music_video" is not a catalog type —
+  // it means music items flagged as proper official videos.
   if (request.mediaTypes && request.mediaTypes.length > 0) {
-    candidates = candidates.filter((i) => request.mediaTypes!.includes(i.type as any));
+    const wants = new Set<string>(request.mediaTypes);
+    candidates = candidates.filter((i) => {
+      if (i.type === "music") {
+        return wants.has("music") || (wants.has("music_video") && i.musicVideo === true);
+      }
+      return wants.has(i.type);
+    });
   }
 
   // Filter by needs (vibes + creator preference).
@@ -242,9 +240,11 @@ export function resultToShareableIds(result: DigitalDjResult): string {
   return result.items.map((i) => i.id).join(",");
 }
 
-// Parse shareableIds back to items.
+// Parse shareableIds back to items. Unknown/tampered ids simply match
+// nothing; input is capped so an oversized query string can't do harm.
+export const MAX_SHARED_IDS = 60;
+
 export function shareableIdsToItems(ids: string, items: MediaItem[] = LIBRARY): MediaItem[] {
-  const idList = ids.split(",");
-  const idSet = new Set(idList);
+  const idSet = new Set(ids.slice(0, 2000).split(",").slice(0, MAX_SHARED_IDS));
   return items.filter((i) => idSet.has(i.id));
 }

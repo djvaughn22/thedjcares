@@ -1,66 +1,88 @@
 "use client";
 
-import { useEffect, useState } from "react";
+// Digital DJ — a conversational selector for the approved catalog.
+//
+// The visitor answers "how long / what kind / what do you need," and the
+// deterministic selector (app/lib/digitalDjSelector.ts) builds a session
+// from the same approved library the rest of the site plays. The optional
+// "Tell the DJ" field asks the server to translate free text into those
+// same filters — it can never add media. Nothing autoplays on load; the
+// player mounts only after a tap.
+
+import { useEffect, useRef, useState } from "react";
 import ShareSheet, { ShareTrigger } from "../components/ShareMenu";
+import { getEmbedUrl, getWatchUrl, type MediaItem } from "../lib/djCaresLibrary";
+import { mediaShareTarget, type ShareTarget } from "../lib/shareLinks";
 import {
-  artworkUrl,
-  getWatchUrl,
-  type MediaItem,
-} from "../lib/djCaresLibrary";
-import {
-  mediaShareTarget,
-  type ShareTarget,
-} from "../lib/shareLinks";
-import {
-  selectMediaForDj,
+  estimateDuration,
+  NEED_TO_VIBES,
   resultToShareableIds,
+  selectMediaForDj,
   shareableIdsToItems,
-  type DjNeed,
   type DigitalDjRequest,
   type DigitalDjResult,
+  type DjNeed,
 } from "../lib/digitalDjSelector";
 import { track } from "../lib/analytics";
 
 const DURATIONS = [5, 10, 20, 30, 60] as const;
-const MEDIA_TYPES: Array<{ id: string; label: string; type: "music" | "music_video" | "sermon" | "podcast" }> = [
-  { id: "music", label: "Music", type: "music" },
-  { id: "music_video", label: "Music Videos", type: "music_video" },
-  { id: "sermon", label: "Sermons", type: "sermon" },
-  { id: "podcast", label: "Podcasts", type: "podcast" },
-];
-const NEEDS: Array<{ id: DjNeed; label: string; icon: string }> = [
-  { id: "encouragement", label: "Encouragement", icon: "💪" },
-  { id: "joy", label: "Joy", icon: "😄" },
-  { id: "peace", label: "Peace", icon: "🕊️" },
-  { id: "hope", label: "Hope", icon: "✨" },
-  { id: "faith", label: "Faith", icon: "✝️" },
-  { id: "family", label: "Family", icon: "👨‍👩‍👧" },
-  { id: "morning", label: "Morning", icon: "🌅" },
-  { id: "evening", label: "Evening", icon: "🌙" },
-  { id: "surprise", label: "Surprise Me", icon: "🎲" },
+
+const MEDIA_TYPES: { id: "music" | "music_video" | "sermon" | "podcast"; label: string; emoji: string }[] = [
+  { id: "music", label: "Music", emoji: "🎵" },
+  { id: "music_video", label: "Music Videos", emoji: "🎬" },
+  { id: "sermon", label: "Sermons", emoji: "✝️" },
+  { id: "podcast", label: "Podcasts", emoji: "🎙️" },
 ];
 
-export default function DigitalDjClient() {
+const NEEDS: { id: DjNeed; label: string; emoji: string }[] = [
+  { id: "encouragement", label: "Encouragement", emoji: "💪" },
+  { id: "joy", label: "Joy", emoji: "😄" },
+  { id: "peace", label: "Peace", emoji: "🕊️" },
+  { id: "hope", label: "Hope", emoji: "✨" },
+  { id: "faith", label: "Faith", emoji: "✝️" },
+  { id: "family", label: "Family", emoji: "👪" },
+  { id: "morning", label: "Morning", emoji: "🌅" },
+  { id: "evening", label: "Evening", emoji: "🌙" },
+  { id: "surprise", label: "Surprise me", emoji: "🎲" },
+];
+
+type MediaTypeId = (typeof MEDIA_TYPES)[number]["id"];
+
+// Reverse of NEED_TO_VIBES — lets "Another like this" reuse an item's vibes.
+const needsForItem = (item: MediaItem): DjNeed[] => {
+  const needs = new Set<DjNeed>();
+  for (const [need, vibes] of Object.entries(NEED_TO_VIBES) as [DjNeed, string[]][]) {
+    if (need === "surprise") continue;
+    if (item.vibes.some((v) => vibes.includes(v))) needs.add(need);
+  }
+  return [...needs];
+};
+
+const sessionMinutes = (items: MediaItem[]) =>
+  Math.max(1, Math.round(items.reduce((sum, i) => sum + estimateDuration(i), 0) / 60));
+
+export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boolean }) {
   const [dark, setDark] = useState(true);
 
-  // UI state.
-  const [duration, setDuration] = useState(10);
-  const [selectedMediaTypes, setSelectedMediaTypes] = useState<Set<string>>(new Set());
-  const [selectedNeeds, setSelectedNeeds] = useState<Set<DjNeed>>(new Set());
+  // --- selection state ---
+  const [duration, setDuration] = useState<number>(10);
+  const [mediaTypes, setMediaTypes] = useState<ReadonlySet<MediaTypeId>>(new Set());
+  const [needs, setNeeds] = useState<ReadonlySet<DjNeed>>(new Set());
   const [userText, setUserText] = useState("");
-  const [loading, setLoading] = useState(false);
   const [loadingAi, setLoadingAi] = useState(false);
+  const [aiNote, setAiNote] = useState("");
 
-  // Result state.
+  // --- session state ---
   const [result, setResult] = useState<DigitalDjResult | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [playing, setPlaying] = useState(false);
-
-  // Share state.
+  const [playerOpen, setPlayerOpen] = useState(false); // only ever true after a tap
+  const [copied, setCopied] = useState(false);
+  const [announce, setAnnounce] = useState("");
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null);
   const [shareTriggerId, setShareTriggerId] = useState<string | null>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
 
-  // Follow the family theme toggle.
+  // Follow the family ☀️/🌙 toggle.
   useEffect(() => {
     const follow = () => setDark(document.documentElement.dataset.omTheme !== "light");
     follow();
@@ -68,459 +90,421 @@ export default function DigitalDjClient() {
     return () => window.removeEventListener("om-theme", follow);
   }, []);
 
-  // Load shared session from URL params if present.
+  // A shared session (?ids=…) cues up — it never autoplays. Unknown ids are
+  // ignored by shareableIdsToItems, so tampered links just come up shorter
+  // (or fall through to the picker when nothing survives).
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ids = params.get("ids");
-    if (ids) {
-      const items = shareableIdsToItems(ids);
-      if (items.length > 0) {
-        setResult({
-          items,
-          durationMinutes: Math.round(items.reduce((sum, i) => sum + (parseInt(i.duration || "0") || 60), 0) / 60),
-          requestedMinutes: 0,
-          truncated: false,
-        });
-        track("digital_dj_shared_session_opened", { itemCount: items.length });
-      }
-    }
+    const ids = new URLSearchParams(window.location.search).get("ids");
+    if (!ids) return;
+    const items = shareableIdsToItems(ids);
+    if (items.length === 0) return;
+    setResult({ items, durationMinutes: sessionMinutes(items), requestedMinutes: 0, truncated: false });
+    track("digital_dj_shared_session_opened", { itemCount: items.length });
   }, []);
 
-  const handleMediaTypeToggle = (type: string) => {
-    const next = new Set(selectedMediaTypes);
-    if (next.has(type)) {
-      next.delete(type);
-    } else {
-      next.add(type);
-    }
-    setSelectedMediaTypes(next);
+  const toggle = <T,>(set: ReadonlySet<T>, value: T): Set<T> => {
+    const next = new Set(set);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    return next;
   };
 
-  const handleNeedToggle = (need: DjNeed) => {
-    const next = new Set(selectedNeeds);
-    if (next.has(need)) {
-      next.delete(need);
-    } else {
-      next.add(need);
-    }
-    setSelectedNeeds(next);
+  // Build + run a request. `overrides` lets the AI path apply parsed intent
+  // immediately instead of racing setState.
+  const generate = (overrides: Partial<DigitalDjRequest> = {}) => {
+    const request: DigitalDjRequest = {
+      durationMinutes: duration,
+      mediaTypes: mediaTypes.size > 0 ? [...mediaTypes] : undefined,
+      needs: needs.size > 0 ? [...needs] : undefined,
+      ...overrides,
+    };
+    const djResult = selectMediaForDj(request);
+    setResult(djResult);
+    setCurrentIndex(0);
+    setPlayerOpen(false);
+    setCopied(false);
+    setAnnounce(
+      djResult.items.length === 0
+        ? "Nothing matches that combination yet."
+        : `Session ready: ${djResult.items.length} picks, about ${djResult.durationMinutes} minutes.`,
+    );
+    track("digital_dj_selection_generated", {
+      duration: request.durationMinutes,
+      itemCount: djResult.items.length,
+      usedAi: Boolean(overrides.durationMinutes || overrides.mediaTypes || overrides.needs),
+    });
   };
 
-  const generateSelection = () => {
-    setLoading(true);
-    try {
-      const request: DigitalDjRequest = {
-        durationMinutes: duration,
-        mediaTypes:
-          selectedMediaTypes.size > 0
-            ? Array.from(selectedMediaTypes).map((t) => {
-                const found = MEDIA_TYPES.find((m) => m.id === t);
-                return found ? found.type : undefined;
-              })
-            : undefined,
-        needs: selectedNeeds.size > 0 ? Array.from(selectedNeeds) : undefined,
-      };
-
-      const djResult = selectMediaForDj(request);
-      setResult(djResult);
-      setCurrentIndex(0);
-      setPlaying(false);
-
-      track("digital_dj_selection_generated", {
-        duration,
-        itemCount: djResult.items.length,
-        hadMediaTypeFilter: selectedMediaTypes.size > 0,
-        hadNeedFilter: selectedNeeds.size > 0,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAiEnhance = async () => {
-    if (!userText.trim()) return;
-
+  // "Tell the DJ" → server intent parse → same deterministic selector.
+  // Every failure path quietly runs the deterministic selection instead.
+  const askTheDj = async () => {
+    const text = userText.trim();
+    if (!text) return;
     setLoadingAi(true);
+    setAiNote("");
     try {
-      const response = await fetch("/api/digital-dj/parse-intent", {
+      const res = await fetch("/api/digital-dj/parse-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userText }),
+        body: JSON.stringify({ userText: text }),
       });
-
-      if (!response.ok) {
-        console.error("AI parsing failed:", response.status);
-        // Fall back to deterministic selection.
-        generateSelection();
-        return;
-      }
-
-      const data = await response.json();
-      if (data.intent) {
-        // Apply AI-parsed intent to current selections.
-        if (data.intent.durationMinutes) {
-          setDuration(data.intent.durationMinutes);
-        }
-        if (data.intent.mediaTypes && data.intent.mediaTypes.length > 0) {
-          const typeIds = new Set(
-            data.intent.mediaTypes
-              .map((t: string) => {
-                const found = MEDIA_TYPES.find((m) => m.type === t);
-                return found?.id;
-              })
-              .filter((id) => id !== undefined) as string[],
-          );
-          setSelectedMediaTypes(typeIds);
-        }
-        if (data.intent.needs && data.intent.needs.length > 0) {
-          setSelectedNeeds(new Set(data.intent.needs));
-        }
-
-        track("digital_dj_ai_parsing_success", {
-          extractedDuration: data.intent.durationMinutes,
-          extractedMediaTypes: data.intent.mediaTypes?.length || 0,
-          extractedNeeds: data.intent.needs?.length || 0,
+      const data = res.ok ? await res.json() : { intent: null };
+      const intent = data?.intent ?? null;
+      if (intent) {
+        if (intent.durationMinutes) setDuration(intent.durationMinutes);
+        if (intent.mediaTypes?.length) setMediaTypes(new Set(intent.mediaTypes));
+        if (intent.needs?.length) setNeeds(new Set(intent.needs));
+        generate({
+          durationMinutes: intent.durationMinutes ?? duration,
+          mediaTypes: intent.mediaTypes?.length ? intent.mediaTypes : undefined,
+          needs: intent.needs?.length ? intent.needs : undefined,
+          requestedCreator: intent.requestedCreator ?? undefined,
         });
+        setAiNote("The DJ read your note and set the dials.");
+        track("digital_dj_ai_parsing_success", {});
+      } else {
+        generate();
+        setAiNote(res.status === 429 ? "The DJ needs a breather — picks made from your dials instead." : "");
       }
-
-      // Generate with applied filters.
-      setUserText("");
-      generateSelection();
-    } catch (error) {
-      console.error("AI enhance error:", error);
-      // Fall back to deterministic.
-      generateSelection();
+    } catch {
+      generate();
     } finally {
       setLoadingAi(false);
+      setUserText("");
     }
   };
 
-  const handlePlayCurrent = () => {
-    if (result && result.items.length > 0) {
-      setPlaying(true);
-      track("digital_dj_play_current", { itemId: result.items[currentIndex].id });
+  const openItem = (idx: number) => {
+    setCurrentIndex(idx);
+    setPlayerOpen(true);
+    const item = result?.items[idx];
+    if (item) {
+      setAnnounce(`Now playing: ${item.title} — ${item.author}`);
+      track("digital_dj_play_current", { itemId: item.id });
     }
+    window.setTimeout(() => playerRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }), 60);
   };
 
-  const handleNextItem = () => {
-    if (result && currentIndex < result.items.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-      setPlaying(true);
-    }
+  const anotherLikeThis = () => {
+    const item = result?.items[currentIndex];
+    if (!item) return;
+    const likeType: MediaTypeId =
+      item.type === "music" ? (item.musicVideo ? "music_video" : "music")
+      : item.type === "sermon" ? "sermon"
+      : item.type === "podcast" ? "podcast"
+      : "music";
+    const likeNeeds = needsForItem(item);
+    generate({
+      durationMinutes: 10,
+      mediaTypes: [likeType],
+      needs: likeNeeds.length > 0 ? likeNeeds : undefined,
+    });
+    track("digital_dj_another_like_this", { originalItemId: item.id });
   };
 
-  const handlePrevItem = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-      setPlaying(true);
-    }
-  };
-
-  const handleAnotherLikeThis = () => {
-    if (result && result.items.length > 0) {
-      const current = result.items[currentIndex];
-      const request: DigitalDjRequest = {
-        durationMinutes: 10,
-        mediaTypes: [current.type as any],
-        needs:
-          current.vibes && current.vibes.length > 0
-            ? (current.vibes.filter((v) => Object.keys(NEEDS).includes(v)) as any)
-            : undefined,
-      };
-
-      const djResult = selectMediaForDj(request);
-      if (djResult.items.length > 0) {
-        setResult(djResult);
-        setCurrentIndex(0);
-        setPlaying(true);
-        track("digital_dj_another_like_this", { originalItemId: current.id });
+  const shareSession = async () => {
+    if (!result || result.items.length === 0) return;
+    const url = `${window.location.origin}/digital-dj?ids=${encodeURIComponent(resultToShareableIds(result))}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "A session from The DJ Cares", url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 2500);
       }
-    }
-  };
-
-  const handleShareCurrent = () => {
-    if (result && result.items.length > 0) {
-      const target = mediaShareTarget(result.items[currentIndex]);
-      setShareTarget(target);
-      setShareTriggerId(`dj-${result.items[currentIndex].id}`);
-    }
-  };
-
-  const handleShareSession = () => {
-    if (result && result.items.length > 0) {
-      const ids = resultToShareableIds(result);
-      const url = `${window.location.origin}/digital-dj?ids=${encodeURIComponent(ids)}`;
-      // Copy to clipboard and show feedback.
-      navigator.clipboard.writeText(url);
-      alert("Session link copied!");
       track("digital_dj_session_shared", { itemCount: result.items.length });
+    } catch {
+      // Visitor cancelled the native sheet — that's fine, stay quiet.
     }
   };
 
-  const currentItem = result && result.items[currentIndex];
-  const hasResult = result && result.items.length > 0;
+  // --- palette: identical to the home page ---
+  const bg = dark ? "#0b1220" : "#eef2f7";
+  const text = dark ? "#e8edf5" : "#0f172a";
+  const sub = dark ? "#94a3b8" : "#475569";
+  const card = dark ? "#141d2e" : "#ffffff";
+  const border = dark ? "#26324c" : "#dbe2ea";
+  const active = dark ? "#1c2740" : "#eef4ff";
+  const activeBorder = dark ? "#33507e" : "#c7d7f5";
+  const accent = "#A78BFA";
+  const ink = "#0b1220";
 
-  // Palette for share menu.
-  const shareBg = dark ? "#141d2e" : "#ffffff";
-  const shareBorder = dark ? "#26324c" : "#dbe2ea";
-  const shareText = dark ? "#e8edf5" : "#0f172a";
-  const shareSub = dark ? "#94a3b8" : "#475569";
-  const shareAccent = "#A78BFA";
+  const pill = (selected: boolean): React.CSSProperties => ({
+    background: selected ? active : "none",
+    border: `2px solid ${selected ? activeBorder : border}`,
+    borderRadius: 50,
+    padding: "10px 8px",
+    fontSize: 13.5,
+    fontWeight: 800,
+    cursor: "pointer",
+    color: selected ? accent : sub,
+    textAlign: "center",
+  });
 
-  const sharePalette = {
-    card: shareBg,
-    border: shareBorder,
-    text: shareText,
-    sub: shareSub,
-    accent: shareAccent,
+  const bigButton: React.CSSProperties = {
+    background: accent,
+    border: "none",
+    color: ink,
+    borderRadius: 50,
+    padding: "14px 26px",
+    fontSize: 16,
+    fontWeight: 900,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
   };
+
+  const quietButton: React.CSSProperties = {
+    background: "none",
+    border: `2px solid ${border}`,
+    color: text,
+    borderRadius: 50,
+    padding: "12px 18px",
+    fontSize: 14,
+    fontWeight: 800,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  };
+
+  const heading: React.CSSProperties = {
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: "0.14em",
+    textTransform: "uppercase",
+    color: sub,
+    margin: "0 0 10px",
+  };
+
+  const sharePalette = { card, border, text, sub, accent };
+  const openShare = (target: ShareTarget, triggerId: string) => {
+    setShareTarget(target);
+    setShareTriggerId(triggerId);
+  };
+
+  const current = result?.items[currentIndex] ?? null;
+  const embed = current ? getEmbedUrl(current) : null;
+  // Autoplay only ever follows the visitor's own tap (playerOpen), and only
+  // for the YouTube player; page load never makes a sound.
+  const embedSrc = embed && current?.videoId ? `${embed}&autoplay=1` : embed;
 
   return (
-    <div className={`min-h-screen ${dark ? "bg-black text-white" : "bg-white text-black"}`}>
-      {/* Player overlay (if playing) */}
-      {playing && currentItem && (
-        <div className="fixed inset-0 z-40 flex flex-col bg-black bg-opacity-95">
-          <button
-            onClick={() => setPlaying(false)}
-            className="absolute top-4 right-4 text-2xl leading-none hover:opacity-70"
-          >
-            ✕
-          </button>
-          <div className="flex-1 flex flex-col justify-center items-center p-4 text-center">
-            {artworkUrl(currentItem) && (
-              <img
-                src={artworkUrl(currentItem)!}
-                alt={currentItem.title}
-                className="max-w-sm max-h-60 rounded-lg mb-4 object-cover"
-              />
-            )}
-            <h2 className="text-2xl font-bold mb-2">{currentItem.title}</h2>
-            <p className="text-lg opacity-75 mb-4">{currentItem.author}</p>
-            {currentItem.summary && (
-              <p className="text-sm opacity-60 mb-6 max-w-md">{currentItem.summary}</p>
-            )}
-            <a
-              href={getWatchUrl(currentItem)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded mb-4"
-            >
-              Open at Official Source
-            </a>
-          </div>
-          <div className="p-4 flex gap-2 justify-center flex-wrap">
-            <button
-              onClick={handlePrevItem}
-              disabled={currentIndex === 0}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 rounded"
-            >
-              ← Previous
-            </button>
-            <button
-              onClick={handleNextItem}
-              disabled={currentIndex >= (result?.items.length ?? 0) - 1}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 rounded"
-            >
-              Next →
-            </button>
-            <button
-              onClick={handleAnotherLikeThis}
-              className="px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded"
-            >
-              Another like this
-            </button>
-            <button
-              onClick={handleShareCurrent}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
-            >
-              Share
-            </button>
-          </div>
-        </div>
-      )}
+    <main style={{ background: bg, minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+      <div style={{ maxWidth: 760, margin: "0 auto", padding: "32px 20px 80px" }}>
+        <p aria-live="polite" role="status" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>
+          {announce}
+        </p>
 
-      {/* Share sheet */}
-      {shareTarget && (
-        <ShareSheet
-          target={shareTarget}
-          triggerId={shareTriggerId ?? ""}
-          palette={sharePalette}
-          onClose={() => setShareTarget(null)}
-        />
-      )}
-
-      {/* Main page */}
-      <div className="max-w-2xl mx-auto p-4 sm:p-6">
-        <header className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Digital DJ</h1>
-          <p className="text-lg opacity-90">
-            Tell the DJ how much time you have and what you need. Get an approved song, sermon, podcast, video, or complete session.
+        <div style={{ textAlign: "center", marginBottom: 22 }}>
+          <h1 style={{ fontSize: "clamp(1.7rem, 7vw, 2.3rem)", fontWeight: 900, color: text, margin: "0 0 8px" }}>
+            Digital <span style={{ color: accent }}>DJ</span> <span aria-hidden>🎛️</span>
+          </h1>
+          <p style={{ fontSize: 15, color: sub, lineHeight: 1.55, maxWidth: 480, margin: "0 auto" }}>
+            Tell the DJ how much time you have and what you need. Every pick comes from the same
+            hand-approved library as the rest of the site.
           </p>
-        </header>
+        </div>
 
-        {!hasResult ? (
-          <div className="space-y-6">
-            {/* Duration selector */}
-            <section>
-              <h2 className="text-xl font-semibold mb-3">How much time do you have?</h2>
-              <div className="grid grid-cols-5 gap-2">
-                {DURATIONS.map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => setDuration(d)}
-                    className={`p-3 rounded font-semibold transition ${
-                      duration === d
-                        ? "bg-purple-600 text-white"
-                        : `${dark ? "bg-gray-800 hover:bg-gray-700" : "bg-gray-200 hover:bg-gray-300"}`
-                    }`}
-                  >
-                    {d}m
-                  </button>
-                ))}
-              </div>
-            </section>
+        {/* ---- the dials ---- */}
+        <section aria-label="Build a session" style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20 }}>
+          <p style={heading}>How much time do you have?</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 8, marginBottom: 18 }}>
+            {DURATIONS.map((d) => (
+              <button key={d} onClick={() => setDuration(d)} aria-pressed={duration === d} style={pill(duration === d)}>
+                {d}m
+              </button>
+            ))}
+          </div>
 
-            {/* Media type selector */}
-            <section>
-              <h2 className="text-xl font-semibold mb-3">What kind of media?</h2>
-              <div className="grid grid-cols-2 gap-2">
-                {MEDIA_TYPES.map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => handleMediaTypeToggle(m.id)}
-                    className={`p-3 rounded transition text-sm font-semibold ${
-                      selectedMediaTypes.has(m.id)
-                        ? "bg-purple-600 text-white"
-                        : `${dark ? "bg-gray-800 hover:bg-gray-700" : "bg-gray-200 hover:bg-gray-300"}`
-                    }`}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-            </section>
+          <p style={heading}>
+            What kind? <span style={{ fontWeight: 700, letterSpacing: 0, textTransform: "none" }}>(none selected = a mix)</span>
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginBottom: 18 }}>
+            {MEDIA_TYPES.map((m) => (
+              <button key={m.id} onClick={() => setMediaTypes(toggle(mediaTypes, m.id))} aria-pressed={mediaTypes.has(m.id)} style={pill(mediaTypes.has(m.id))}>
+                <span aria-hidden>{m.emoji}</span> {m.label}
+              </button>
+            ))}
+          </div>
 
-            {/* Needs selector */}
-            <section>
-              <h2 className="text-xl font-semibold mb-3">What do you need right now?</h2>
-              <div className="grid grid-cols-3 gap-2">
-                {NEEDS.map((n) => (
-                  <button
-                    key={n.id}
-                    onClick={() => handleNeedToggle(n.id)}
-                    className={`p-3 rounded transition text-sm font-semibold ${
-                      selectedNeeds.has(n.id)
-                        ? "bg-purple-600 text-white"
-                        : `${dark ? "bg-gray-800 hover:bg-gray-700" : "bg-gray-200 hover:bg-gray-300"}`
-                    }`}
-                  >
-                    {n.icon} {n.label}
-                  </button>
-                ))}
-              </div>
-            </section>
+          <p style={heading}>What do you need right now?</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, marginBottom: 18 }}>
+            {NEEDS.map((n) => (
+              <button key={n.id} onClick={() => setNeeds(toggle(needs, n.id))} aria-pressed={needs.has(n.id)} style={pill(needs.has(n.id))}>
+                <span aria-hidden>{n.emoji}</span> {n.label}
+              </button>
+            ))}
+          </div>
 
-            {/* Optional: Natural language enhancement */}
-            <section>
-              <h2 className="text-xl font-semibold mb-3">Tell the DJ what you need</h2>
-              <div className="flex gap-2">
+          {aiEnabled && (
+            <>
+              <p style={heading}>
+                Or tell the DJ <span style={{ fontWeight: 700, letterSpacing: 0, textTransform: "none" }}>(optional)</span>
+              </p>
+              <div style={{ display: "flex", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
                 <input
                   type="text"
-                  placeholder="E.g., 'I have 30 minutes before bed and need peace'"
                   value={userText}
                   onChange={(e) => setUserText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") askTheDj();
+                  }}
                   maxLength={300}
-                  className={`flex-1 p-3 rounded border ${
-                    dark ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-300"
-                  }`}
-                  onKeyPress={(e) => {
-                    if (e.key === "Enter" && userText.trim()) {
-                      handleAiEnhance();
-                    }
+                  placeholder="“Ten minutes of peace before work”"
+                  aria-label="Tell the DJ what you need"
+                  style={{
+                    flex: "1 1 200px",
+                    minWidth: 0,
+                    background: bg,
+                    border: `2px solid ${border}`,
+                    borderRadius: 14,
+                    color: text,
+                    fontSize: 15,
+                    padding: "12px 14px",
                   }}
                 />
-                <button
-                  onClick={handleAiEnhance}
-                  disabled={!userText.trim() || loadingAi}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded font-semibold"
-                >
-                  {loadingAi ? "..." : "Ask"}
+                <button onClick={askTheDj} disabled={loadingAi || !userText.trim()} style={{ ...quietButton, opacity: loadingAi || !userText.trim() ? 0.55 : 1 }}>
+                  {loadingAi ? "Listening…" : "Ask the DJ"}
                 </button>
               </div>
-            </section>
+              {aiNote && <p style={{ fontSize: 13, color: sub, margin: "0 0 6px" }}>{aiNote}</p>}
+            </>
+          )}
 
-            {/* Generate button */}
-            <button
-              onClick={generateSelection}
-              disabled={loading}
-              className="w-full p-4 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 rounded-lg text-lg font-bold"
-            >
-              {loading ? "Spinning..." : "Spin something for me"}
+          <div style={{ textAlign: "center", marginTop: 14 }}>
+            <button onClick={() => generate()} style={bigButton}>
+              🎛️ Spin something for me
             </button>
           </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Result summary */}
-            <div className={`p-4 rounded-lg ${dark ? "bg-gray-900" : "bg-gray-100"}`}>
-              <p className="text-sm opacity-75">
-                {result.items.length} item{result.items.length !== 1 ? "s" : ""} • {result.durationMinutes} minutes
-                {result.truncated && " (rounded up)"}
-              </p>
-              <h2 className="text-2xl font-bold mt-2">Your Session</h2>
-            </div>
+        </section>
 
-            {/* Session playlist */}
-            <div className="space-y-2">
-              {result.items.map((item, idx) => (
-                <button
-                  key={`${item.id}-${idx}`}
-                  onClick={() => {
-                    setCurrentIndex(idx);
-                    setPlaying(true);
-                  }}
-                  className={`w-full p-3 rounded text-left transition ${
-                    idx === currentIndex
-                      ? "bg-purple-600 text-white"
-                      : `${dark ? "bg-gray-800 hover:bg-gray-700" : "bg-gray-200 hover:bg-gray-300"}`
-                  }`}
-                >
-                  <div className="font-semibold">{item.title}</div>
-                  <div className="text-sm opacity-75">
-                    {item.author} • {item.type}
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={handlePlayCurrent}
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded font-semibold flex-1"
-              >
-                ▶ Play
-              </button>
-              <button
-                onClick={handleShareSession}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded font-semibold flex-1"
-              >
-                📤 Share Session
-              </button>
-              <button
-                onClick={() => {
-                  setResult(null);
-                  setSelectedMediaTypes(new Set());
-                  setSelectedNeeds(new Set());
-                  setUserText("");
-                }}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded font-semibold flex-1"
-              >
-                🔄 Reset
-              </button>
-            </div>
-          </div>
+        {/* ---- empty state ---- */}
+        {result && result.items.length === 0 && (
+          <section style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: 20, marginBottom: 20, textAlign: "center" }}>
+            <p style={{ fontSize: 15, color: text, fontWeight: 800, margin: "0 0 6px" }}>Nothing matches that combination yet.</p>
+            <p style={{ fontSize: 13.5, color: sub, margin: "0 0 14px" }}>Try fewer filters, or let the DJ surprise you.</p>
+            <button
+              onClick={() => {
+                setMediaTypes(new Set());
+                setNeeds(new Set());
+                generate({ mediaTypes: undefined, needs: undefined });
+              }}
+              style={quietButton}
+            >
+              Clear filters and spin again
+            </button>
+          </section>
         )}
+
+        {/* ---- the session ---- */}
+        {result && result.items.length > 0 && (
+          <section aria-label="Your session" style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px" }}>
+            <p style={{ ...heading, color: accent }}>
+              Your session · {result.items.length} pick{result.items.length === 1 ? "" : "s"} · about {result.durationMinutes} min
+            </p>
+
+            {/* now playing (mounts only after a tap) */}
+            {playerOpen && current && (
+              <div ref={playerRef} style={{ marginBottom: 16 }}>
+                {embedSrc ? (
+                  <iframe
+                    key={current.id}
+                    src={embedSrc}
+                    title={`${current.title} — ${current.author}`}
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                    style={{ width: "100%", aspectRatio: "16 / 9", border: 0, borderRadius: 14, background: "#000" }}
+                  />
+                ) : null}
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: 15, fontWeight: 800, color: text, margin: 0 }}>{current.title}</p>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: 0 }}>{current.author}</p>
+                  </div>
+                  <a href={getWatchUrl(current)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none", whiteSpace: "nowrap" }}>
+                    {current.videoId ? "Open on YouTube ↗" : "Open the official source ↗"}
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* the list — current highlighted, the rest are up next */}
+            <ol style={{ listStyle: "none", margin: "0 0 16px", padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+              {result.items.map((item, idx) => {
+                const isCurrent = idx === currentIndex && playerOpen;
+                const isUpNext = playerOpen && idx === currentIndex + 1;
+                return (
+                  <li key={`${item.id}-${idx}`}>
+                    <button
+                      onClick={() => openItem(idx)}
+                      aria-label={`Play ${item.title} by ${item.author}`}
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        textAlign: "left",
+                        background: isCurrent ? active : "none",
+                        border: `2px solid ${isCurrent ? activeBorder : border}`,
+                        borderRadius: 14,
+                        padding: "10px 14px",
+                        cursor: "pointer",
+                        color: "inherit",
+                        font: "inherit",
+                      }}
+                    >
+                      <span style={{ display: "block", fontSize: 11, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: isCurrent ? accent : sub }}>
+                        {isCurrent ? "Now playing" : isUpNext ? "Up next" : `${idx + 1}.`}
+                      </span>
+                      <span style={{ display: "block", fontSize: 14.5, fontWeight: 800, color: text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {item.title}
+                      </span>
+                      <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: sub }}>
+                        {item.author}
+                        {item.duration ? ` · ${item.duration}` : ""}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              {!playerOpen && (
+                <button onClick={() => openItem(0)} style={bigButton}>
+                  ▶ Play
+                </button>
+              )}
+              {playerOpen && (
+                <>
+                  <button onClick={() => currentIndex > 0 && openItem(currentIndex - 1)} disabled={currentIndex === 0} style={{ ...quietButton, opacity: currentIndex === 0 ? 0.5 : 1 }}>
+                    ⏮ Previous
+                  </button>
+                  <button
+                    onClick={() => currentIndex < result.items.length - 1 && openItem(currentIndex + 1)}
+                    disabled={currentIndex >= result.items.length - 1}
+                    style={{ ...quietButton, opacity: currentIndex >= result.items.length - 1 ? 0.5 : 1 }}
+                  >
+                    ⏭ Next
+                  </button>
+                  <button onClick={anotherLikeThis} style={quietButton}>
+                    🔁 Another like this
+                  </button>
+                  {current && <ShareTrigger target={mediaShareTarget(current)} scope="dj" palette={sharePalette} onOpen={openShare} />}
+                </>
+              )}
+              <button onClick={shareSession} style={quietButton}>
+                {copied ? "✓ Link copied" : "📤 Share session"}
+              </button>
+            </div>
+          </section>
+        )}
+
+        <p style={{ textAlign: "center", marginTop: 22 }}>
+          <a href="/" style={{ fontSize: 13.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
+            ← Back to The DJ Cares
+          </a>
+        </p>
       </div>
-    </div>
+
+      <ShareSheet target={shareTarget} triggerId={shareTriggerId} palette={sharePalette} onClose={() => setShareTarget(null)} />
+    </main>
   );
 }
