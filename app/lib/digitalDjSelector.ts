@@ -154,37 +154,37 @@ export function selectForDuration(
   const selected: MediaItem[] = [];
   let elapsedSeconds = 0;
   let truncated = false;
-  const recentIds = new Set<string>();
 
-  // Accumulate items until we hit or exceed the target duration.
-  // Prefer variety over repetition.
-  for (const item of items) {
-    if (selected.length >= 50) break; // Cap at 50 items per session.
+  // Greedy fill that prefers items which actually FIT the remaining time
+  // (in shuffled order, so sessions stay varied). Only when nothing in the
+  // pool fits at all does the session take the closest full-length match
+  // and mark itself truncated — never "a long sermon because it came first".
+  const pool = items.filter((i, idx) => items.findIndex((j) => j.id === i.id) === idx);
+  while (selected.length < 50) {
+    const remaining = targetSeconds - elapsedSeconds;
+    if (remaining <= targetSeconds * 0.1) break; // filled to ≥90%
 
-    // Avoid immediate repeats.
-    if (recentIds.has(item.id)) continue;
-
-    const duration = estimateDuration(item);
-    const newElapsed = elapsedSeconds + duration;
-
-    if (newElapsed > targetSeconds) {
-      // This item would exceed the target.
-      // Include it anyway (round up), but mark as truncated.
+    const fitIndex = pool.findIndex((i) => estimateDuration(i) <= remaining);
+    if (fitIndex >= 0) {
+      const [item] = pool.splice(fitIndex, 1);
       selected.push(item);
+      elapsedSeconds += estimateDuration(item);
+      continue;
+    }
+
+    if (selected.length === 0 && pool.length > 0) {
+      // Nothing in the whole pool fits the request — take the shortest
+      // available full item as the honest closest match.
+      let best = 0;
+      for (let i = 1; i < pool.length; i++) {
+        if (estimateDuration(pool[i]) < estimateDuration(pool[best])) best = i;
+      }
+      const [item] = pool.splice(best, 1);
+      selected.push(item);
+      elapsedSeconds += estimateDuration(item);
       truncated = true;
-      elapsedSeconds = newElapsed;
-      recentIds.add(item.id);
-      break;
     }
-
-    selected.push(item);
-    elapsedSeconds += duration;
-    recentIds.add(item.id);
-
-    // Stop if we're close enough to the target (within 10%).
-    if (elapsedSeconds >= targetSeconds * 0.9) {
-      break;
-    }
+    break;
   }
 
   return {
