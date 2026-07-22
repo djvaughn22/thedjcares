@@ -171,6 +171,29 @@ describe("digitalDjSelector", () => {
       expect(result.items.length).toBeGreaterThan(0);
     });
 
+    it("prefers items that fit over rounding up with a long one", () => {
+      const song = (id: string, dur: string) => ({
+        id, type: "music" as const, title: id, author: "A", url: "https://example.com",
+        duration: dur, vibes: ["Gospel" as const], verified: "2026-01-01",
+      });
+      // A 23-min sermon first in shuffle order must NOT hijack a 10-min ask
+      // when fitting songs exist.
+      const sermon = { ...song("long-sermon", "23:00"), type: "sermon" as const };
+      const result = selectForDuration([sermon, song("s1", "4:00"), song("s2", "4:00"), song("s3", "4:00")], 10);
+      expect(result.items.every((i) => i.type === "music")).toBe(true);
+      expect(result.truncated).toBe(false);
+    });
+
+    it("takes the shortest full match only when nothing fits", () => {
+      const sermon = (id: string, dur: string) => ({
+        id, type: "sermon" as const, title: id, author: "A", url: "https://example.com",
+        duration: dur, vibes: ["Gospel" as const], verified: "2026-01-01",
+      });
+      const result = selectForDuration([sermon("a", "45:00"), sermon("b", "23:00"), sermon("c", "38:00")], 10);
+      expect(result.items.map((i) => i.id)).toEqual(["b"]);
+      expect(result.truncated).toBe(true);
+    });
+
     it("handles empty item list", () => {
       const result = selectForDuration([], 10);
       expect(result.items.length).toBe(0);

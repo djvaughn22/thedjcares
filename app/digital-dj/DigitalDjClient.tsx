@@ -75,6 +75,7 @@ export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boo
   const [currentIndex, setCurrentIndex] = useState(0);
   const [playerOpen, setPlayerOpen] = useState(false); // only ever true after a tap
   const [copied, setCopied] = useState(false);
+  const [shareUrlFallback, setShareUrlFallback] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null);
   const [shareTriggerId, setShareTriggerId] = useState<string | null>(null);
@@ -127,6 +128,7 @@ export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boo
     setCurrentIndex(0);
     setPlayerOpen(false);
     setCopied(false);
+    setShareUrlFallback(null);
     setAnnounce(
       djResult.items.length === 0
         ? "Nothing matches that combination yet."
@@ -212,18 +214,24 @@ export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boo
     const url = `${window.location.origin}/digital-dj?ids=${encodeURIComponent(
       resultToShareableIds({ items, durationMinutes: 0, requestedMinutes: 0, truncated: false }),
     )}`;
-    try {
-      if (navigator.share) {
+    if (navigator.share) {
+      try {
         await navigator.share({ title: "A session from The DJ Cares", url });
-      } else {
-        await navigator.clipboard.writeText(url);
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 2500);
+        track("digital_dj_session_shared", { itemCount: items.length });
+      } catch {
+        // Visitor closed the native sheet — stay quiet.
       }
-      track("digital_dj_session_shared", { itemCount: items.length });
-    } catch {
-      // Visitor closed the native sheet — stay quiet.
+      return;
     }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Clipboard unavailable — show the link itself so it can be copied.
+      setShareUrlFallback(url);
+    }
+    track("digital_dj_session_shared", { itemCount: items.length });
   };
 
   // --- family palette ---
@@ -665,6 +673,21 @@ export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boo
                 {copied ? "✓ Link copied" : "📤 Share session"}
               </button>
             </div>
+            {shareUrlFallback && (
+              <div style={{ marginTop: 10 }}>
+                <label htmlFor="djc-share-url" style={{ display: "block", fontSize: 12, fontWeight: 800, color: sub, marginBottom: 4 }}>
+                  Copy this session link:
+                </label>
+                <input
+                  id="djc-share-url"
+                  type="text"
+                  readOnly
+                  value={shareUrlFallback}
+                  onFocus={(e) => e.currentTarget.select()}
+                  style={{ width: "100%", background: bg, border: `2px solid ${border}`, borderRadius: 12, color: text, fontSize: 13, padding: "10px 12px" }}
+                />
+              </div>
+            )}
           </section>
         )}
 
