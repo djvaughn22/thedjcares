@@ -1,211 +1,102 @@
 # Digital DJ — Rollback Guide
 
-This document describes how to disable, revert, or troubleshoot the Digital DJ feature.
+How to disable, revert, or troubleshoot the Digital DJ feature. Every claim
+in this file has been verified against the actual build.
 
 ## Quick Reference
 
-- **Baseline tag**: `before-digital-dj-preview-20260722-1700`
+- **Baseline tag**: `before-digital-dj-preview-20260722-1700` (= commit `cebbe85`)
 - **Feature branch**: `feature/digital-dj-preview`
-- **Main commits added**: 5 (see below)
 
 ## Disabling Digital DJ
 
-### Option 1: Kill the Feature Flag (Fastest)
+### Option 1: Kill switch (no code changes)
 
-Set this environment variable in Vercel:
+In Vercel → Project Settings → Environment Variables, set:
 
 ```
 DIGITAL_DJ_ACCESS_MODE=off
 ```
 
-This:
-- ✅ Hides the `/digital-dj` route (returns 404)
-- ✅ Hides the homepage feature card
-- ✅ Blocks all API calls
-- ✅ Is **instantly reversible** — change the env var back to `preview`
-- ❌ Does NOT delete code (kept for fast restore)
+then **redeploy** (env changes on Vercel only take effect on the next
+deployment — use "Redeploy" on the latest deployment, or push any commit).
 
-### Option 2: Disable AI Only
+Verified effect of an `off` build:
+- `/digital-dj` returns **404**
+- `POST /api/digital-dj/parse-intent` returns **403**
+- The homepage Digital DJ card is not rendered
+- No OpenAI call can occur
+- Everything else on the site is untouched
 
-If deterministic selection works but AI is problematic:
+To restore: set the variable back to `preview` and redeploy.
+
+### Option 2: Disable AI only
 
 ```
 DIGITAL_DJ_AI_ENABLED=false
 ```
 
-This:
-- ✅ Disables OpenAI calls entirely
-- ✅ Keeps deterministic selection working
-- ✅ No code changes needed
-- ✅ Feature still accessible in "deterministic mode"
+(again: redeploy to apply). The deterministic DJ keeps working; the
+"tell the DJ" field disappears; the API answers `{ intent: null,
+aiEnabled: false }` without ever contacting OpenAI. Removing / not setting
+`OPENAI_API_KEY` has the same effect.
 
-## Reverting All Code
-
-### Full Rollback (Removes All Code)
+## Reverting all code
 
 ```bash
 cd /home/dj/TheDJCares/thedjcares
-
-# Reset to the baseline commit
 git reset --hard before-digital-dj-preview-20260722-1700
-
-# Verify
-git log --oneline -1  # Should show: cebbe85 Share everything...
-git status            # Should show: nothing to commit, working tree clean
+git push --force-with-lease origin main   # only if the feature already merged
 ```
 
-### Or: Revert via Commits
+Or revert the feature commits individually with `git revert` (newest first)
+if you prefer a forward-moving history.
 
-If the feature is already on main and you want to revert specific commits:
+## What a full revert removes
+
+**Files added by the feature:**
+- `app/lib/featureAccess.ts` — access modes + `canAccessFeature`
+- `app/lib/digitalDjSelector.ts` — deterministic selector
+- `app/lib/digitalDjAiParser.ts` — OpenAI Responses API intent parser
+- `app/lib/digitalDjRateLimit.ts` — burst + daily-quota limiter
+- `app/api/digital-dj/parse-intent/route.ts` — the one AI endpoint
+- `app/digital-dj/page.tsx` + `app/digital-dj/DigitalDjClient.tsx`
+- `app/lib/__tests__/featureAccess.test.ts`
+- `app/lib/__tests__/digitalDjSelector.test.ts`
+- `app/lib/__tests__/digitalDjGuards.test.ts`
+- `DIGITAL_DJ_ROLLBACK.md`, `docs/DIGITAL-DJ-STATUS.md`
+
+**Files modified by the feature (revert restores them):**
+- `app/page.tsx` — passes `digitalDjEnabled` to the home client
+- `app/HomeClient.tsx` — the homepage feature card
+- `.env.example` — the `DIGITAL_DJ_*` / `OPENAI_*` block
+- `package.json` / `package-lock.json` — the `openai` dependency
+
+**No database or migration exists** — the feature is stateless; nothing to
+clean up.
+
+## After rollback, confirm
 
 ```bash
-# Get the list of commits to revert
-git log --oneline main | head -10
-
-# Revert each Digital DJ commit (from newest to oldest)
-# Example (adjust SHAs as needed):
-git revert [COMMIT_SHA_1]
-git revert [COMMIT_SHA_2]
-# ... etc
-
-git push origin main
+npm run build   # succeeds
+npm test        # remaining suites pass
 ```
 
-## What Gets Removed
+and that the homepage renders without the Digital DJ card.
 
-**Files added** (safe to delete or keep):
-- `app/lib/featureAccess.ts` — feature flag + access control
-- `app/lib/digitalDjSelector.ts` — deterministic media selector
-- `app/lib/digitalDjAiParser.ts` — optional AI intent parser
-- `app/lib/__tests__/featureAccess.test.ts` — access control tests
-- `app/lib/__tests__/digitalDjSelector.test.ts` — selector tests
-- `app/digital-dj/page.tsx` — page wrapper
-- `app/digital-dj/DigitalDjClient.tsx` — UI component
-- `app/api/digital-dj/parse-intent/route.ts` — API endpoint
-- `DIGITAL_DJ_ROLLBACK.md` — this file
+## Shared session links
 
-**Files modified** (easy to revert):
-- `app/HomeClient.tsx` — added Digital DJ feature card (lines ~628-664)
+Shared links look like `/digital-dj?ids=song-way-maker,song-living-hope`.
+They contain only catalog ids — never visitor text. Unknown or tampered ids
+are ignored; a link whose ids all fail simply shows the normal picker.
+After a full revert (or in `off` mode) these links 404 — if you want old
+links to keep working, prefer the kill switch over deleting the code.
 
-**No database migrations** — feature is purely stateless/frontend.
+## Common issues
 
-## Testing the Rollback
-
-After reverting, confirm:
-
-```bash
-# 1. Build succeeds
-npm run build
-
-# 2. Tests pass (including removed test files won't run)
-npm test
-
-# 3. Routes are gone
-# These should all 404:
-#   GET /digital-dj
-#   POST /api/digital-dj/parse-intent
-
-# 4. Homepage loads without Digital DJ card
-# Open https://thedj.cares and verify the "Digital DJ" section is gone
-```
-
-## Accessing Shared Sessions
-
-Shared Digital DJ sessions use the format:
-```
-https://thedj.cares/digital-dj?ids=song-way-maker,apple-faith-playlist,sermon-bg-christ-is-our-hope
-```
-
-**After rollback**:
-- These links will 404.
-- Users with shared links have no fallback.
-
-To preserve shared links, **do not fully revert**; instead just set `DIGITAL_DJ_ACCESS_MODE=off`.
-
-## Logs & Monitoring
-
-### Check Feature Access in Production
-
-In Vercel Analytics or CloudWatch:
-
-```
-DIGITAL_DJ_ACCESS_MODE = 'preview'  ✅ Feature enabled
-DIGITAL_DJ_ACCESS_MODE = 'off'      ✅ Feature disabled
-DIGITAL_DJ_AI_ENABLED = 'false'     ✅ Deterministic only
-```
-
-### AI Usage Events
-
-If logging is enabled, search logs for:
-- `digital_dj_selection_generated` — deterministic selection
-- `digital_dj_ai_parsing_success` — successful AI parsing
-- `digital_dj_ai_parsing_failed` — AI parsing failed (graceful fallback)
-
-### Common Issues
-
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| "Feature not available" 403 | `DIGITAL_DJ_ACCESS_MODE=off` | Change to `preview` |
-| `/digital-dj` returns 404 | Feature disabled | Set `DIGITAL_DJ_ACCESS_MODE=preview` |
-| AI parsing always fails | No `OPENAI_API_KEY` | Add or enable the env var |
-| Slow homepage loads | Feature card rendering | Turn on `DIGITAL_DJ_ACCESS_MODE=off` |
-
-## The Feature at a Glance
-
-### Architecture
-
-```
-DigitalDjClient (React, /digital-dj)
-    ├─ UI for duration, media type, needs selection
-    ├─ digitalDjSelector.ts (deterministic, zero-token)
-    │  └─ selectMediaForDj() → filters catalog
-    ├─ Optional: "Tell the DJ" text field
-    │  └─ parseUserIntentWithAi() (server-only, guarded)
-    └─ ShareMenu (existing)
-       └─ Share links (session as IDs)
-
-canAccessFeature() (everywhere)
-    └─ Checks: feature flag + access mode + viewer
-
-API: /api/digital-dj/parse-intent
-    └─ POST: { userText } → { intent }
-    └─ Guards: access check, size limit, AI enabled check
-```
-
-### No User Data Stored
-
-- No registration required.
-- No accounts created.
-- No payment processing.
-- User text is **never stored** (only parsed in-memory and discarded).
-- Session sharing uses only **media IDs** (not user text).
-
-## Deploying After Rollback
-
-After rollback, Vercel will:
-1. See fewer files
-2. Run full rebuild
-3. Tests will pass (removed test files skipped)
-4. Build succeeds (no new dependencies)
-
-**Deploy command** (no changes needed):
-```bash
-git push origin main
-```
-
-Vercel auto-deploys on main commits.
-
-## Questions?
-
-- **Baseline**: `git show before-digital-dj-preview-20260722-1700`
-- **Last commit before Digital DJ**: `cebbe85` (Share everything…)
-- **Changes**: `git diff before-digital-dj-preview-20260722-1700..HEAD`
-
-## Success Criteria for Rollback
-
-✅ Feature is disabled or code is fully reverted  
-✅ Homepage loads and renders without Digital DJ  
-✅ No broken links in existing sections  
-✅ Tests pass  
-✅ Build succeeds  
-✅ No user data loss (feature was stateless)  
+| Symptom | Cause | Fix |
+|---|---|---|
+| `/digital-dj` 404s | `DIGITAL_DJ_ACCESS_MODE=off` at build time | Set `preview`, redeploy |
+| "Tell the DJ" field missing | AI disabled or `OPENAI_API_KEY` unset | Set the key (server-side env only), redeploy |
+| API returns 429 | Burst (4/min) or daily quota reached | Expected; limits reset within a minute / at UTC midnight |
+| API returns 403 | Mode is `off` or `subscriber` | Set `preview`, redeploy |
