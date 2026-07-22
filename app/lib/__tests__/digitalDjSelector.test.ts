@@ -185,7 +185,7 @@ describe("digitalDjSelector", () => {
         author: "Test",
         url: "https://example.com",
         duration: "3:00",
-        vibes: ["Gospel"] as const,
+        vibes: ["Gospel" as const],
         verified: "2026-01-01",
       }));
       const result = selectForDuration(items, 1000);
