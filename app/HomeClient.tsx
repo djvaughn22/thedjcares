@@ -76,7 +76,7 @@ const REQUEST_MAILTO =
     "What I'd love on The DJ Cares:\n\nTitle / name:\nArtist or speaker:\nLink (YouTube, Apple Music, or Spotify):\nWhy it encourages:\n",
   );
 
-export default function TheDJCaresPage() {
+export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjEnabled?: boolean }) {
   const [dark, setDark] = useState(true);
   const [tab, setTab] = useState<Tab>("spin");
 
@@ -623,6 +623,46 @@ export default function TheDJCaresPage() {
             Music, messages, and encouragement worth passing on — hand-picked, Gospel first.
           </p>
         </div>
+
+        {/* Digital DJ: conversational media selector (server decides existence) */}
+        {digitalDjEnabled && tab === "spin" && (
+          <section
+            style={{
+              background: accent,
+              color: ink,
+              border: "none",
+              borderRadius: 22,
+              padding: "20px 20px 22px",
+              marginBottom: 20,
+            }}
+          >
+            <p style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: ink, margin: "0 0 12px" }}>
+              <span aria-hidden>🎙️</span> Digital DJ
+            </p>
+            <p style={{ fontSize: 17, fontWeight: 900, color: ink, margin: "0 0 6px" }}>Tell the DJ what you need</p>
+            <p style={{ fontSize: 13.5, color: ink, margin: "0 0 14px", lineHeight: 1.55 }}>
+              How much time do you have? What kind of media? Tell us your mood. We'll spin something good from our approved catalog.
+            </p>
+            <a
+              href="/digital-dj"
+              onClick={() => track("digital_dj_homepage_click")}
+              style={{
+                display: "inline-block",
+                background: ink,
+                color: accent,
+                border: "none",
+                borderRadius: 50,
+                padding: "12px 24px",
+                fontSize: 15,
+                fontWeight: 900,
+                cursor: "pointer",
+                textDecoration: "none",
+              }}
+            >
+              Spin something for me
+            </a>
+          </section>
+        )}
 
         {/* the site opens with the DJ's music: Faith Playlist on Apple Music,
             with one-tap filters for the other playlists */}

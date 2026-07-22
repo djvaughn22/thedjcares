@@ -8,6 +8,7 @@
 
 import type { Metadata } from "next";
 import HomeClient from "./HomeClient";
+import { getCurrentAccessMode } from "./lib/featureAccess";
 import {
   findShareChurch,
   findShareMedia,
@@ -72,7 +73,8 @@ export default async function Page({ searchParams }: { searchParams: SearchParam
     <>
       {link && <link rel="canonical" href={link.canonical} />}
       {link && <meta property="og:url" content={link.canonical} />}
-      <HomeClient />
+      {/* Server decides whether the Digital DJ card exists at all. */}
+      <HomeClient digitalDjEnabled={getCurrentAccessMode("digital_dj") !== "off"} />
     </>
   );
 }
