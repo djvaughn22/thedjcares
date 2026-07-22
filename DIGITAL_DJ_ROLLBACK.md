@@ -57,14 +57,19 @@ if you prefer a forward-moving history.
 **Files added by the feature:**
 - `app/lib/featureAccess.ts` — access modes + `canAccessFeature`
 - `app/lib/digitalDjSelector.ts` — deterministic selector
+- `app/lib/digitalDjSession.ts` — artwork, swap, reorder, duration helpers
 - `app/lib/digitalDjAiParser.ts` — OpenAI Responses API intent parser
 - `app/lib/digitalDjRateLimit.ts` — burst + daily-quota limiter
 - `app/api/digital-dj/parse-intent/route.ts` — the one AI endpoint
 - `app/digital-dj/page.tsx` + `app/digital-dj/DigitalDjClient.tsx`
 - `app/lib/__tests__/featureAccess.test.ts`
 - `app/lib/__tests__/digitalDjSelector.test.ts`
+- `app/lib/__tests__/digitalDjSession.test.ts`
 - `app/lib/__tests__/digitalDjGuards.test.ts`
 - `DIGITAL_DJ_ROLLBACK.md`, `docs/DIGITAL-DJ-STATUS.md`
+
+To undo only the Jul-22 visual polish (keep the feature), reset to tag
+`before-digital-dj-visual-polish-20260722-1745` instead.
 
 **Files modified by the feature (revert restores them):**
 - `app/page.tsx` — passes `digitalDjEnabled` to the home client

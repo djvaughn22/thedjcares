@@ -26,9 +26,11 @@ described as working).
   `gpt-5.4-nano` (override: `OPENAI_MODEL`). The catalog is never sent;
   the model's output is whitelist-sanitized and can only ever set filter
   values — never URLs, ids, or media. Visitor text is parsed in memory
-  and never stored or logged. *(implemented; guard paths locally
-  verified with network tripwires; a real end-to-end OpenAI call has NOT
-  been made — no API key has ever been configured)*
+  and never stored or logged. *(LIVE-VERIFIED Jul 22 2026: with
+  `OPENAI_API_KEY` configured in Vercel, real production requests parsed
+  correctly — e.g. "ten minutes … encouragement" → 10 min +
+  encouragement — and every result still resolves through the local
+  catalog only)*
 - **Rate limiting** — server-side, before any OpenAI request: 4/min burst
   + daily quota (`DIGITAL_DJ_DAILY_ANONYMOUS_LIMIT`, default 5) keyed by a
   salted SHA-256 hash of the forwarded IP (raw IPs never stored).
