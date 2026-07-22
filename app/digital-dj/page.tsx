@@ -1,5 +1,13 @@
+// Server gate for Digital DJ. The access mode is read here, on the server —
+// client state is never treated as authorization. With
+// DIGITAL_DJ_ACCESS_MODE=off this route 404s (env changes on Vercel take
+// effect on the next deploy, which Vercel performs when the variable is
+// saved and the project is redeployed).
+
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import DigitalDjClient from "./DigitalDjClient";
+import { getCurrentAccessMode, isAiEnabled } from "../lib/featureAccess";
 
 export const metadata: Metadata = {
   title: "Digital DJ",
@@ -8,5 +16,7 @@ export const metadata: Metadata = {
 };
 
 export default function DigitalDjPage() {
-  return <DigitalDjClient />;
+  if (getCurrentAccessMode("digital_dj") === "off") notFound();
+  const aiEnabled = isAiEnabled("digital_dj") && Boolean(process.env.OPENAI_API_KEY);
+  return <DigitalDjClient aiEnabled={aiEnabled} />;
 }

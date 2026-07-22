@@ -76,7 +76,7 @@ const REQUEST_MAILTO =
     "What I'd love on The DJ Cares:\n\nTitle / name:\nArtist or speaker:\nLink (YouTube, Apple Music, or Spotify):\nWhy it encourages:\n",
   );
 
-export default function TheDJCaresPage() {
+export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjEnabled?: boolean }) {
   const [dark, setDark] = useState(true);
   const [tab, setTab] = useState<Tab>("spin");
 
@@ -624,8 +624,8 @@ export default function TheDJCaresPage() {
           </p>
         </div>
 
-        {/* Digital DJ: conversational media selector */}
-        {tab === "spin" && (
+        {/* Digital DJ: conversational media selector (server decides existence) */}
+        {digitalDjEnabled && tab === "spin" && (
           <section
             style={{
               background: accent,
