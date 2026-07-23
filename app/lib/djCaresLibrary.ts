@@ -16,6 +16,8 @@
 
 export type MediaType = "music" | "podcast" | "sermon" | "playlist";
 
+export type PlaybackExperience = "listen" | "watch" | "sermon" | "podcast";
+
 export type Vibe =
   | "Gospel"
   | "Worship"
@@ -63,6 +65,7 @@ export type Ministry = {
 export type MediaItem = {
   id: string;
   type: MediaType;
+  playbackExperience: PlaybackExperience; // listen=audio, watch=video, sermon/podcast
   title: string;
   author: string; // artist, speaker, host, or show
   ministry?: MinistryKey;
@@ -70,7 +73,6 @@ export type MediaItem = {
   shortTitle?: string; // compact label for filter pills
   url: string; // canonical official source
   videoId?: string; // YouTube (oEmbed-verified)
-  musicVideo?: boolean; // music item that's a proper official music video
   appleEmbed?: string; // embed.music.apple.com URL
   spotifyEmbed?: string; // open.spotify.com/embed URL
   spotifyAlt?: string; // Spotify twin for Apple playlists
@@ -178,6 +180,7 @@ export function ministryByKey(key: MinistryKey | undefined): Ministry | undefine
 const yt = (
   id: string,
   type: MediaType,
+  playbackExperience: PlaybackExperience,
   title: string,
   author: string,
   videoId: string,
@@ -186,6 +189,7 @@ const yt = (
 ): MediaItem => ({
   id,
   type,
+  playbackExperience,
   title,
   author,
   videoId,
@@ -196,7 +200,7 @@ const yt = (
 });
 
 const song = (id: string, title: string, author: string, videoId: string, vibes: Vibe[], extra: Partial<MediaItem> = {}) =>
-  yt(id, "music", title, author, videoId, vibes, extra);
+  yt(id, "music", "watch", title, author, videoId, vibes, extra);
 
 const sermon = (
   id: string,
@@ -206,12 +210,13 @@ const sermon = (
   videoId: string,
   vibes: Vibe[],
   extra: Partial<MediaItem> = {},
-) => yt(id, "sermon", title, author, videoId, vibes, { ministry, ...extra });
+) => yt(id, "sermon", "sermon", title, author, videoId, vibes, { ministry, ...extra });
 
 const applePl = (id: string, title: string, shortTitle: string, path: string, vibes: Vibe[], extra: Partial<MediaItem> = {}): MediaItem => ({
   shortTitle,
   id,
   type: "playlist",
+  playbackExperience: "listen",
   title,
   author: "The DJ Cares",
   vibes,
@@ -222,42 +227,42 @@ const applePl = (id: string, title: string, shortTitle: string, path: string, vi
 });
 
 // ---------------------------------------------------------------------------
-// MUSIC — official artist/label uploads only. `musicVideo: true` marks a
+// MUSIC — official artist/label uploads only. `` marks a
 // proper official music video (those also show under Music Videos).
 // ---------------------------------------------------------------------------
 const MUSIC: MediaItem[] = [
-  song("song-way-maker", "Way Maker", "Leeland", "iJCV_2H9xD0", ["Hope", "Worship"], { musicVideo: true, featured: true, summary: "Even when you don't see it, He's working. The first record on the deck." }),
-  song("song-this-is-amazing-grace", "This Is Amazing Grace", "Phil Wickham", "XFRjr_x-yxU", ["Worship", "Gospel"], { musicVideo: true, duration: "4:59", summary: "The wonder of grace, sung loud." }),
-  song("song-living-hope", "Living Hope", "Phil Wickham", "u-1fwZtKJSM", ["Hope", "Gospel"], { musicVideo: true, summary: "“Hallelujah, praise the One who set me free.”" }),
-  song("song-battle-belongs", "Battle Belongs", "Phil Wickham", "qtvQNzPHn-w", ["Faith", "Hope"], { musicVideo: true, summary: "When it's too heavy — the fight was never yours alone." }),
-  song("song-chains-are-gone", "Amazing Grace (My Chains Are Gone)", "Chris Tomlin", "Y-4NFvI5U9w", ["Worship", "Gospel"], { musicVideo: true, summary: "The old hymn with a new chorus of freedom." }),
-  song("song-we-believe", "We Believe", "Newsboys", "WjZ01FcK0yk", ["Faith", "Worship"], { musicVideo: true, summary: "A creed you can sing." }),
-  song("song-i-can-only-imagine", "I Can Only Imagine", "MercyMe", "N_lrrq_opng", ["Hope", "Worship"], { musicVideo: true, summary: "The song that made a generation look up." }),
-  song("song-rise-up-lazarus", "Rise Up (Lazarus)", "CAIN", "8RIZlNYl4ok", ["Hope", "Joy"], { musicVideo: true, summary: "Come out of that grave — a resurrection anthem." }),
+  song("song-way-maker", "Way Maker", "Leeland", "iJCV_2H9xD0", ["Hope", "Worship"], { featured: true, summary: "Even when you don't see it, He's working. The first record on the deck." }),
+  song("song-this-is-amazing-grace", "This Is Amazing Grace", "Phil Wickham", "XFRjr_x-yxU", ["Worship", "Gospel"], { duration: "4:59", summary: "The wonder of grace, sung loud." }),
+  song("song-living-hope", "Living Hope", "Phil Wickham", "u-1fwZtKJSM", ["Hope", "Gospel"], { summary: "“Hallelujah, praise the One who set me free.”" }),
+  song("song-battle-belongs", "Battle Belongs", "Phil Wickham", "qtvQNzPHn-w", ["Faith", "Hope"], { summary: "When it's too heavy — the fight was never yours alone." }),
+  song("song-chains-are-gone", "Amazing Grace (My Chains Are Gone)", "Chris Tomlin", "Y-4NFvI5U9w", ["Worship", "Gospel"], { summary: "The old hymn with a new chorus of freedom." }),
+  song("song-we-believe", "We Believe", "Newsboys", "WjZ01FcK0yk", ["Faith", "Worship"], { summary: "A creed you can sing." }),
+  song("song-i-can-only-imagine", "I Can Only Imagine", "MercyMe", "N_lrrq_opng", ["Hope", "Worship"], { summary: "The song that made a generation look up." }),
+  song("song-rise-up-lazarus", "Rise Up (Lazarus)", "CAIN", "8RIZlNYl4ok", ["Hope", "Joy"], { summary: "Come out of that grave — a resurrection anthem." }),
   song("song-even-if", "Even If", "MercyMe", "B6fA35Ved-Y", ["Faith", "Peace"], { summary: "Hope that holds even when the healing doesn't come." }),
   song("song-praise-you-in-this-storm", "Praise You in This Storm", "Casting Crowns", "0YUGwUgBvTU", ["Faith", "Peace"], { summary: "Worship that doesn't wait for the storm to pass." }),
   // Mood note: Anne Wilson's testimony born from her brother's death — Gospel
   // and hope, NOT Joy. Do not re-add a Joy vibe (see djMoodReview.ts).
-  song("song-my-jesus", "My Jesus", "Anne Wilson", "FW5o2uBeMWQ", ["Gospel", "Hope"], { musicVideo: true, summary: "Let me tell you about my Jesus." }),
+  song("song-my-jesus", "My Jesus", "Anne Wilson", "FW5o2uBeMWQ", ["Gospel", "Hope"], { summary: "Let me tell you about my Jesus." }),
   song("song-just-be-held", "Just Be Held", "Casting Crowns", "tIZitK6_IMQ", ["Peace", "Faith"], { summary: "Stop holding on — and just be held." }),
-  song("song-chain-breaker", "Chain Breaker", "Zach Williams", "cd_xxmXdQz4", ["Hope", "Gospel"], { musicVideo: true, summary: "If you've got chains, He's a chain breaker." }),
-  song("song-fear-is-a-liar", "Fear Is a Liar", "Zach Williams", "1srs1YoTVzs", ["Peace", "Faith"], { musicVideo: true, summary: "Calling fear what it is." }),
+  song("song-chain-breaker", "Chain Breaker", "Zach Williams", "cd_xxmXdQz4", ["Hope", "Gospel"], { summary: "If you've got chains, He's a chain breaker." }),
+  song("song-fear-is-a-liar", "Fear Is a Liar", "Zach Williams", "1srs1YoTVzs", ["Peace", "Faith"], { summary: "Calling fear what it is." }),
   song("song-who-am-i", "Who Am I", "Casting Crowns", "3rT8Re1EIQc", ["Gospel", "Worship"], { duration: "5:34", summary: "Not because of who I am — because of what You've done." }),
-  song("song-rescue-story", "Rescue Story", "Zach Williams", "Q3aP5iuJITg", ["Gospel", "Hope"], { musicVideo: true, summary: "You were the rescue story — live from Red Rocks." }),
-  song("song-god-who-stays", "The God Who Stays", "Matthew West", "QPwd_TQpsHY", ["Peace", "Hope"], { musicVideo: true, summary: "He's the God who stays, even when you run." }),
-  song("song-you-say", "You Say", "Lauren Daigle", "sIaT8Jl2zpI", ["Peace", "Faith"], { musicVideo: true, summary: "When the voices argue — believe what He says." }),
+  song("song-rescue-story", "Rescue Story", "Zach Williams", "Q3aP5iuJITg", ["Gospel", "Hope"], { summary: "You were the rescue story — live from Red Rocks." }),
+  song("song-god-who-stays", "The God Who Stays", "Matthew West", "QPwd_TQpsHY", ["Peace", "Hope"], { summary: "He's the God who stays, even when you run." }),
+  song("song-you-say", "You Say", "Lauren Daigle", "sIaT8Jl2zpI", ["Peace", "Faith"], { summary: "When the voices argue — believe what He says." }),
   song("song-christ-be-all-around-me", "Christ Be All Around Me", "All Sons & Daughters", "cmge-ycIkoo", ["Peace", "Prayer"], { summary: "A quiet prayer to carry through the day." }),
   // Mood note: a bereavement song — about MISSING family, not family time.
   // Hope only; never tag Family or Joy (see djMoodReview.ts).
-  song("song-scars-in-heaven", "Scars in Heaven", "Casting Crowns", "qCdevloDE6E", ["Hope"], { musicVideo: true, summary: "For anyone missing someone — the only scars in heaven are His." }),
-  song("song-holy-water", "Holy Water", "We The Kingdom", "7KLQ2AXQmtA", ["Worship", "Joy"], { musicVideo: true, summary: "Grace like holy water — live and joyful." }),
-  song("song-good-day", "GOOD DAY", "Forrest Frank", "eO7-9WzLDZo", ["Joy"], { musicVideo: true, summary: "It's gonna be a good day. Turn it up." }),
-  song("song-joy", "joy.", "for KING & COUNTRY", "lA7n7TwPDmw", ["Joy"], { musicVideo: true, summary: "Choosing joy on purpose." }),
+  song("song-scars-in-heaven", "Scars in Heaven", "Casting Crowns", "qCdevloDE6E", ["Hope"], { summary: "For anyone missing someone — the only scars in heaven are His." }),
+  song("song-holy-water", "Holy Water", "We The Kingdom", "7KLQ2AXQmtA", ["Worship", "Joy"], { summary: "Grace like holy water — live and joyful." }),
+  song("song-good-day", "GOOD DAY", "Forrest Frank", "eO7-9WzLDZo", ["Joy"], { summary: "It's gonna be a good day. Turn it up." }),
+  song("song-joy", "joy.", "for KING & COUNTRY", "lA7n7TwPDmw", ["Joy"], { summary: "Choosing joy on purpose." }),
   song("song-counting-my-blessings", "Counting My Blessings", "Seph Schlueter", "aZjWYgq9QfM", ["Joy", "Worship"], { summary: "A gratitude reset in one song." }),
-  song("song-there-was-jesus", "There Was Jesus", "Zach Williams & Dolly Parton", "37wV6D49iEY", ["Hope", "Gospel"], { musicVideo: true, summary: "Looking back at the hardest roads and seeing He was there." }),
+  song("song-there-was-jesus", "There Was Jesus", "Zach Williams & Dolly Parton", "37wV6D49iEY", ["Hope", "Gospel"], { summary: "Looking back at the hardest roads and seeing He was there." }),
   // Hymns — official Reawaken Hymns (Nathan Drake) and Shane & Shane uploads.
   song("hymn-amazing-grace", "Amazing Grace", "Reawaken Hymns", "aDmcdZTEU5E", ["Hymns", "Gospel"], { summary: "“I once was lost, but now am found.”" }),
-  song("hymn-how-great-thou-art", "How Great Thou Art", "Shane & Shane", "EueRjHaGbS4", ["Hymns", "Worship"], { musicVideo: true, duration: "5:07", summary: "“Then sings my soul…”" }),
+  song("hymn-how-great-thou-art", "How Great Thou Art", "Shane & Shane", "EueRjHaGbS4", ["Hymns", "Worship"], { duration: "5:07", summary: "“Then sings my soul…”" }),
   song("hymn-it-is-well", "It Is Well With My Soul", "Reawaken Hymns", "i4Mo9pkmd98", ["Hymns", "Peace"], { summary: "Written in deep grief — peace that holds anyway." }),
   song("hymn-blessed-assurance", "Blessed Assurance", "Reawaken Hymns", "6GJF1ac37lI", ["Hymns", "Joy"], { summary: "“Jesus is mine!” Confidence you can sing." }),
   song("hymn-great-is-thy-faithfulness", "Great Is Thy Faithfulness", "Reawaken Hymns", "lbDNkwcuBus", ["Hymns", "Hope"], { summary: "“Morning by morning new mercies I see.”" }),
@@ -283,6 +288,7 @@ const PODCASTS: MediaItem[] = [
   {
     id: "pod-thru-the-bible",
     type: "podcast",
+    playbackExperience: "podcast",
     title: "Thru the Bible",
     author: "J. Vernon McGee",
     ministry: "ttb",
@@ -296,6 +302,7 @@ const PODCASTS: MediaItem[] = [
   {
     id: "pod-minute-with-mcgee",
     type: "podcast",
+    playbackExperience: "podcast",
     title: "A Minute with McGee",
     author: "J. Vernon McGee",
     ministry: "ttb",
@@ -308,6 +315,7 @@ const PODCASTS: MediaItem[] = [
   {
     id: "pod-love-worth-finding",
     type: "podcast",
+    playbackExperience: "podcast",
     title: "Love Worth Finding Daily Broadcast",
     author: "Adrian Rogers",
     ministry: "lwf",
@@ -319,6 +327,7 @@ const PODCASTS: MediaItem[] = [
   {
     id: "pod-in-touch",
     type: "podcast",
+    playbackExperience: "podcast",
     title: "In Touch with Dr. Charles Stanley",
     author: "Charles Stanley",
     ministry: "in-touch",
@@ -330,6 +339,7 @@ const PODCASTS: MediaItem[] = [
   {
     id: "pod-family-talk",
     type: "podcast",
+    playbackExperience: "podcast",
     title: "Family Talk",
     author: "James Dobson",
     ministry: "family-talk",
@@ -756,7 +766,7 @@ const BULK_SERMONS: MediaItem[] = [
 // to preserve distinct browsing experience.
 // ---------------------------------------------------------------------------
 const MUSIC_VIDEOS: MediaItem[] = [
-  // Existing music videos are already marked musicVideo: true in MUSIC
+  // Existing music videos are already marked in MUSIC
   // and also appear in musicVideos() helper. This section is for
   // music-video-primary entries (official lyric videos, live sessions, etc.)
   // that are distinct from the studio recordings.
@@ -774,24 +784,24 @@ const EXPANDED_MUSIC: MediaItem[] = [
   // All have review entries in djMoodReview.ts with ownerReviewed: false
 
   // All Sons & Daughters (5 new)
-  song("song-asd-greatareyoulord", "Great Are You Lord", "All Sons & Daughters", "hpb02shcAis", ["Worship", "Gospel"], { musicVideo: true, summary: "A declaration of God's greatness." }),
+  song("song-asd-greatareyoulord", "Great Are You Lord", "All Sons & Daughters", "hpb02shcAis", ["Worship", "Gospel"], { summary: "A declaration of God's greatness." }),
   song("song-asd-restinyou", "Rest In You", "All Sons & Daughters", "mVKjCKYSGT4", ["Peace", "Hope"], { summary: "Finding rest in His promises." }),
   song("song-asd-youholditall", "You Hold It All Together", "All Sons & Daughters", "PkalShCfEi8", ["Worship", "Gospel"], { summary: "Everything holds together in Him." }),
   song("song-asd-calledmehigher", "Called Me Higher", "All Sons & Daughters", "FgAzLKXqcDk", ["Hope", "Faith"], { summary: "Called to something greater." }),
-  song("song-asd-ohhowineedy", "Oh How I Need You", "All Sons & Daughters", "j-ZpcJzGBpE", ["Worship", "Prayer"], { musicVideo: true, summary: "A cry of deepest need met by His presence." }),
+  song("song-asd-ohhowineedy", "Oh How I Need You", "All Sons & Daughters", "j-ZpcJzGBpE", ["Worship", "Prayer"], { summary: "A cry of deepest need met by His presence." }),
 
   // Anne Wilson (2 new)
-  song("song-annewilson-godstory", "God Story", "Anne Wilson", "3lk_9IbmDQs", ["Gospel", "Hope"], { musicVideo: true, summary: "Your testimony matters in His story." }),
-  song("song-annewilson-songsaboutwhiskey", "Songs About Whiskey", "Anne Wilson", "6JIPU4crP7k", ["Gospel", "Hope"], { musicVideo: true, summary: "From whiskey to worship — the transformation." }),
+  song("song-annewilson-godstory", "God Story", "Anne Wilson", "3lk_9IbmDQs", ["Gospel", "Hope"], { summary: "Your testimony matters in His story." }),
+  song("song-annewilson-songsaboutwhiskey", "Songs About Whiskey", "Anne Wilson", "6JIPU4crP7k", ["Gospel", "Hope"], { summary: "From whiskey to worship — the transformation." }),
 
   // CAIN (4 new)
-  song("song-cain-friendinjesus", "Friend in Jesus", "CAIN", "_1D5C0kid2g", ["Gospel", "Joy"], { musicVideo: true, summary: "Jesus, our greatest friend." }),
-  song("song-cain-windowsdown", "Windows Down", "CAIN", "4qrMMS7bFSk", ["Joy", "Worship"], { musicVideo: true, summary: "Celebrating with freedom." }),
-  song("song-cain-thecommission", "The Commission", "CAIN", "APATH3ea-D0", ["Gospel", "Faith"], { musicVideo: true, summary: "Go and make disciples — the mission." }),
-  song("song-cain-friendinjesuslive", "Friend In Jesus (Live)", "CAIN", "CwWOWgmdcxY", ["Gospel", "Joy"], { musicVideo: true, summary: "Live from the heart." }),
+  song("song-cain-friendinjesus", "Friend in Jesus", "CAIN", "_1D5C0kid2g", ["Gospel", "Joy"], { summary: "Jesus, our greatest friend." }),
+  song("song-cain-windowsdown", "Windows Down", "CAIN", "4qrMMS7bFSk", ["Joy", "Worship"], { summary: "Celebrating with freedom." }),
+  song("song-cain-thecommission", "The Commission", "CAIN", "APATH3ea-D0", ["Gospel", "Faith"], { summary: "Go and make disciples — the mission." }),
+  song("song-cain-friendinjesuslive", "Friend In Jesus (Live)", "CAIN", "CwWOWgmdcxY", ["Gospel", "Joy"], { summary: "Live from the heart." }),
 
   // Casting Crowns (1 new - who am i removed as duplicate)
-  song("song-cc-nobody", "Nobody", "Casting Crowns", "1yBzIt_z8oY", ["Gospel", "Hope"], { musicVideo: true, summary: "When you feel overlooked, you are somebody to Him." }),
+  song("song-cc-nobody", "Nobody", "Casting Crowns", "1yBzIt_z8oY", ["Gospel", "Hope"], { summary: "When you feel overlooked, you are somebody to Him." }),
 
   // Chris Tomlin (2 new)
   song("song-christomlin-iwillfollow", "I Will Follow", "Chris Tomlin", "1ohvhmGSfxI", ["Gospel", "Worship"], { summary: "Complete surrender to follow Jesus." }),
@@ -805,29 +815,29 @@ const EXPANDED_MUSIC: MediaItem[] = [
   song("song-fkc-whatifitoldyou", "what if i told you", "for KING & COUNTRY", "4TtDlYiUF9s", ["Gospel", "Hope"], { summary: "What if the Gospel story changed everything?" }),
 
   // Lauren Daigle (2 new)
-  song("song-laurendaigle-thankgodiido", "Thank God I Do", "Lauren Daigle", "1U0wAhq2tg4", ["Joy", "Gospel"], { musicVideo: true, summary: "Grateful for His faithfulness." }),
+  song("song-laurendaigle-thankgodiido", "Thank God I Do", "Lauren Daigle", "1U0wAhq2tg4", ["Joy", "Gospel"], { summary: "Grateful for His faithfulness." }),
   song("song-laurendaigle-ouleadme", "You Lead Me", "Lauren Daigle", "5xwQFjx5Er8", ["Peace", "Faith"], { summary: "Following where He leads." }),
 
   // Leeland (7 new)
-  song("song-leeland-yourenotdone", "You're Not Done", "Leeland", "1f89ySw7hUc", ["Gospel", "Hope"], { musicVideo: true, summary: "His work in us continues." }),
-  song("song-leeland-stillmighty", "Still Mighty", "Leeland", "1rucdIEgitU", ["Faith", "Gospel"], { musicVideo: true, summary: "His power is not diminished." }),
+  song("song-leeland-yourenotdone", "You're Not Done", "Leeland", "1f89ySw7hUc", ["Gospel", "Hope"], { summary: "His work in us continues." }),
+  song("song-leeland-stillmighty", "Still Mighty", "Leeland", "1rucdIEgitU", ["Faith", "Gospel"], { summary: "His power is not diminished." }),
   song("song-leeland-waymakerlyr", "Way Maker", "Leeland", "29IxnsqOkmQ", ["Hope", "Worship"], { summary: "He makes a way where there is none." }),
-  song("song-leeland-whereyouare", "Where You Are", "Leeland", "3-zVfM9SJQA", ["Peace", "Prayer"], { musicVideo: true, summary: "Seeking His presence in every place." }),
-  song("song-leeland-followyou", "Follow You", "Leeland", "4ajIFfSaEzE", ["Gospel", "Faith"], { musicVideo: true, summary: "Single-hearted devotion to Jesus." }),
-  song("song-leeland-rain", "Rain", "Leeland", "AaTOcRsaUpk", ["Peace", "Hope"], { musicVideo: true, summary: "Refreshment in the storms of life." }),
+  song("song-leeland-whereyouare", "Where You Are", "Leeland", "3-zVfM9SJQA", ["Peace", "Prayer"], { summary: "Seeking His presence in every place." }),
+  song("song-leeland-followyou", "Follow You", "Leeland", "4ajIFfSaEzE", ["Gospel", "Faith"], { summary: "Single-hearted devotion to Jesus." }),
+  song("song-leeland-rain", "Rain", "Leeland", "AaTOcRsaUpk", ["Peace", "Hope"], { summary: "Refreshment in the storms of life." }),
   song("song-leeland-lionandthelamb", "Lion And The Lamb", "Leeland", "C9ujBoud26k", ["Gospel", "Worship"], { summary: "The power and gentleness of Christ." }),
 
   // Matthew West (3 new)
-  song("song-mwest-meonyourmind", "Me on Your Mind", "Matthew West", "5sNbahy6UCc", ["Gospel", "Peace"], { musicVideo: true, summary: "Knowing His thoughts toward us are countless." }),
-  song("song-mwest-dontstoppraying", "Don't Stop Praying", "Matthew West", "8r0eA49MZ0w", ["Prayer", "Faith"], { musicVideo: true, summary: "Persistence in prayer changes everything." }),
-  song("song-mwest-good", "Good", "Matthew West", "BquLbLcwrZU", ["Gospel", "Hope"], { musicVideo: true, summary: "In His hands, all things work for good." }),
+  song("song-mwest-meonyourmind", "Me on Your Mind", "Matthew West", "5sNbahy6UCc", ["Gospel", "Peace"], { summary: "Knowing His thoughts toward us are countless." }),
+  song("song-mwest-dontstoppraying", "Don't Stop Praying", "Matthew West", "8r0eA49MZ0w", ["Prayer", "Faith"], { summary: "Persistence in prayer changes everything." }),
+  song("song-mwest-good", "Good", "Matthew West", "BquLbLcwrZU", ["Gospel", "Hope"], { summary: "In His hands, all things work for good." }),
 
   // MercyMe (2 new)
-  song("song-mercyme-makeitwell", "Make It Well", "MercyMe", "3wnzzOpqzdk", ["Peace", "Hope"], { musicVideo: true, summary: "Peace in the midst of life's chaos." }),
-  song("song-mercyme-ohdeath", "Oh Death", "MercyMe", "4m2Ld4CJfZA", ["Gospel", "Hope"], { musicVideo: true, summary: "Victory over death through Christ." }),
+  song("song-mercyme-makeitwell", "Make It Well", "MercyMe", "3wnzzOpqzdk", ["Peace", "Hope"], { summary: "Peace in the midst of life's chaos." }),
+  song("song-mercyme-ohdeath", "Oh Death", "MercyMe", "4m2Ld4CJfZA", ["Gospel", "Hope"], { summary: "Victory over death through Christ." }),
 
   // Newsboys (2 new)
-  song("song-newsboys-entertainingangels", "Entertaining Angels", "Newsboys", "1YH4UQb_VlE", ["Gospel", "Joy"], { musicVideo: true, summary: "Hospitality and kindness as worship." }),
+  song("song-newsboys-entertainingangels", "Entertaining Angels", "Newsboys", "1YH4UQb_VlE", ["Gospel", "Joy"], { summary: "Hospitality and kindness as worship." }),
   song("song-newsboys-shine", "Shine", "Newsboys", "5gl1xu1wCN4", ["Gospel", "Hope"], { summary: "Let your light shine in the darkness." }),
 
   // Phil Wickham (2 new)
@@ -841,10 +851,10 @@ const EXPANDED_MUSIC: MediaItem[] = [
   song("hymn-thisismyfatthersworld-raw", "This Is My Father's World", "Reawaken Hymns", "EMAsxu_HwaA", ["Hymns", "Gospel"], { summary: "Assurance in God's sovereignty over all creation." }),
 
   // Seph Schlueter (4 new - counting my blessings removed as duplicate)
-  song("song-seph-runningbacktoyou", "Running Back To You", "Seph Schlueter", "3PDnaKH4_i0", ["Gospel", "Hope"], { musicVideo: true, summary: "Always finding our way back to Him." }),
-  song("song-seph-turnittoproaise", "Turn It To Praise", "Seph Schlueter", "8EPGgJPB-Ls", ["Worship", "Gospel"], { musicVideo: true, summary: "Transforming struggles into worship." }),
-  song("song-seph-lovemestill", "Love Me Still", "Seph Schlueter", "bRoAKzSFaLc", ["Gospel", "Hope"], { musicVideo: true, summary: "Unconditional love in Christ." }),
-  song("song-seph-stay", "Stay", "Seph Schlueter", "Egt-pQY0oeY", ["Gospel", "Peace"], { musicVideo: true, summary: "His faithfulness will never leave us." }),
+  song("song-seph-runningbacktoyou", "Running Back To You", "Seph Schlueter", "3PDnaKH4_i0", ["Gospel", "Hope"], { summary: "Always finding our way back to Him." }),
+  song("song-seph-turnittoproaise", "Turn It To Praise", "Seph Schlueter", "8EPGgJPB-Ls", ["Worship", "Gospel"], { summary: "Transforming struggles into worship." }),
+  song("song-seph-lovemestill", "Love Me Still", "Seph Schlueter", "bRoAKzSFaLc", ["Gospel", "Hope"], { summary: "Unconditional love in Christ." }),
+  song("song-seph-stay", "Stay", "Seph Schlueter", "Egt-pQY0oeY", ["Gospel", "Peace"], { summary: "His faithfulness will never leave us." }),
 
   // Shane & Shane (2 new)
   song("song-shaneandshane-comeтhonfont", "Come Thou Fount", "Shane & Shane", "3bvYJL6WhuY", ["Hymns", "Prayer"], { summary: "Ancient prayer of praise and thanksgiving." }),
@@ -894,9 +904,7 @@ export function itemsOfType(type: MediaType, items: MediaItem[] = LIBRARY): Medi
   return activeItems(items).filter((i) => i.type === type);
 }
 
-export function musicVideos(items: MediaItem[] = LIBRARY): MediaItem[] {
-  return itemsOfType("music", items).filter((i) => i.musicVideo);
-}
+// musicVideos() removed — playbackExperience now distinguishes listen from watch
 
 // Can the Now Spinning player play it directly (vs. link out)?
 export function isPlayable(item: MediaItem): boolean {

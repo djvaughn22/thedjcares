@@ -34,6 +34,7 @@ describe("digitalDjSelector", () => {
       const item: MediaItem = {
         id: "test",
         type: "music",
+        playbackExperience: "listen",
         title: "Test",
         author: "Test",
         url: "https://example.com",
@@ -48,6 +49,7 @@ describe("digitalDjSelector", () => {
       const item: MediaItem = {
         id: "test",
         type: "music",
+        playbackExperience: "listen",
         title: "Test",
         author: "Test",
         url: "https://example.com",
@@ -61,6 +63,7 @@ describe("digitalDjSelector", () => {
       const item: MediaItem = {
         id: "test",
         type: "sermon",
+        playbackExperience: "sermon",
         title: "Test",
         author: "Test",
         url: "https://example.com",
@@ -74,6 +77,7 @@ describe("digitalDjSelector", () => {
       const item: MediaItem = {
         id: "test",
         type: "playlist",
+        playbackExperience: "listen",
         title: "Test",
         author: "Test",
         url: "https://example.com",

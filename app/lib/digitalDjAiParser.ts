@@ -13,7 +13,7 @@ import { type DjNeed } from "./digitalDjSelector";
 
 export type DigitalDjIntent = {
   durationMinutes?: number;
-  mediaTypes?: Array<"music" | "music_video" | "sermon" | "podcast">;
+  playbackExperiences?: Array<"listen" | "watch" | "sermon" | "podcast">;
   needs?: DjNeed[];
   requestedCreator?: string;
   familyFriendly?: boolean;
@@ -35,9 +35,9 @@ const INTENT_SCHEMA = {
   additionalProperties: false,
   properties: {
     durationMinutes: { type: ["integer", "null"], enum: [5, 10, 20, 30, 60, null] },
-    mediaTypes: {
+    playbackExperiences: {
       type: ["array", "null"],
-      items: { type: "string", enum: ["music", "music_video", "sermon", "podcast"] },
+      items: { type: "string", enum: ["listen", "watch", "sermon", "podcast"] },
     },
     needs: {
       type: ["array", "null"],
@@ -49,7 +49,7 @@ const INTENT_SCHEMA = {
     requestedCreator: { type: ["string", "null"] },
     familyFriendly: { type: ["boolean", "null"] },
   },
-  required: ["durationMinutes", "mediaTypes", "needs", "requestedCreator", "familyFriendly"],
+  required: ["durationMinutes", "playbackExperiences", "needs", "requestedCreator", "familyFriendly"],
 } as const;
 
 const INSTRUCTIONS = `You extract listening intent for "The DJ Cares", a curator of pre-approved Christian music, sermons, and podcasts.
@@ -57,6 +57,7 @@ const INSTRUCTIONS = `You extract listening intent for "The DJ Cares", a curator
 Map the visitor's short request onto the schema fields. Rules:
 - Use only what the visitor actually said; leave fields null when unsure.
 - durationMinutes: snap to 5, 10, 20, 30, or 60.
+- playbackExperiences: "listen" for audio songs, "watch" for music videos, "sermon" for sermons, "podcast" for podcasts.
 - needs: map feelings to the closest values (sad/anxious → encouragement or peace; energetic → joy; bedtime → evening).
 - requestedCreator: only a person or ministry the visitor named (e.g. "Billy Graham").
 - Never suggest content, channels, links, or anything outside these fields.
@@ -121,12 +122,12 @@ export function sanitizeIntent(raw: unknown): DigitalDjIntent | null {
     intent.durationMinutes = r.durationMinutes;
   }
 
-  if (Array.isArray(r.mediaTypes)) {
-    const allowed = new Set(["music", "music_video", "sermon", "podcast"]);
-    const filtered = r.mediaTypes.filter((t): t is DigitalDjIntent["mediaTypes"] extends Array<infer U> | undefined ? U : never =>
+  if (Array.isArray(r.playbackExperiences)) {
+    const allowed = new Set(["listen", "watch", "sermon", "podcast"]);
+    const filtered = r.playbackExperiences.filter((t): t is DigitalDjIntent["playbackExperiences"] extends Array<infer U> | undefined ? U : never =>
       typeof t === "string" && allowed.has(t),
     );
-    if (filtered.length > 0) intent.mediaTypes = filtered;
+    if (filtered.length > 0) intent.playbackExperiences = filtered;
   }
 
   if (Array.isArray(r.needs)) {

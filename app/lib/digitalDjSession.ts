@@ -18,7 +18,8 @@ import { recommendableAtAll } from "./djMoodReview";
 // Structural shape shared by the AI parser's intent and the selector request.
 type IntentLike = {
   durationMinutes?: number;
-  mediaTypes?: string[];
+  playbackExperiences?: string[];
+  mediaTypes?: string[]; // legacy, for backward compat with AI parser
   needs?: string[];
   requestedCreator?: string;
 };
@@ -37,16 +38,15 @@ export function thumbUrl(item: MediaItem, size: "small" | "large" = "large"): st
 export type MediaLook = { badge: string; emoji: string; tint: string };
 
 export function mediaLook(item: MediaItem): MediaLook {
-  if (item.type === "music" && item.musicVideo) return { badge: "Music Video", emoji: "🎬", tint: "#7c5cd6" };
-  switch (item.type) {
-    case "music":
-      return { badge: "Music", emoji: "🎵", tint: "#6d5bb8" };
-    case "playlist":
-      return { badge: "Playlist", emoji: "💿", tint: "#5b6ab8" };
-    case "podcast":
-      return { badge: "Podcast", emoji: "🎙️", tint: "#4f7ab0" };
+  switch (item.playbackExperience) {
+    case "listen":
+      return { badge: "Listen", emoji: "🎵", tint: "#6d5bb8" };
+    case "watch":
+      return { badge: "Watch", emoji: "🎬", tint: "#7c5cd6" };
     case "sermon":
       return { badge: "Sermon", emoji: "✝️", tint: "#8a5ca8" };
+    case "podcast":
+      return { badge: "Podcast", emoji: "🎙️", tint: "#4f7ab0" };
     default:
       return { badge: "Media", emoji: "🎧", tint: "#6d5bb8" };
   }
@@ -87,12 +87,12 @@ export function longerOf(minutes: number): number {
 
 // --- session shaping ---------------------------------------------------------
 
-// The "like" identity used for swapping: keeps music videos with music videos.
-type LikeKind = "music" | "music_video" | "sermon" | "podcast" | "playlist";
+// The "like" identity used for swapping: keeps listen with listen, watch with watch.
+type LikeKind = "listen" | "watch" | "sermon" | "podcast" | "playlist";
 
 function likeKind(item: MediaItem): LikeKind {
-  if (item.type === "music") return item.musicVideo ? "music_video" : "music";
-  return item.type;
+  if (item.type === "playlist") return "playlist";
+  return item.playbackExperience as LikeKind;
 }
 
 // Swap one session item for a fresh catalog match: same kind, shared vibe
@@ -138,9 +138,9 @@ export function hasType(items: MediaItem[], kind: "music" | "sermon"): boolean {
 
 // --- plain-language AI summary ----------------------------------------------
 
-const TYPE_LABELS: Record<string, string> = {
-  music: "music",
-  music_video: "music videos",
+const PLAYBACK_EXP_LABELS: Record<string, string> = {
+  listen: "music",
+  watch: "music videos",
   sermon: "sermons",
   podcast: "podcasts",
 };
@@ -164,13 +164,13 @@ export function describeIntent(intent: IntentLike | null): string {
   if (intent.durationMinutes) parts.push(`${intent.durationMinutes} minutes`);
   if (intent.needs?.length) parts.push(intent.needs.map((n) => NEED_LABELS[n] ?? n).join(", "));
   if (intent.requestedCreator) parts.push(intent.requestedCreator);
-  if (intent.mediaTypes?.length) parts.push(intent.mediaTypes.map((t) => TYPE_LABELS[t] ?? t).join(" + "));
+  if (intent.mediaTypes?.length) parts.push(intent.mediaTypes.map((t) => PLAYBACK_EXP_LABELS[t] ?? t).join(" + "));
   return parts.join(" · ");
 }
 
 // --- homepage console prefill ------------------------------------------------
 
-// /digital-dj?t=10&need=peace&media=music — every value is whitelist-checked;
+// /digital-dj?t=10&need=peace&media=listen — every value is whitelist-checked;
 // anything else is ignored.
 export function parsePrefill(params: URLSearchParams): {
   duration?: number;
@@ -183,6 +183,6 @@ export function parsePrefill(params: URLSearchParams): {
   const need = params.get("need");
   if (need && need in NEED_LABELS) out.need = need;
   const media = params.get("media");
-  if (media && media in TYPE_LABELS) out.media = media;
+  if (media && media in PLAYBACK_EXP_LABELS) out.media = media;
   return out;
 }

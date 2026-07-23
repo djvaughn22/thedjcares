@@ -20,6 +20,7 @@ import {
 const fakeItem = (extra: Partial<MediaItem> = {}): MediaItem => ({
   id: "song-test",
   type: "music",
+  playbackExperience: "listen",
   title: "Test Song",
   author: "Test Artist",
   vibes: ["Joy"],
@@ -73,8 +74,8 @@ describe("share URLs", () => {
 describe("type labels and messages", () => {
   it("labels every media type", () => {
     expect(mediaTypeLabel(fakeItem())).toBe("Song");
-    expect(mediaTypeLabel(fakeItem({ musicVideo: true }))).toBe("Music Video");
-    expect(mediaTypeLabel(fakeItem({ type: "sermon" }))).toBe("Sermon");
+    expect(mediaTypeLabel(fakeItem({ playbackExperience: "watch" }))).toBe("Music Video");
+    expect(mediaTypeLabel(fakeItem({ type: "sermon", playbackExperience: "sermon" }))).toBe("Sermon");
     expect(mediaTypeLabel(fakeItem({ type: "podcast" }))).toBe("Podcast");
     expect(mediaTypeLabel(fakeItem({ type: "playlist" }))).toBe("Playlist");
   });
@@ -84,9 +85,9 @@ describe("type labels and messages", () => {
     expect(msg).toBe("Listen to “Test Song” on The DJ Cares:\nhttps://thedjcares.com/?play=song-test");
   });
 
-  it("says what non-song items are", () => {
-    const msg = shareMessage(mediaShareTarget(fakeItem({ type: "sermon", id: "sermon-x", title: "A Message" })));
-    expect(msg).toContain("Watch “A Message” (sermon) on The DJ Cares:");
+  it(“says what non-song items are”, () => {
+    const msg = shareMessage(mediaShareTarget(fakeItem({ type: “sermon”, playbackExperience: “sermon”, id: “sermon-x”, title: “A Message” })));
+    expect(msg).toContain(“Watch “A Message” (sermon) on The DJ Cares:”);
   });
 });
 

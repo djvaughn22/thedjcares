@@ -29,9 +29,10 @@ export type ShareTarget = {
 };
 
 export function mediaTypeLabel(item: MediaItem): string {
-  if (item.type === "music") return item.musicVideo ? "Music Video" : "Song";
-  if (item.type === "podcast") return "Podcast";
-  if (item.type === "sermon") return "Sermon";
+  if (item.playbackExperience === "listen") return "Song";
+  if (item.playbackExperience === "watch") return "Music Video";
+  if (item.playbackExperience === "podcast") return "Podcast";
+  if (item.playbackExperience === "sermon") return "Sermon";
   return "Playlist";
 }
 

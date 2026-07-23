@@ -31,7 +31,7 @@ export function spinPool(filter: SpinFilter, items: MediaItem[] = LIBRARY): Medi
   return activeItems(items).filter((i) => {
     if (!isPlayable(i)) return false;
     if (filter.category === "videos") {
-      if (!(i.type === "music" && i.musicVideo)) return false;
+      if (i.playbackExperience !== "watch") return false;
     } else if (filter.category !== "all" && i.type !== filter.category) {
       return false;
     }

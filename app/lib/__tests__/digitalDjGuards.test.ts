@@ -164,17 +164,17 @@ describe("tampered share links", () => {
   });
 });
 
-describe("music vs music video separation", () => {
-  it("music_video requests return only official music videos", () => {
-    const result = selectMediaForDj({ durationMinutes: 20, mediaTypes: ["music_video"] });
+describe("watch vs listen separation", () => {
+  it("watch requests return only music videos", () => {
+    const result = selectMediaForDj({ durationMinutes: 20, playbackExperiences: ["watch"] });
     expect(result.items.length).toBeGreaterThan(0);
-    expect(result.items.every((i) => i.type === "music" && i.musicVideo === true)).toBe(true);
+    expect(result.items.every((i) => i.playbackExperience === "watch")).toBe(true);
   });
 
   it("sermon requests never return music", () => {
-    const result = selectMediaForDj({ durationMinutes: 30, mediaTypes: ["sermon"] });
+    const result = selectMediaForDj({ durationMinutes: 30, playbackExperiences: ["sermon"] });
     expect(result.items.length).toBeGreaterThan(0);
-    expect(result.items.every((i) => i.type === "sermon")).toBe(true);
+    expect(result.items.every((i) => i.playbackExperience === "sermon")).toBe(true);
   });
 
   it("a mix (no filter) can draw from the whole playable library", () => {

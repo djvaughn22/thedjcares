@@ -1,0 +1,5 @@
+Duplicates to remove from EXPANDED_MUSIC:
+- aZjWYgq9QfM: "Counting My Blessings" by Seph Schlueter (already in library)
+- 6GJF1ac37lI: "Blessed Assurance" by Reawaken Hymns (already in library)  
+- 3rT8Re1EIQc: "Who Am I" by Casting Crowns (already in library)
+- 1srs1YoTVzs: "Fear Is a Liar" by Zach Williams (already in library)

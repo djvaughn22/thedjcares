@@ -33,7 +33,7 @@ describe("spinPool", () => {
   it("videos category = official music videos only", () => {
     const pool = spinPool({ category: "videos" });
     expect(pool.length).toBeGreaterThan(0);
-    expect(pool.every((i) => i.type === "music" && i.musicVideo)).toBe(true);
+    expect(pool.every((i) => i.playbackExperience === "watch")).toBe(true);
   });
 
   it("respects vibe and ministry filters", () => {

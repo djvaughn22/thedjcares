@@ -21,6 +21,7 @@ import { LIBRARY, type MediaItem } from "../djCaresLibrary";
 const make = (over: Partial<MediaItem>): MediaItem => ({
   id: "t",
   type: "music",
+  playbackExperience: "listen",
   title: "T",
   author: "A",
   url: "https://example.com",
@@ -50,12 +51,11 @@ describe("thumbUrl — artwork only from stored videoIds", () => {
 });
 
 describe("mediaLook badges", () => {
-  it("distinguishes music videos from plain music", () => {
-    expect(mediaLook(make({ musicVideo: true })).badge).toBe("Music Video");
-    expect(mediaLook(make({})).badge).toBe("Music");
-    expect(mediaLook(make({ type: "sermon" })).badge).toBe("Sermon");
-    expect(mediaLook(make({ type: "podcast" })).badge).toBe("Podcast");
-    expect(mediaLook(make({ type: "playlist" })).badge).toBe("Playlist");
+  it("distinguishes watch from listen from other types", () => {
+    expect(mediaLook(make({ playbackExperience: "watch" })).badge).toBe("Watch");
+    expect(mediaLook(make({ playbackExperience: "listen" })).badge).toBe("Listen");
+    expect(mediaLook(make({ type: "sermon", playbackExperience: "sermon" })).badge).toBe("Sermon");
+    expect(mediaLook(make({ type: "podcast", playbackExperience: "podcast" })).badge).toBe("Podcast");
   });
 });
 
@@ -91,33 +91,32 @@ describe("duration ladder", () => {
 });
 
 describe("swapItem", () => {
-  const musicVideo = LIBRARY.find((i) => i.type === "music" && i.musicVideo)!;
+  const watchItem = LIBRARY.find((i) => i.playbackExperience === "watch")!;
   const sermon = LIBRARY.find((i) => i.type === "sermon")!;
 
   it("replaces with the same kind from the approved catalog only", () => {
-    const items = [musicVideo, sermon];
+    const items = [watchItem, sermon];
     const next = swapItem(items, 0, LIBRARY, () => 0);
     expect(next).not.toBeNull();
     const replacement = next![0];
-    expect(replacement.id).not.toBe(musicVideo.id);
-    expect(replacement.type).toBe("music");
-    expect(replacement.musicVideo).toBe(true);
+    expect(replacement.id).not.toBe(watchItem.id);
+    expect(replacement.playbackExperience).toBe("watch");
     expect(LIBRARY.some((i) => i.id === replacement.id)).toBe(true);
     // The untouched slot stays put.
     expect(next![1].id).toBe(sermon.id);
   });
 
   it("never picks something already in the session", () => {
-    const items = [musicVideo, sermon];
+    const items = [watchItem, sermon];
     for (let r = 0; r < 10; r++) {
       const next = swapItem(items, 1, LIBRARY, () => r / 10);
       expect(next![1].id).not.toBe(sermon.id);
-      expect(next![1].id).not.toBe(musicVideo.id);
+      expect(next![1].id).not.toBe(watchItem.id);
     }
   });
 
   it("returns null when the catalog has no alternative", () => {
-    const only = make({ videoId: "abc" });
+    const only = make({ videoId: "abc", playbackExperience: "listen" });
     expect(swapItem([only], 0, [only])).toBeNull();
   });
 });
@@ -137,7 +136,7 @@ describe("typeFirst reorder", () => {
 describe("describeIntent — plain language, no JSON", () => {
   it("reads like a sentence fragment", () => {
     expect(
-      describeIntent({ durationMinutes: 10, needs: ["encouragement"], mediaTypes: ["music"] }),
+      describeIntent({ durationMinutes: 10, needs: ["encouragement"], mediaTypes: ["listen"] }),
     ).toBe("10 minutes · encouragement · music");
   });
   it("includes a requested creator", () => {
@@ -150,8 +149,8 @@ describe("describeIntent — plain language, no JSON", () => {
 
 describe("parsePrefill — whitelist only", () => {
   it("accepts valid values", () => {
-    const p = parsePrefill(new URLSearchParams("t=20&need=peace&media=sermon"));
-    expect(p).toEqual({ duration: 20, need: "peace", media: "sermon" });
+    const p = parsePrefill(new URLSearchParams("t=20&need=peace&media=listen"));
+    expect(p).toEqual({ duration: 20, need: "peace", media: "listen" });
   });
   it("ignores anything off-list — no injection through query params", () => {
     const p = parsePrefill(

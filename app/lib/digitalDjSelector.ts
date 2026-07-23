@@ -41,7 +41,7 @@ export const NEED_TO_VIBES: Record<DjNeed, Vibe[]> = {
 
 export type DigitalDjRequest = {
   durationMinutes: number; // 5, 10, 20, 30, or 60
-  mediaTypes?: Array<"music" | "music_video" | "sermon" | "podcast">;
+  playbackExperiences?: Array<"listen" | "watch" | "sermon" | "podcast">;
   needs?: DjNeed[];
   requestedCreator?: string; // ministry name or artist to prefer
   familyFriendly?: boolean;
@@ -75,14 +75,13 @@ export function estimateDuration(item: MediaItem): number {
     const parsed = parseDurationString(item.duration);
     if (parsed) return parsed;
   }
-  // Fallback estimates by type.
-  const type = item.type;
-  if (type === "music") {
-    return item.musicVideo ? 300 : 240; // Music video ~5 min, song ~4 min
-  }
-  if (type === "playlist") return 1800; // ~30 min
-  if (type === "podcast") return 600; // ~10 min
-  if (type === "sermon") return 1800; // ~30 min
+  // Fallback estimates by type first (for playlists), then by playback experience.
+  if (item.type === "playlist") return 1800; // ~30 min
+  const exp = item.playbackExperience;
+  if (exp === "listen") return 240; // Song ~4 min
+  if (exp === "watch") return 300; // Music video ~5 min
+  if (exp === "podcast") return 600; // ~10 min
+  if (exp === "sermon") return 1800; // ~30 min
   return 300; // Default
 }
 
@@ -215,16 +214,10 @@ export function selectMediaForDj(
   // Start with playable items.
   let candidates = activeItems(items).filter((i) => isPlayable(i));
 
-  // Filter by media type if specified. "music_video" is not a catalog type —
-  // it means music items flagged as proper official videos.
-  if (request.mediaTypes && request.mediaTypes.length > 0) {
-    const wants = new Set<string>(request.mediaTypes);
-    candidates = candidates.filter((i) => {
-      if (i.type === "music") {
-        return wants.has("music") || (wants.has("music_video") && i.musicVideo === true);
-      }
-      return wants.has(i.type);
-    });
+  // Filter by playback experience if specified.
+  if (request.playbackExperiences && request.playbackExperiences.length > 0) {
+    const wants = new Set<string>(request.playbackExperiences);
+    candidates = candidates.filter((i) => wants.has(i.playbackExperience));
   }
 
   // Filter by needs (vibes + creator preference).

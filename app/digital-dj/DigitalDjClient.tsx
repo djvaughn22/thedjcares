@@ -37,9 +37,9 @@ import { track } from "../lib/analytics";
 
 const DURATIONS = [5, 10, 20, 30, 60] as const;
 
-const MEDIA_TYPES: { id: "music" | "music_video" | "sermon" | "podcast"; label: string; emoji: string }[] = [
-  { id: "music", label: "Music", emoji: "🎵" },
-  { id: "music_video", label: "Music Videos", emoji: "🎬" },
+const PLAYBACK_EXPERIENCES: { id: "listen" | "watch" | "sermon" | "podcast"; label: string; emoji: string }[] = [
+  { id: "listen", label: "Listen", emoji: "🎵" },
+  { id: "watch", label: "Watch", emoji: "🎬" },
   { id: "sermon", label: "Sermons", emoji: "✝️" },
   { id: "podcast", label: "Podcasts", emoji: "🎙️" },
 ];
@@ -56,14 +56,14 @@ const NEEDS: { id: DjNeed; label: string; emoji: string }[] = [
   { id: "surprise", label: "Surprise me", emoji: "🎲" },
 ];
 
-type MediaTypeId = (typeof MEDIA_TYPES)[number]["id"];
+type PlaybackExperienceId = (typeof PLAYBACK_EXPERIENCES)[number]["id"];
 
 export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boolean }) {
   const [dark, setDark] = useState(true);
 
   // --- console state ---
   const [duration, setDuration] = useState<number>(10);
-  const [mediaTypes, setMediaTypes] = useState<ReadonlySet<MediaTypeId>>(new Set());
+  const [playbackExperiences, setPlaybackExperiences] = useState<ReadonlySet<PlaybackExperienceId>>(new Set());
   const [needs, setNeeds] = useState<ReadonlySet<DjNeed>>(new Set());
   const [userText, setUserText] = useState("");
   const [loadingAi, setLoadingAi] = useState(false);
@@ -105,7 +105,7 @@ export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boo
     const pre = parsePrefill(params);
     if (pre.duration) setDuration(pre.duration);
     if (pre.need) setNeeds(new Set([pre.need as DjNeed]));
-    if (pre.media) setMediaTypes(new Set([pre.media as MediaTypeId]));
+    if (pre.media) setPlaybackExperiences(new Set([pre.media as PlaybackExperienceId]));
   }, []);
 
   const toggle = <T,>(set: ReadonlySet<T>, value: T): Set<T> => {
@@ -118,7 +118,7 @@ export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boo
   const cue = (overrides: Partial<DigitalDjRequest> = {}) => {
     const request: DigitalDjRequest = {
       durationMinutes: duration,
-      mediaTypes: mediaTypes.size > 0 ? [...mediaTypes] : undefined,
+      playbackExperiences: playbackExperiences.size > 0 ? [...playbackExperiences] : undefined,
       needs: needs.size > 0 ? [...needs] : undefined,
       ...overrides,
     };
@@ -155,11 +155,11 @@ export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boo
       const intent = data?.intent ?? null;
       if (intent) {
         if (intent.durationMinutes) setDuration(intent.durationMinutes);
-        if (intent.mediaTypes?.length) setMediaTypes(new Set(intent.mediaTypes));
+        if (intent.playbackExperiences?.length) setPlaybackExperiences(new Set(intent.playbackExperiences));
         if (intent.needs?.length) setNeeds(new Set(intent.needs));
         cue({
           durationMinutes: intent.durationMinutes ?? duration,
-          mediaTypes: intent.mediaTypes?.length ? intent.mediaTypes : undefined,
+          playbackExperiences: intent.playbackExperiences?.length ? intent.playbackExperiences : undefined,
           needs: intent.needs?.length ? intent.needs : undefined,
           requestedCreator: intent.requestedCreator ?? undefined,
         });
@@ -249,15 +249,20 @@ export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boo
     background: selected ? active : "none",
     border: `2px solid ${selected ? activeBorder : border}`,
     borderRadius: 50,
-    padding: "10px 14px",
-    fontSize: 13.5,
+    padding: "8px 12px",
+    fontSize: "clamp(12px, 2.5vw, 13.5px)",
     fontWeight: 800,
     cursor: "pointer",
     color: selected ? accent : sub,
     textAlign: "center",
     minWidth: 0,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
+    whiteSpace: "normal",
+    lineHeight: 1.2,
+    minHeight: "44px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "visible",
   });
 
   const bigButton: React.CSSProperties = {
@@ -404,15 +409,15 @@ export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boo
             What kind? <span style={{ fontWeight: 700, letterSpacing: 0, textTransform: "none" }}>(none selected = a mix)</span>
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginBottom: 18 }}>
-            {MEDIA_TYPES.map((m) => (
-              <button key={m.id} onClick={() => setMediaTypes(toggle(mediaTypes, m.id))} aria-pressed={mediaTypes.has(m.id)} style={pill(mediaTypes.has(m.id))}>
+            {PLAYBACK_EXPERIENCES.map((m) => (
+              <button key={m.id} onClick={() => setPlaybackExperiences(toggle(playbackExperiences, m.id))} aria-pressed={playbackExperiences.has(m.id)} style={pill(playbackExperiences.has(m.id))}>
                 <span aria-hidden>{m.emoji}</span> {m.label}
               </button>
             ))}
           </div>
 
           <p style={heading}>What do you need right now?</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, marginBottom: 18 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginBottom: 18 }}>
             {NEEDS.map((n) => (
               <button key={n.id} onClick={() => setNeeds(toggle(needs, n.id))} aria-pressed={needs.has(n.id)} style={pill(needs.has(n.id))}>
                 <span aria-hidden>{n.emoji}</span> {n.label}
@@ -473,9 +478,9 @@ export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boo
             <p style={{ fontSize: 13.5, color: sub, margin: "0 0 14px" }}>Try fewer filters, or let the DJ surprise you.</p>
             <button
               onClick={() => {
-                setMediaTypes(new Set());
+                setPlaybackExperiences(new Set());
                 setNeeds(new Set());
-                cue({ mediaTypes: undefined, needs: undefined });
+                cue({ playbackExperiences: undefined, needs: undefined });
               }}
               style={quietButton}
             >
