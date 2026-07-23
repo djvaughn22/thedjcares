@@ -34,6 +34,15 @@ export function thumbUrl(item: MediaItem, size: "small" | "large" = "large"): st
   return `https://i.ytimg.com/vi/${item.videoId}/${file}.jpg`;
 }
 
+// Get the proper artwork for Listen (playlist cover) or Watch (video thumbnail).
+// Listen items show artworkUrl (approved square covers); Watch items show YouTube thumbs.
+export function getItemArtwork(item: MediaItem, size: "small" | "large" = "large"): string | null {
+  if (item.playbackExperience === "listen" && item.artworkUrl) {
+    return item.artworkUrl;
+  }
+  return thumbUrl(item, size);
+}
+
 // The visible identity of each media kind — badge + local placeholder art.
 export type MediaLook = { badge: string; emoji: string; tint: string };
 

@@ -23,6 +23,7 @@ import {
 import {
   attribution,
   describeIntent,
+  getItemArtwork,
   hasType,
   longerOf,
   mediaLook,
@@ -328,12 +329,13 @@ export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boo
     setShareTriggerId(triggerId);
   };
 
-  // Artwork or an honest local placeholder — fixed 16:9 so nothing shifts.
+  // Artwork or an honest local placeholder — square for Listen (playlists), 16:9 for Watch (videos).
   const Artwork = ({ item, size }: { item: MediaItem; size: "small" | "large" }) => {
     const look = mediaLook(item);
-    const src = thumbUrl(item, size);
+    const src = getItemArtwork(item, size);
+    const isListen = item.playbackExperience === "listen";
     return (
-      <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", overflow: "hidden" }}>
+      <div style={{ position: "relative", width: "100%", aspectRatio: isListen ? "1" : "16 / 9", background: "#000", overflow: "hidden" }}>
         {src ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -506,7 +508,50 @@ export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boo
 
             {/* NOW PLAYING */}
             <div ref={nowPlayingRef} style={{ border: `2px solid ${activeBorder}`, borderRadius: 16, overflow: "hidden", marginBottom: 8 }}>
-              {playerOpen && embedSrc ? (
+              {/* For Listen items: always show square cover as main visual; embed below if playing. */}
+              {/* For Watch items: show embed when playing, cover otherwise. */}
+              {current.playbackExperience === "listen" ? (
+                <>
+                  <button
+                    onClick={() => playIndex(currentIndex)}
+                    aria-label={`Listen to ${current.title} from ${current.author}`}
+                    style={{ display: "block", width: "100%", position: "relative", background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                  >
+                    <Artwork item={current} size="large" />
+                    {!playerOpen && (
+                      <span
+                        aria-hidden
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 46,
+                          textShadow: "0 2px 18px rgba(0,0,0,0.65)",
+                        }}
+                      >
+                        ▶️
+                      </span>
+                    )}
+                  </button>
+                  {playerOpen && embedSrc && (
+                    <iframe
+                      key={current.id}
+                      src={embedSrc}
+                      title={`${current.title} from ${current.author}`}
+                      allow="encrypted-media; picture-in-picture"
+                      style={{
+                        width: "100%",
+                        height: 352,
+                        border: 0,
+                        display: "block",
+                        background: "#000",
+                      }}
+                    />
+                  )}
+                </>
+              ) : playerOpen && embedSrc ? (
                 <iframe
                   key={current.id}
                   src={embedSrc}
@@ -555,7 +600,7 @@ export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boo
                       <span />
                     </span>
                   )}
-                  Now playing
+                  {current.playbackExperience === "listen" ? "Now listening" : "Now playing"}
                 </p>
                 <p style={{ fontSize: 16, fontWeight: 800, color: text, margin: 0 }}>{current.title}</p>
                 <p style={{ fontSize: 13, fontWeight: 700, color: sub, margin: "2px 0 0" }}>
@@ -579,7 +624,11 @@ export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boo
                     rel="noopener noreferrer"
                     style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none", whiteSpace: "nowrap" }}
                   >
-                    {current.videoId ? "Open on YouTube ↗" : "Open the official source ↗"}
+                    {current.playbackExperience === "listen"
+                      ? "Listen in Apple Music ↗"
+                      : current.videoId
+                        ? "Open on YouTube ↗"
+                        : "Open the official source ↗"}
                   </a>
                 </div>
               </div>
