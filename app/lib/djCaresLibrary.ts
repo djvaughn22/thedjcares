@@ -236,7 +236,9 @@ const MUSIC: MediaItem[] = [
   song("song-rise-up-lazarus", "Rise Up (Lazarus)", "CAIN", "8RIZlNYl4ok", ["Hope", "Joy"], { musicVideo: true, summary: "Come out of that grave — a resurrection anthem." }),
   song("song-even-if", "Even If", "MercyMe", "B6fA35Ved-Y", ["Faith", "Peace"], { summary: "Hope that holds even when the healing doesn't come." }),
   song("song-praise-you-in-this-storm", "Praise You in This Storm", "Casting Crowns", "0YUGwUgBvTU", ["Faith", "Peace"], { summary: "Worship that doesn't wait for the storm to pass." }),
-  song("song-my-jesus", "My Jesus", "Anne Wilson", "FW5o2uBeMWQ", ["Gospel", "Joy"], { musicVideo: true, summary: "Let me tell you about my Jesus." }),
+  // Mood note: Anne Wilson's testimony born from her brother's death — Gospel
+  // and hope, NOT Joy. Do not re-add a Joy vibe (see djMoodReview.ts).
+  song("song-my-jesus", "My Jesus", "Anne Wilson", "FW5o2uBeMWQ", ["Gospel", "Hope"], { musicVideo: true, summary: "Let me tell you about my Jesus." }),
   song("song-just-be-held", "Just Be Held", "Casting Crowns", "tIZitK6_IMQ", ["Peace", "Faith"], { summary: "Stop holding on — and just be held." }),
   song("song-chain-breaker", "Chain Breaker", "Zach Williams", "cd_xxmXdQz4", ["Hope", "Gospel"], { musicVideo: true, summary: "If you've got chains, He's a chain breaker." }),
   song("song-fear-is-a-liar", "Fear Is a Liar", "Zach Williams", "1srs1YoTVzs", ["Peace", "Faith"], { musicVideo: true, summary: "Calling fear what it is." }),
@@ -245,7 +247,9 @@ const MUSIC: MediaItem[] = [
   song("song-god-who-stays", "The God Who Stays", "Matthew West", "QPwd_TQpsHY", ["Peace", "Hope"], { musicVideo: true, summary: "He's the God who stays, even when you run." }),
   song("song-you-say", "You Say", "Lauren Daigle", "sIaT8Jl2zpI", ["Peace", "Faith"], { musicVideo: true, summary: "When the voices argue — believe what He says." }),
   song("song-christ-be-all-around-me", "Christ Be All Around Me", "All Sons & Daughters", "cmge-ycIkoo", ["Peace", "Prayer"], { summary: "A quiet prayer to carry through the day." }),
-  song("song-scars-in-heaven", "Scars in Heaven", "Casting Crowns", "qCdevloDE6E", ["Hope", "Family"], { musicVideo: true, summary: "For anyone missing someone — the only scars in heaven are His." }),
+  // Mood note: a bereavement song — about MISSING family, not family time.
+  // Hope only; never tag Family or Joy (see djMoodReview.ts).
+  song("song-scars-in-heaven", "Scars in Heaven", "Casting Crowns", "qCdevloDE6E", ["Hope"], { musicVideo: true, summary: "For anyone missing someone — the only scars in heaven are His." }),
   song("song-holy-water", "Holy Water", "We The Kingdom", "7KLQ2AXQmtA", ["Worship", "Joy"], { musicVideo: true, summary: "Grace like holy water — live and joyful." }),
   song("song-good-day", "GOOD DAY", "Forrest Frank", "eO7-9WzLDZo", ["Joy"], { musicVideo: true, summary: "It's gonna be a good day. Turn it up." }),
   song("song-joy", "joy.", "for KING & COUNTRY", "lA7n7TwPDmw", ["Joy"], { musicVideo: true, summary: "Choosing joy on purpose." }),

@@ -42,6 +42,30 @@ described as working).
   `aria-pressed`, a live announcer, and no autoplay on page load (the
   player mounts only after a tap).
 
+## Mood integrity (P0 fix, Jul 22 2026)
+
+A Joy request served "My Jesus" — a grief-born testimony song carrying a
+hand-typed Joy vibe. Root cause: catalog vibes describe genre/message, but a
+mood request asks for a dominant listening experience, and the DJ trusted
+vibes blindly. Fixed structurally:
+
+- `app/lib/djMoodReview.ts` — an owner-review eligibility layer. Items
+  substantially centered on death, bereavement, illness, trauma, fear, war,
+  or violence carry a review entry and are **excluded from every
+  mood-specific recommendation (including "surprise me" and swaps) until DJ
+  sets `ownerReviewed: true`** with the moods he approves. 20 items are
+  currently flagged (7 songs, 13 sermons) — that list is DJ's review
+  worklist, one line per decision.
+- Catalog corrections: "My Jesus" is Gospel/Hope (never Joy); "Scars in
+  Heaven" is Hope only (never Family/Joy). Both stay fully available in
+  tabs, deck, direct links, shared sessions, and no-mood mixes.
+- Rule of record: hope-after-grief ≠ joy; encouragement ≠ joy; faith ≠ joy;
+  Gospel ≠ joy. Joy media is predominantly celebratory, uplifting, warmly
+  happy, gratitude- or praise-centered.
+- Locked by 16 tests in `app/lib/__tests__/djMoodReview.test.ts`, including
+  a data-hygiene rule: nothing death/grief-flagged may ever claim joy
+  without explicit owner approval.
+
 ## Preview-grade (fine for free preview, NOT production-grade)
 
 - **Rate-limit store** — process memory. Vercel serverless instances do
