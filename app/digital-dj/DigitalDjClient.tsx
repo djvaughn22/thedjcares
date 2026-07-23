@@ -249,12 +249,15 @@ export default function DigitalDjClient({ aiEnabled = false }: { aiEnabled?: boo
     background: selected ? active : "none",
     border: `2px solid ${selected ? activeBorder : border}`,
     borderRadius: 50,
-    padding: "10px 8px",
+    padding: "10px 14px",
     fontSize: 13.5,
     fontWeight: 800,
     cursor: "pointer",
     color: selected ? accent : sub,
     textAlign: "center",
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   });
 
   const bigButton: React.CSSProperties = {
