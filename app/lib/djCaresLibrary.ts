@@ -76,6 +76,7 @@ export type MediaItem = {
   appleEmbed?: string; // embed.music.apple.com URL
   spotifyEmbed?: string; // open.spotify.com/embed URL
   spotifyAlt?: string; // Spotify twin for Apple playlists
+  artworkUrl?: string; // approved, verified square playlist cover (for Listen experience)
   vibes: Vibe[];
   duration?: string; // only when reliably known
   featured?: boolean;
@@ -200,9 +201,6 @@ const yt = (
 });
 
 const song = (id: string, title: string, author: string, videoId: string, vibes: Vibe[], extra: Partial<MediaItem> = {}) =>
-  yt(id, "music", "listen", title, author, videoId, vibes, extra);
-
-const musicVideo = (id: string, title: string, author: string, videoId: string, vibes: Vibe[], extra: Partial<MediaItem> = {}) =>
   yt(id, "music", "watch", title, author, videoId, vibes, extra);
 
 const sermon = (
@@ -275,7 +273,7 @@ const MUSIC: MediaItem[] = [
 // PLAYLISTS — DJ-curated Apple Music playlists (with Spotify twins where set).
 // ---------------------------------------------------------------------------
 const PLAYLISTS: MediaItem[] = [
-  applePl("apple-faith-playlist", "Faith Playlist", "Faith", "faith-playlist/pl.u-2aoqXjzsNqgmY7", ["Faith", "Worship"], { featured: true, spotifyAlt: "https://open.spotify.com/playlist/37i9dQZF1DXcb6CQIjdqKy", summary: "The songs I keep coming back to. Press play and let faith rise." }),
+  applePl("apple-faith-playlist", "Faith Playlist", "Faith", "faith-playlist/pl.u-2aoqXjzsNqgmY7", ["Faith", "Worship"], { featured: true, spotifyAlt: "https://open.spotify.com/playlist/37i9dQZF1DXcb6CQIjdqKy", summary: "The songs I keep coming back to. Press play and let faith rise.", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/M7T0mAFjwGdXlZwwjmedEQ/540x540bb-60.jpg" }),
   applePl("apple-todays-christian", "Today's Christian", "Today's", "todays-christian/pl.fecfa8a26ea44ad581d4fe501892c8ff", ["Worship"], { spotifyAlt: "https://open.spotify.com/playlist/37i9dQZF1DX5SzTPIoCKiv", summary: "Today's Christian music, hand-picked to encourage." }),
   applePl("apple-christian-rap", "Christian Rap Essentials", "Rap", "christian-rap-essentials/pl.981a3c7a4e4641ceae33034bc51bdceb", ["Joy"], { summary: "Faith-filled bars that point to Jesus." }),
   applePl("apple-christian-workout", "Christian Workout", "Workout", "christian-workout/pl.4f6345e9ab6f4782bd31250b74ec6b23", ["Joy"], { summary: "High-energy worship to move to." }),
@@ -776,11 +774,10 @@ const BULK_SERMONS: MediaItem[] = [
 // the song catalog.
 // ---------------------------------------------------------------------------
 const MUSIC_VIDEOS: MediaItem[] = [
-  // Official music videos curated separately from the audio-focused songs.
-  // These entries have unique videoIds distinct from MUSIC and EXPANDED_MUSIC.
-  // Examples: official lyric videos, live performance sessions, choreographed videos.
-  musicVideo("mv-phil-wickham-living-hope-live", "Living Hope (Live Session)", "Phil Wickham", "abcd1234567", ["Hope", "Gospel"], { summary: "Official live performance from Phil Wickham." }),
-  musicVideo("mv-casting-crowns-who-am-i-live", "Who Am I (Live Performance)", "Casting Crowns", "efgh9876543", ["Gospel", "Worship"], { summary: "Official live session with powerful visuals." }),
+  // Official music videos — official lyric videos, live sessions, and visual
+  // performances distinct from studio recordings. All entries must be
+  // oEmbed-verified (official channel, working videoId, correct title) before shipping.
+  // Curated separately to preserve distinct browsing experience.
 ];
 
 // ---------------------------------------------------------------------------
