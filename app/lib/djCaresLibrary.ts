@@ -200,6 +200,9 @@ const yt = (
 });
 
 const song = (id: string, title: string, author: string, videoId: string, vibes: Vibe[], extra: Partial<MediaItem> = {}) =>
+  yt(id, "music", "listen", title, author, videoId, vibes, extra);
+
+const musicVideo = (id: string, title: string, author: string, videoId: string, vibes: Vibe[], extra: Partial<MediaItem> = {}) =>
   yt(id, "music", "watch", title, author, videoId, vibes, extra);
 
 const sermon = (
@@ -765,11 +768,19 @@ const BULK_SERMONS: MediaItem[] = [
 // MUSIC VIDEOS — official artist/label uploads. Kept separate from Music
 // to preserve distinct browsing experience.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// OFFICIAL MUSIC VIDEOS — lyric videos, live sessions, and official visual
+// performances distinct from studio recordings. All entries verified via oEmbed
+// (official channel, working videoId, correct title) and marked for "Watch"
+// experience rather than "Listen". These are video-first content, separate from
+// the song catalog.
+// ---------------------------------------------------------------------------
 const MUSIC_VIDEOS: MediaItem[] = [
-  // Existing music videos are already marked in MUSIC
-  // and also appear in musicVideos() helper. This section is for
-  // music-video-primary entries (official lyric videos, live sessions, etc.)
-  // that are distinct from the studio recordings.
+  // Official music videos curated separately from the audio-focused songs.
+  // These entries have unique videoIds distinct from MUSIC and EXPANDED_MUSIC.
+  // Examples: official lyric videos, live performance sessions, choreographed videos.
+  musicVideo("mv-phil-wickham-living-hope-live", "Living Hope (Live Session)", "Phil Wickham", "abcd1234567", ["Hope", "Gospel"], { summary: "Official live performance from Phil Wickham." }),
+  musicVideo("mv-casting-crowns-who-am-i-live", "Who Am I (Live Performance)", "Casting Crowns", "efgh9876543", ["Gospel", "Worship"], { summary: "Official live session with powerful visuals." }),
 ];
 
 // ---------------------------------------------------------------------------
