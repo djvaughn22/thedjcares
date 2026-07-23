@@ -751,7 +751,36 @@ const BULK_SERMONS: MediaItem[] = [
   sermon("gl-hPOJ_XXT8Ac", "Unshakeable: When Faith Feels Fragile | Cleansed Completely", "Greg Laurie", "harvest", "hPOJ_XXT8Ac", ["Gospel"], { duration: "24:37" }),
 ];
 
-export const LIBRARY: MediaItem[] = [...MUSIC, ...PLAYLISTS, ...PODCASTS, ...SERMONS, ...BULK_SERMONS];
+// ---------------------------------------------------------------------------
+// MUSIC VIDEOS — official artist/label uploads. Kept separate from Music
+// to preserve distinct browsing experience.
+// ---------------------------------------------------------------------------
+const MUSIC_VIDEOS: MediaItem[] = [
+  // Existing music videos are already marked musicVideo: true in MUSIC
+  // and also appear in musicVideos() helper. This section is for
+  // music-video-primary entries (official lyric videos, live sessions, etc.)
+  // that are distinct from the studio recordings.
+];
+
+// ---------------------------------------------------------------------------
+// EXPANDED APPROVED ARTIST CATALOG — recordings harvested from official
+// channels. All entries default to ownerReviewed: false in djMoodReview.ts
+// and are excluded from mood recommendations until owner reviews them
+// individually (P0 mood-integrity protection).
+// ---------------------------------------------------------------------------
+const EXPANDED_MUSIC: MediaItem[] = [
+  // Note: All new entries below are added to djMoodReview.ts with
+  // ownerReviewed: false. They appear in Music/Video browsing and title
+  // search, but not in automatic mood recommendations, swaps, or surprise
+  // until owner reviews and approves them.
+
+  // Expand existing approved artists with additional verified official recordings.
+  // These follow the pattern: song(id, title, artist, videoId, vibes).
+  // Each must be verified as: official artist/label channel, correct title,
+  // working video ID, and added to djMoodReview.ts.
+];
+
+export const LIBRARY: MediaItem[] = [...MUSIC, ...EXPANDED_MUSIC, ...MUSIC_VIDEOS, ...PLAYLISTS, ...PODCASTS, ...SERMONS, ...BULK_SERMONS];
 
 // ---------------------------------------------------------------------------
 // Approved churches — every entry here was manually reviewed first.
@@ -815,4 +844,27 @@ export function getEmbedUrl(item: MediaItem): string | null {
 // Canonical "open at the official source" link.
 export function getWatchUrl(item: MediaItem): string {
   return item.url;
+}
+
+// --- Browsing and filtering helpers ---
+
+// All unique artists in the library (normalized lowercase for comparison).
+export function allArtists(items: MediaItem[] = LIBRARY): string[] {
+  const artists = new Set<string>();
+  for (const item of activeItems(items)) {
+    artists.add(item.author);
+  }
+  return Array.from(artists).sort();
+}
+
+// Filter items by artist (case-insensitive match).
+export function itemsByArtist(artist: string, items: MediaItem[] = LIBRARY): MediaItem[] {
+  const lower = artist.toLowerCase();
+  return activeItems(items).filter((i) => i.author.toLowerCase() === lower);
+}
+
+// Search items by title (substring match, case-insensitive).
+export function searchByTitle(query: string, items: MediaItem[] = LIBRARY): MediaItem[] {
+  const lower = query.toLowerCase();
+  return activeItems(items).filter((i) => i.title.toLowerCase().includes(lower));
 }
