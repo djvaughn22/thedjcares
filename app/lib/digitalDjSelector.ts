@@ -13,6 +13,7 @@ import {
   type Vibe,
 } from "./djCaresLibrary";
 import { spinPool, type SpinCategory } from "./spin";
+import { moodEligible, recommendableAtAll, type Mood } from "./djMoodReview";
 
 export type DjNeed =
   | "encouragement"
@@ -98,19 +99,12 @@ function filterByNeeds(
     return items.filter((i) => creatorMatches(i, requestedCreator));
   }
 
-  // Collect all vibes for requested needs.
-  const vibes = new Set<Vibe>();
-  for (const need of needs) {
-    const needVibes = NEED_TO_VIBES[need];
-    if (needVibes) {
-      for (const v of needVibes) {
-        vibes.add(v);
-      }
-    }
-  }
-
-  // Filter to items with at least one matching vibe.
-  let filtered = items.filter((i) => i.vibes.some((v) => vibes.has(v)));
+  // Mood-integrity rule: an item qualifies only if there is SOME requested
+  // need for which it BOTH matches that need's vibes AND passes the
+  // owner-review mood gate (djMoodReview.ts). Vibes describe genre/message;
+  // the gate protects the feeling the visitor actually asked for — a
+  // grief-centered song never rides its "Joy" tag into a joy request again.
+  let filtered = items.filter((i) => eligibleForSomeNeed(i, needs));
 
   // Secondary filter by creator if specified.
   if (requestedCreator) {
@@ -120,6 +114,19 @@ function filterByNeeds(
   }
 
   return filtered;
+}
+
+// Does the item qualify for at least one of the requested needs — matching
+// that need's vibes AND allowed by the mood-review gate? "surprise" matches
+// broadly but still refuses anything flagged-and-unreviewed. Exported for
+// tests and for the UI's own filtering.
+export function eligibleForSomeNeed(item: MediaItem, needs: DjNeed[]): boolean {
+  return needs.some((need) => {
+    if (need === "surprise") return recommendableAtAll(item.id);
+    const needVibes = NEED_TO_VIBES[need];
+    if (!needVibes || !item.vibes.some((v) => needVibes.includes(v))) return false;
+    return moodEligible(item.id, need as Mood);
+  });
 }
 
 // Check if an item matches a requested creator (ministry name, artist name, etc).

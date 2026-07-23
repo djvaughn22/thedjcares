@@ -13,6 +13,7 @@ import {
   type MediaItem,
 } from "./djCaresLibrary";
 import { estimateDuration } from "./digitalDjSelector";
+import { recommendableAtAll } from "./djMoodReview";
 
 // Structural shape shared by the AI parser's intent and the selector request.
 type IntentLike = {
@@ -108,8 +109,10 @@ export function swapItem(
   const inSession = new Set(items.map((i) => i.id));
   const kind = likeKind(target);
 
+  // Swap replacements are recommendations: flagged-but-unreviewed items
+  // (djMoodReview.ts) never come back through a swap.
   const pool = activeItems(catalog).filter(
-    (i) => isPlayable(i) && !inSession.has(i.id) && likeKind(i) === kind,
+    (i) => isPlayable(i) && !inSession.has(i.id) && likeKind(i) === kind && recommendableAtAll(i.id),
   );
   if (pool.length === 0) return null;
 
