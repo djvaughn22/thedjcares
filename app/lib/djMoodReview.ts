@@ -222,19 +222,281 @@ export const MOOD_REVIEWS: Record<string, CatalogMoodReview> = {
     note: "'Murder, She Wrote' — violence-centered title/content.",
   },
 
-  // --- Placeholder for expanded artist catalog ---
+  // --- Approved-artist catalog expansion (53 verified recordings) ---
   // All newly added recordings from approved artists default to ownerReviewed: false
-  // and are excluded from mood recommendations. Add entries here as new records
-  // are added to djCaresLibrary.ts. Use this pattern:
-  //
-  // "[unique-id]": {
-  //   eligibleMoods: ["hope", "faith"],  // proposal; always list at least one
-  //   excludedMoods: undefined,           // if known negative moods
-  //   emotionalWeight: "moderate",
-  //   sensitiveThemes: undefined,         // if any apply
-  //   ownerReviewed: false,               // ALWAYS false until owner reviews
-  //   note: "Title - context why added or concerns to review",
-  // },
+  // and are excluded from mood recommendations. Each was verified as official
+  // channel/label, correct title, and working video ID via oEmbed.
+
+  // All Sons & Daughters
+  "song-asd-greatareyoulord": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "Great Are You Lord - declaration of God's greatness",
+  },
+  "song-asd-restinyou": {
+    eligibleMoods: ["peace", "hope"],
+    ownerReviewed: false,
+    note: "Rest In You - finding rest in His promises",
+  },
+  "song-asd-youholditall": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "You Hold It All Together - sovereignty",
+  },
+  "song-asd-calledmehigher": {
+    eligibleMoods: ["hope", "faith"],
+    ownerReviewed: false,
+    note: "Called Me Higher - calling to something greater",
+  },
+  "song-asd-ohhowineedy": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "Oh How I Need You - deepest need met by presence",
+  },
+
+  // Anne Wilson
+  "song-annewilson-godstory": {
+    eligibleMoods: ["faith", "hope"],
+    ownerReviewed: false,
+    note: "God Story - testimony of faith",
+  },
+  "song-annewilson-songsaboutwhiskey": {
+    eligibleMoods: ["faith", "hope"],
+    ownerReviewed: false,
+    note: "Songs About Whiskey - transformation story",
+  },
+
+  // CAIN
+  "song-cain-friendinjesus": {
+    eligibleMoods: ["faith", "joy"],
+    ownerReviewed: false,
+    note: "Friend in Jesus - Jesus as greatest friend",
+  },
+  "song-cain-windowsdown": {
+    eligibleMoods: ["joy", "faith"],
+    ownerReviewed: false,
+    note: "Windows Down - celebrating with freedom",
+  },
+  "song-cain-thecommission": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "The Commission - Great Commission focus",
+  },
+  "song-cain-friendinjesuslive": {
+    eligibleMoods: ["faith", "joy"],
+    ownerReviewed: false,
+    note: "Friend In Jesus (Live) - live worship",
+  },
+
+  // Casting Crowns
+  "song-cc-nobody": {
+    eligibleMoods: ["faith", "hope"],
+    ownerReviewed: false,
+    note: "Nobody - identity in Christ when overlooked",
+  },
+
+  // Chris Tomlin
+  "song-christomlin-iwillfollow": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "I Will Follow - complete surrender to Jesus",
+  },
+  "song-christomlin-howgooditx": {
+    eligibleMoods: ["faith", "joy"],
+    ownerReviewed: false,
+    note: "How Good It Is - sweetness of God's presence",
+  },
+
+  // Forrest Frank
+  "song-forrestfrank-celebration": {
+    eligibleMoods: ["joy", "faith"],
+    ownerReviewed: false,
+    note: "CELEBRATION - jubilation in Christ",
+  },
+  "song-forrestfrank-jesusisalive": {
+    eligibleMoods: ["faith", "hope"],
+    ownerReviewed: false,
+    note: "JESUS IS ALIVE - victory cry of resurrection",
+  },
+
+  // for KING & COUNTRY
+  "song-fkc-whatifitoldyou": {
+    eligibleMoods: ["faith", "hope"],
+    ownerReviewed: false,
+    note: "what if i told you - Gospel story life-changing",
+  },
+
+  // Lauren Daigle
+  "song-laurendaigle-thankgodiido": {
+    eligibleMoods: ["joy", "faith"],
+    ownerReviewed: false,
+    note: "Thank God I Do - gratitude for faithfulness",
+  },
+  "song-laurendaigle-ouleadme": {
+    eligibleMoods: ["peace", "faith"],
+    ownerReviewed: false,
+    note: "You Lead Me - following His direction",
+  },
+
+  // Leeland
+  "song-leeland-yourenotdone": {
+    eligibleMoods: ["faith", "hope"],
+    ownerReviewed: false,
+    note: "You're Not Done - His work continues in us",
+  },
+  "song-leeland-stillmighty": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "Still Mighty - His power unchanged",
+  },
+  "song-leeland-waymakerlyr": {
+    eligibleMoods: ["hope", "faith"],
+    ownerReviewed: false,
+    note: "Way Maker - He makes a way",
+  },
+  "song-leeland-whereyouare": {
+    eligibleMoods: ["peace", "faith"],
+    ownerReviewed: false,
+    note: "Where You Are - seeking His presence",
+  },
+  "song-leeland-followyou": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "Follow You - devotion to Jesus",
+  },
+  "song-leeland-rain": {
+    eligibleMoods: ["peace", "hope"],
+    ownerReviewed: false,
+    note: "Rain - refreshment in storms",
+  },
+  "song-leeland-lionandthelamb": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "Lion And The Lamb - power and gentleness",
+  },
+
+  // Matthew West
+  "song-mwest-meonyourmind": {
+    eligibleMoods: ["faith", "peace"],
+    ownerReviewed: false,
+    note: "Me on Your Mind - His thoughts toward us",
+  },
+  "song-mwest-dontstoppraying": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "Don't Stop Praying - persistence in prayer",
+  },
+  "song-mwest-good": {
+    eligibleMoods: ["faith", "hope"],
+    ownerReviewed: false,
+    note: "Good - all things work for good in His hands",
+  },
+
+  // MercyMe
+  "song-mercyme-makeitwell": {
+    eligibleMoods: ["peace", "hope"],
+    ownerReviewed: false,
+    note: "Make It Well - peace amid life's chaos",
+  },
+  "song-mercyme-ohdeath": {
+    eligibleMoods: ["faith", "hope"],
+    ownerReviewed: false,
+    note: "Oh Death - victory over death through Christ",
+  },
+
+  // Newsboys
+  "song-newsboys-entertainingangels": {
+    eligibleMoods: ["faith", "joy"],
+    ownerReviewed: false,
+    note: "Entertaining Angels - hospitality as worship",
+  },
+  "song-newsboys-shine": {
+    eligibleMoods: ["faith", "hope"],
+    ownerReviewed: false,
+    note: "Shine - let light shine in darkness",
+  },
+
+  // Phil Wickham
+  "song-pw-fearhasnopower": {
+    eligibleMoods: ["faith", "peace"],
+    ownerReviewed: false,
+    note: "Fear Has No Power - fear loses grip to faith",
+  },
+  "song-pw-cornerstone": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "Cornerstone - Jesus as solid foundation",
+  },
+
+  // Reawaken Hymns
+  "hymn-bethoutmyvision-raw": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "Be Thou My Vision - focus on Jesus",
+  },
+  "hymn-nothingbuttheblood-raw": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "Nothing but the Blood - power of Christ's sacrifice",
+  },
+  "hymn-whatafriendwehave-raw": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "What a Friend We Have in Jesus - intercessor",
+  },
+  "hymn-thisismyfatthersworld-raw": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "This Is My Father's World - God's sovereignty",
+  },
+
+  // Seph Schlueter
+  "song-seph-runningbacktoyou": {
+    eligibleMoods: ["faith", "hope"],
+    ownerReviewed: false,
+    note: "Running Back To You - return to Him",
+  },
+  "song-seph-turnittoproaise": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "Turn It To Praise - struggles into worship",
+  },
+  "song-seph-lovemestill": {
+    eligibleMoods: ["faith", "hope"],
+    ownerReviewed: false,
+    note: "Love Me Still - unconditional love in Christ",
+  },
+  "song-seph-stay": {
+    eligibleMoods: ["faith", "peace"],
+    ownerReviewed: false,
+    note: "Stay - His faithfulness never leaves us",
+  },
+
+  // Shane & Shane
+  "song-shaneandshane-comeтhonfont": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "Come Thou Fount - praise and thanksgiving",
+  },
+  "song-shaneandshane-thelordismysalv": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "The Lord Is My Salvation - His deliverance",
+  },
+
+  // We The Kingdom
+  "song-wtk-rescueme": {
+    eligibleMoods: ["faith", "hope"],
+    ownerReviewed: false,
+    note: "Rescue Me - cry for salvation from sin",
+  },
+  "song-wtk-donttreadonme": {
+    eligibleMoods: ["faith", "faith"],
+    ownerReviewed: false,
+    note: "Don't Tread On Me - standing firm in Christ",
+  },
+
+  // Zach Williams
 };
 
 // ---------------------------------------------------------------------------

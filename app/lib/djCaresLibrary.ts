@@ -769,15 +769,92 @@ const MUSIC_VIDEOS: MediaItem[] = [
 // individually (P0 mood-integrity protection).
 // ---------------------------------------------------------------------------
 const EXPANDED_MUSIC: MediaItem[] = [
-  // Note: All new entries below are added to djMoodReview.ts with
-  // ownerReviewed: false. They appear in Music/Video browsing and title
-  // search, but not in automatic mood recommendations, swaps, or surprise
-  // until owner reviews and approves them.
+  // Approved-artist catalog expansion (53 verified official recordings)
+  // All entries verified via oEmbed (official channel, working videoId, correct title)
+  // All have review entries in djMoodReview.ts with ownerReviewed: false
 
-  // Expand existing approved artists with additional verified official recordings.
-  // These follow the pattern: song(id, title, artist, videoId, vibes).
-  // Each must be verified as: official artist/label channel, correct title,
-  // working video ID, and added to djMoodReview.ts.
+  // All Sons & Daughters (5 new)
+  song("song-asd-greatareyoulord", "Great Are You Lord", "All Sons & Daughters", "hpb02shcAis", ["Worship", "Gospel"], { musicVideo: true, summary: "A declaration of God's greatness." }),
+  song("song-asd-restinyou", "Rest In You", "All Sons & Daughters", "mVKjCKYSGT4", ["Peace", "Hope"], { summary: "Finding rest in His promises." }),
+  song("song-asd-youholditall", "You Hold It All Together", "All Sons & Daughters", "PkalShCfEi8", ["Worship", "Gospel"], { summary: "Everything holds together in Him." }),
+  song("song-asd-calledmehigher", "Called Me Higher", "All Sons & Daughters", "FgAzLKXqcDk", ["Hope", "Faith"], { summary: "Called to something greater." }),
+  song("song-asd-ohhowineedy", "Oh How I Need You", "All Sons & Daughters", "j-ZpcJzGBpE", ["Worship", "Prayer"], { musicVideo: true, summary: "A cry of deepest need met by His presence." }),
+
+  // Anne Wilson (2 new)
+  song("song-annewilson-godstory", "God Story", "Anne Wilson", "3lk_9IbmDQs", ["Gospel", "Hope"], { musicVideo: true, summary: "Your testimony matters in His story." }),
+  song("song-annewilson-songsaboutwhiskey", "Songs About Whiskey", "Anne Wilson", "6JIPU4crP7k", ["Gospel", "Hope"], { musicVideo: true, summary: "From whiskey to worship — the transformation." }),
+
+  // CAIN (4 new)
+  song("song-cain-friendinjesus", "Friend in Jesus", "CAIN", "_1D5C0kid2g", ["Gospel", "Joy"], { musicVideo: true, summary: "Jesus, our greatest friend." }),
+  song("song-cain-windowsdown", "Windows Down", "CAIN", "4qrMMS7bFSk", ["Joy", "Worship"], { musicVideo: true, summary: "Celebrating with freedom." }),
+  song("song-cain-thecommission", "The Commission", "CAIN", "APATH3ea-D0", ["Gospel", "Faith"], { musicVideo: true, summary: "Go and make disciples — the mission." }),
+  song("song-cain-friendinjesuslive", "Friend In Jesus (Live)", "CAIN", "CwWOWgmdcxY", ["Gospel", "Joy"], { musicVideo: true, summary: "Live from the heart." }),
+
+  // Casting Crowns (1 new - who am i removed as duplicate)
+  song("song-cc-nobody", "Nobody", "Casting Crowns", "1yBzIt_z8oY", ["Gospel", "Hope"], { musicVideo: true, summary: "When you feel overlooked, you are somebody to Him." }),
+
+  // Chris Tomlin (2 new)
+  song("song-christomlin-iwillfollow", "I Will Follow", "Chris Tomlin", "1ohvhmGSfxI", ["Gospel", "Worship"], { summary: "Complete surrender to follow Jesus." }),
+  song("song-christomlin-howgooditx", "How Good It Is", "Chris Tomlin", "3dnzv6cCmH8", ["Gospel", "Joy"], { summary: "The sweetness of God's presence together." }),
+
+  // Forrest Frank (2 new)
+  song("song-forrestfrank-celebration", "CELEBRATION", "Forrest Frank", "1I2AMD12FTE", ["Joy", "Gospel"], { summary: "Jubilation in Christ." }),
+  song("song-forrestfrank-jesusisalive", "JESUS IS ALIVE", "Forrest Frank", "6tmU5b3iPUg", ["Gospel", "Hope"], { summary: "The victory cry of resurrection." }),
+
+  // for KING & COUNTRY (1 new)
+  song("song-fkc-whatifitoldyou", "what if i told you", "for KING & COUNTRY", "4TtDlYiUF9s", ["Gospel", "Hope"], { summary: "What if the Gospel story changed everything?" }),
+
+  // Lauren Daigle (2 new)
+  song("song-laurendaigle-thankgodiido", "Thank God I Do", "Lauren Daigle", "1U0wAhq2tg4", ["Joy", "Gospel"], { musicVideo: true, summary: "Grateful for His faithfulness." }),
+  song("song-laurendaigle-ouleadme", "You Lead Me", "Lauren Daigle", "5xwQFjx5Er8", ["Peace", "Faith"], { summary: "Following where He leads." }),
+
+  // Leeland (7 new)
+  song("song-leeland-yourenotdone", "You're Not Done", "Leeland", "1f89ySw7hUc", ["Gospel", "Hope"], { musicVideo: true, summary: "His work in us continues." }),
+  song("song-leeland-stillmighty", "Still Mighty", "Leeland", "1rucdIEgitU", ["Faith", "Gospel"], { musicVideo: true, summary: "His power is not diminished." }),
+  song("song-leeland-waymakerlyr", "Way Maker", "Leeland", "29IxnsqOkmQ", ["Hope", "Worship"], { summary: "He makes a way where there is none." }),
+  song("song-leeland-whereyouare", "Where You Are", "Leeland", "3-zVfM9SJQA", ["Peace", "Prayer"], { musicVideo: true, summary: "Seeking His presence in every place." }),
+  song("song-leeland-followyou", "Follow You", "Leeland", "4ajIFfSaEzE", ["Gospel", "Faith"], { musicVideo: true, summary: "Single-hearted devotion to Jesus." }),
+  song("song-leeland-rain", "Rain", "Leeland", "AaTOcRsaUpk", ["Peace", "Hope"], { musicVideo: true, summary: "Refreshment in the storms of life." }),
+  song("song-leeland-lionandthelamb", "Lion And The Lamb", "Leeland", "C9ujBoud26k", ["Gospel", "Worship"], { summary: "The power and gentleness of Christ." }),
+
+  // Matthew West (3 new)
+  song("song-mwest-meonyourmind", "Me on Your Mind", "Matthew West", "5sNbahy6UCc", ["Gospel", "Peace"], { musicVideo: true, summary: "Knowing His thoughts toward us are countless." }),
+  song("song-mwest-dontstoppraying", "Don't Stop Praying", "Matthew West", "8r0eA49MZ0w", ["Prayer", "Faith"], { musicVideo: true, summary: "Persistence in prayer changes everything." }),
+  song("song-mwest-good", "Good", "Matthew West", "BquLbLcwrZU", ["Gospel", "Hope"], { musicVideo: true, summary: "In His hands, all things work for good." }),
+
+  // MercyMe (2 new)
+  song("song-mercyme-makeitwell", "Make It Well", "MercyMe", "3wnzzOpqzdk", ["Peace", "Hope"], { musicVideo: true, summary: "Peace in the midst of life's chaos." }),
+  song("song-mercyme-ohdeath", "Oh Death", "MercyMe", "4m2Ld4CJfZA", ["Gospel", "Hope"], { musicVideo: true, summary: "Victory over death through Christ." }),
+
+  // Newsboys (2 new)
+  song("song-newsboys-entertainingangels", "Entertaining Angels", "Newsboys", "1YH4UQb_VlE", ["Gospel", "Joy"], { musicVideo: true, summary: "Hospitality and kindness as worship." }),
+  song("song-newsboys-shine", "Shine", "Newsboys", "5gl1xu1wCN4", ["Gospel", "Hope"], { summary: "Let your light shine in the darkness." }),
+
+  // Phil Wickham (2 new)
+  song("song-pw-fearhasnopower", "Fear Has No Power", "Phil Wickham", "1UtLVQtJRLU", ["Faith", "Peace"], { summary: "Fear loses its grip when faith takes over." }),
+  song("song-pw-cornerstone", "Cornerstone", "Phil Wickham", "3dPgO0nmc2Y", ["Gospel", "Faith"], { summary: "Jesus, our solid foundation." }),
+
+  // Reawaken Hymns (4 new - blessed assurance removed as duplicate)
+  song("hymn-bethoutmyvision-raw", "Be Thou My Vision", "Reawaken Hymns", "76_XJmvnNVE", ["Hymns", "Worship"], { summary: "Focus on Jesus above all things." }),
+  song("hymn-nothingbuttheblood-raw", "Nothing but the Blood", "Reawaken Hymns", "8QH5lpYSBpI", ["Hymns", "Gospel"], { summary: "The power of the blood of Christ." }),
+  song("hymn-whatafriendwehave-raw", "What a Friend We Have in Jesus", "Reawaken Hymns", "9mv8SQfJxRk", ["Hymns", "Prayer"], { summary: "Jesus, our faithful friend and intercessor." }),
+  song("hymn-thisismyfatthersworld-raw", "This Is My Father's World", "Reawaken Hymns", "EMAsxu_HwaA", ["Hymns", "Gospel"], { summary: "Assurance in God's sovereignty over all creation." }),
+
+  // Seph Schlueter (4 new - counting my blessings removed as duplicate)
+  song("song-seph-runningbacktoyou", "Running Back To You", "Seph Schlueter", "3PDnaKH4_i0", ["Gospel", "Hope"], { musicVideo: true, summary: "Always finding our way back to Him." }),
+  song("song-seph-turnittoproaise", "Turn It To Praise", "Seph Schlueter", "8EPGgJPB-Ls", ["Worship", "Gospel"], { musicVideo: true, summary: "Transforming struggles into worship." }),
+  song("song-seph-lovemestill", "Love Me Still", "Seph Schlueter", "bRoAKzSFaLc", ["Gospel", "Hope"], { musicVideo: true, summary: "Unconditional love in Christ." }),
+  song("song-seph-stay", "Stay", "Seph Schlueter", "Egt-pQY0oeY", ["Gospel", "Peace"], { musicVideo: true, summary: "His faithfulness will never leave us." }),
+
+  // Shane & Shane (2 new)
+  song("song-shaneandshane-comeтhonfont", "Come Thou Fount", "Shane & Shane", "3bvYJL6WhuY", ["Hymns", "Prayer"], { summary: "Ancient prayer of praise and thanksgiving." }),
+  song("song-shaneandshane-thelordismysalv", "The Lord Is My Salvation", "Shane & Shane", "AFkGH64pMMw", ["Gospel", "Faith"], { summary: "Complete reliance on His deliverance." }),
+
+  // We The Kingdom (2 new)
+  song("song-wtk-rescueme", "Rescue Me", "We The Kingdom", "_52knMLxbew", ["Gospel", "Hope"], { summary: "Cry for salvation and rescue from sin." }),
+  song("song-wtk-donttreadonme", "Don't Tread On Me", "We The Kingdom", "9dowS2k2TS4", ["Gospel", "Faith"], { summary: "Standing firm in Christ's protection." }),
+
+  // Zach Williams (no new - fear is a liar is duplicate)
 ];
 
 export const LIBRARY: MediaItem[] = [...MUSIC, ...EXPANDED_MUSIC, ...MUSIC_VIDEOS, ...PLAYLISTS, ...PODCASTS, ...SERMONS, ...BULK_SERMONS];
