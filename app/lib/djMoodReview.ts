@@ -221,6 +221,20 @@ export const MOOD_REVIEWS: Record<string, CatalogMoodReview> = {
     ownerReviewed: false,
     note: "'Murder, She Wrote' — violence-centered title/content.",
   },
+
+  // --- Placeholder for expanded artist catalog ---
+  // All newly added recordings from approved artists default to ownerReviewed: false
+  // and are excluded from mood recommendations. Add entries here as new records
+  // are added to djCaresLibrary.ts. Use this pattern:
+  //
+  // "[unique-id]": {
+  //   eligibleMoods: ["hope", "faith"],  // proposal; always list at least one
+  //   excludedMoods: undefined,           // if known negative moods
+  //   emotionalWeight: "moderate",
+  //   sensitiveThemes: undefined,         // if any apply
+  //   ownerReviewed: false,               // ALWAYS false until owner reviews
+  //   note: "Title - context why added or concerns to review",
+  // },
 };
 
 // ---------------------------------------------------------------------------
