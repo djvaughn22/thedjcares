@@ -31,7 +31,8 @@ export function spinPool(filter: SpinFilter, items: MediaItem[] = LIBRARY): Medi
   return activeItems(items).filter((i) => {
     if (!isPlayable(i)) return false;
     if (filter.category === "videos") {
-      if (i.playbackExperience !== "watch") return false;
+      // Proper official music videos only — the flag set from verified titles.
+      if (i.musicVideo !== true) return false;
     } else if (filter.category !== "all" && i.type !== filter.category) {
       return false;
     }

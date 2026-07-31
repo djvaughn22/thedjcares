@@ -5,6 +5,7 @@ import { LIBRARY, type MediaItem } from "../djCaresLibrary";
 const fakeItem = (id: string, extra: Partial<MediaItem> = {}): MediaItem => ({
   id,
   type: "music",
+  playbackExperience: "watch",
   title: id,
   author: "Test",
   vibes: ["Joy"],

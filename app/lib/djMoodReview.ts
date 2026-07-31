@@ -497,6 +497,37 @@ export const MOOD_REVIEWS: Record<string, CatalogMoodReview> = {
   },
 
   // Zach Williams
+
+  // --- Mood expansion screening (2026-07-30) ---
+  // Every song added in the mood expansion was screened against the
+  // sensitive-theme rule above. These three are the only borderline entries;
+  // per the rule they stay OUT of mood recommendations until the owner
+  // reviews them. The rest of the expansion is celebratory/worship material
+  // with no sensitive center and keeps vibe-based behavior.
+  "song-mm-sayiwont": {
+    eligibleMoods: ["encouragement", "faith", "hope"],
+    excludedMoods: ["joy"],
+    emotionalWeight: "moderate",
+    sensitiveThemes: ["illness"],
+    ownerReviewed: false,
+    note: "Perseverance anthem; official video centers a comeback from limb loss and sepsis.",
+  },
+  "song-ld-rescue": {
+    eligibleMoods: ["comfort", "hope", "peace"],
+    excludedMoods: ["joy"],
+    emotionalWeight: "moderate",
+    sensitiveThemes: ["fear"],
+    ownerReviewed: false,
+    note: "Comfort for someone in distress ('I hear you whisper underneath your breath').",
+  },
+  "song-mw-truthbetold": {
+    eligibleMoods: ["encouragement", "hope", "faith"],
+    excludedMoods: ["joy"],
+    emotionalWeight: "moderate",
+    sensitiveThemes: ["fear"],
+    ownerReviewed: false,
+    note: "Honesty about hidden struggle and church-face pretending; references dark days.",
+  },
 };
 
 // ---------------------------------------------------------------------------

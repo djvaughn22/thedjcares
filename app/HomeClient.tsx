@@ -7,7 +7,7 @@
 // app/lib/djCaresLibrary.ts. The shuffle (app/lib/spin.ts) never leaves it.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import DJPlayer from "./components/DJPlayer";
+import DJPlayer, { type DJPlayerHandle } from "./components/DJPlayer";
 import ChurchSubmitForm from "./components/ChurchSubmitForm";
 import ShareSheet, { ShareTrigger } from "./components/ShareMenu";
 import {
@@ -43,6 +43,22 @@ import {
   spinPool,
   type SpinCategory,
 } from "./lib/spin";
+import {
+  buildQueue,
+  DEFAULT_PREFS,
+  isAtQueueEnd,
+  loadPrefs,
+  loadSession,
+  MIX_MODES,
+  nextPlayableIndex,
+  QUEUE_MOODS,
+  resolveQueue,
+  savePrefs,
+  saveSession,
+  type MixMode,
+  type PlayerPrefs,
+} from "./lib/moodQueue";
+import type { DjNeed } from "./lib/digitalDjSelector";
 import { track } from "./lib/analytics";
 
 const TABS = [
@@ -90,6 +106,13 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
   const [blocked, setBlocked] = useState(false); // current item wouldn't play
   const [announce, setAnnounce] = useState("");
   const [unavailable, setUnavailable] = useState<ReadonlySet<string>>(new Set());
+  // --- mood mix state ---
+  const [moodQueue, setMoodQueue] = useState<{ mood: DjNeed; mode: MixMode; queue: MediaItem[]; position: number } | null>(null);
+  const [mixMode, setMixMode] = useState<MixMode>("both");
+  const [prefs, setPrefs] = useState<PlayerPrefs>(DEFAULT_PREFS);
+  const [progress, setProgress] = useState<{ t: number; d: number } | null>(null);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const playerRef = useRef<DJPlayerHandle>(null);
   // Which item the (single, page-level) share sheet is open for.
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null);
   const [shareTriggerId, setShareTriggerId] = useState<string | null>(null);
@@ -171,6 +194,22 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
       setTab("churches");
       bringIntoView(`djc-church-${church.id}`);
     }
+
+    // No deep link — restore a saved mood session (cued, never auto-playing)
+    // before falling back to tonight's featured record.
+    setPrefs(loadPrefs());
+    const saved = loadSession();
+    if (saved) {
+      const queue = resolveQueue(saved.queueIds);
+      if (queue.length > 0) {
+        const position = Math.min(saved.position, queue.length - 1);
+        setMoodQueue({ mood: saved.mood, mode: saved.mode, queue, position });
+        setMixMode(saved.mode);
+        setCurrent(queue[position]);
+        setAnnounce(`Your ${saved.mood === "surprise" ? "mix" : `${saved.mood} mix`} is cued where you left off.`);
+        return;
+      }
+    }
     setCurrent(LIBRARY.find((i) => i.featured && i.type === "music") ?? LIBRARY[0]);
   }, []);
 
@@ -179,7 +218,19 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
     [category, vibe, unavailable],
   );
 
-  const startItem = (item: MediaItem, viaSpin = false) => {
+  const startItem = (item: MediaItem, viaSpin = false, inMoodMix = false) => {
+    // A pick outside the mood queue is a new choice — the mood mix steps
+    // aside. A pick that IS in the queue jumps the queue there instead.
+    if (!inMoodMix && moodQueue) {
+      const qIdx = moodQueue.queue.findIndex((q) => q.id === item.id);
+      if (qIdx === -1) {
+        endMoodMix();
+      } else {
+        const mix = { ...moodQueue, position: qIdx };
+        setMoodQueue(mix);
+        persistMoodMix(mix);
+      }
+    }
     // New play cuts the session's forward branch (like a browser history).
     sessionRef.current = [...sessionRef.current.slice(0, posRef.current + 1), item];
     posRef.current = sessionRef.current.length - 1;
@@ -189,17 +240,79 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
     setStarted(true);
     setPlaying(true);
     setBlocked(false);
+    setAutoplayBlocked(false);
+    setProgress(null);
     setAnnounce(`Now spinning: ${item.title} — ${item.author}`);
     track("media_play", { content_type: item.type, content_title: item.title, via: viaSpin ? "spin" : "pick" });
     deckRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   };
 
+  // --- the mood mix -----------------------------------------------------------
+
+  const persistMoodMix = (mix: { mood: DjNeed; mode: MixMode; queue: MediaItem[]; position: number } | null) => {
+    saveSession(mix ? { mood: mix.mood, mode: mix.mode, queueIds: mix.queue.map((i) => i.id), position: mix.position, updatedAt: Date.now() } : null);
+  };
+
+  const endMoodMix = () => {
+    setMoodQueue(null);
+    persistMoodMix(null);
+  };
+
+  // Selecting a mood (or "New mix") builds a fresh shuffled queue and starts it.
+  const startMoodMix = (mood: DjNeed, mode: MixMode = mixMode) => {
+    const queue = buildQueue(mood, mode, { avoidFirst: current?.id });
+    if (queue.length === 0) {
+      setAnnounce("Nothing matches that mix yet — try Both.");
+      return;
+    }
+    const mix = { mood, mode, queue, position: 0 };
+    setMoodQueue(mix);
+    persistMoodMix(mix);
+    setUnavailable(new Set());
+    startItem(queue[0], true, true);
+    const label = mood === "surprise" ? "surprise mix" : `${mood} mix`;
+    setAnnounce(`Your ${label} is on: ${queue.length} songs, ${queue[0].title} first.`);
+    track("mood_mix_start", { mood, mode, size: queue.length });
+  };
+
+  // Move through the queue, skipping anything that failed to play.
+  const moodStep = (direction: 1 | -1) => {
+    if (!moodQueue) return;
+    const idx = nextPlayableIndex(moodQueue.queue, moodQueue.position, unavailable, direction);
+    if (idx === null) {
+      setAnnounce("Nothing in this mix will play right now — cue a new mix.");
+      return;
+    }
+    const mix = { ...moodQueue, position: idx };
+    setMoodQueue(mix);
+    persistMoodMix(mix);
+    startItem(mix.queue[idx], true, true);
+  };
+
+  // When the queue's last playable item ends, repeat the mood with a fresh
+  // shuffle that never opens on the item that just finished.
+  const moodRollover = () => {
+    if (!moodQueue) return;
+    const queue = buildQueue(moodQueue.mood, moodQueue.mode, { avoidFirst: current?.id });
+    if (queue.length === 0) return;
+    const mix = { ...moodQueue, queue, position: 0 };
+    setMoodQueue(mix);
+    persistMoodMix(mix);
+    startItem(queue[0], true, true);
+    setAnnounce("Back to the top — fresh shuffle, same mood.");
+  };
+
   const spin = () => {
+    if (moodQueue) {
+      moodStep(1);
+      return;
+    }
     const next = pickNext(pool, historyRef.current);
     if (next) startItem(next, true);
   };
 
   const spinMinistry = (key: MinistryKey) => {
+    endMoodMix();
     const mPool = spinPool({ category: "sermon", ministry: key }).filter((i) => !unavailable.has(i.id));
     const next = pickNext(mPool, historyRef.current);
     if (next) {
@@ -209,6 +322,10 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
   };
 
   const prev = () => {
+    if (moodQueue) {
+      moodStep(-1);
+      return;
+    }
     if (posRef.current <= 0) return;
     posRef.current -= 1;
     const item = sessionRef.current[posRef.current];
@@ -219,6 +336,11 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
   };
 
   const next = () => {
+    if (moodQueue) {
+      if (isAtQueueEnd(moodQueue.queue, moodQueue.position, unavailable)) moodRollover();
+      else moodStep(1);
+      return;
+    }
     if (posRef.current < sessionRef.current.length - 1) {
       posRef.current += 1;
       const item = sessionRef.current[posRef.current];
@@ -231,13 +353,43 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
     }
   };
 
+  // A record finished on its own.
+  const onEnded = () => {
+    if (prefs.repeat === "one") {
+      playerRef.current?.restart();
+      return;
+    }
+    next();
+  };
+
   const onUnavailable = () => {
     if (!current) return;
+    setUnavailable((s) => new Set([...s, current.id]));
+    if (moodQueue) {
+      // One bad record never stops the mix — skip it and keep playing.
+      setAnnounce(`${current.title} won't play here — skipping to the next one.`);
+      const failed = new Set([...unavailable, current.id]);
+      const idx = nextPlayableIndex(moodQueue.queue, moodQueue.position, failed, 1);
+      if (idx !== null && moodQueue.queue[idx].id !== current.id) {
+        const mix = { ...moodQueue, position: idx };
+        setMoodQueue(mix);
+        persistMoodMix(mix);
+        startItem(mix.queue[idx], true, true);
+        return;
+      }
+    }
     setBlocked(true);
     setPlaying(false);
     setPlayerState("idle");
-    setUnavailable((s) => new Set([...s, current.id]));
     setAnnounce(`${current.title} won't play here. Use the official link, or spin another.`);
+  };
+
+  const updatePrefs = (patch: Partial<PlayerPrefs>) => {
+    setPrefs((p) => {
+      const nextPrefs = { ...p, ...patch };
+      savePrefs(nextPrefs);
+      return nextPrefs;
+    });
   };
 
   // Palette — flat + cool, matched to the Open Mirror family.
@@ -493,13 +645,18 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
       {showVideo && !blocked && (
         <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
           <DJPlayer
+            ref={playerRef}
             videoId={current!.videoId!}
             title={current!.title}
             playing={playing}
+            volume={prefs.volume}
+            muted={prefs.muted}
             onPlaybackChange={(s) => {
-              if (s === "ended") next();
+              if (s === "ended") onEnded();
               else setPlayerState(s);
             }}
+            onProgress={(t, d) => setProgress({ t, d })}
+            onAutoplayBlocked={() => setAutoplayBlocked(true)}
             onUnavailable={onUnavailable}
           />
         </div>
@@ -555,11 +712,58 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
           <button onClick={() => startItem(current)} style={bigButton}>▶ Play</button>
         ) : null}
         <button onClick={next} aria-label="Next" style={quietButton}>⏭</button>
-        <button onClick={spin} disabled={deckPoolEmpty} style={{ ...bigButton, opacity: deckPoolEmpty ? 0.5 : 1 }}>
+        <button onClick={spin} disabled={deckPoolEmpty && !moodQueue} style={{ ...bigButton, opacity: deckPoolEmpty && !moodQueue ? 0.5 : 1 }}>
           🔀 Spin Another
         </button>
         {current && share(mediaShareTarget(current), "deck")}
+        <button onClick={() => updatePrefs({ muted: !prefs.muted })} aria-label={prefs.muted ? "Unmute" : "Mute"} style={quietButton}>
+          {prefs.muted ? "🔇" : "🔊"}
+        </button>
       </div>
+
+      {/* mood mixer UI */}
+      {tab === "spin" && (
+        <div style={{ marginTop: 20, borderTop: `1px solid ${border}`, paddingTop: 16 }}>
+          <p style={{ fontSize: 12, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", color: sub, margin: "0 0 10px" }}>
+            Mood mixes
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))", gap: 8, marginBottom: 12 }}>
+            {QUEUE_MOODS.map((mood) => (
+              <button
+                key={mood}
+                onClick={() => startMoodMix(mood, mixMode)}
+                aria-pressed={moodQueue?.mood === mood}
+                style={pill(moodQueue?.mood === mood)}
+              >
+                {mood === "surprise" ? "🎲" : mood[0].toUpperCase()}{mood.slice(1)}
+              </button>
+            ))}
+          </div>
+          <p style={{ fontSize: 12, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", color: sub, margin: "0 0 8px" }}>
+            Mix type
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+            {MIX_MODES.map((mode) => (
+              <button
+                key={mode.id}
+                onClick={() => {
+                  setMixMode(mode.id);
+                  if (moodQueue) startMoodMix(moodQueue.mood, mode.id);
+                }}
+                aria-pressed={mixMode === mode.id}
+                style={pill(mixMode === mode.id)}
+              >
+                <span aria-hidden>{mode.emoji}</span> {mode.label}
+              </button>
+            ))}
+          </div>
+          {moodQueue && (
+            <button onClick={endMoodMix} style={{ ...quietButton, width: "100%", marginTop: 12 }}>
+              End this mood mix
+            </button>
+          )}
+        </div>
+      )}
 
       {/* category + vibe — the DJ's request line (Spin tab only) */}
       {tab === "spin" && (

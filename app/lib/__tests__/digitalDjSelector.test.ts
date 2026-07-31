@@ -101,10 +101,10 @@ describe("digitalDjSelector", () => {
     it("filters by media type", () => {
       const request: DigitalDjRequest = {
         durationMinutes: 5,
-        mediaTypes: ["music"],
+        playbackExperiences: ["watch"],
       };
       const result = selectMediaForDj(request, LIBRARY);
-      expect(result.items.every((i) => i.type === "music")).toBe(true);
+      expect(result.items.every((i) => i.playbackExperience === "watch")).toBe(true);
     });
 
     it("filters by needs (vibes)", () => {
@@ -129,6 +129,7 @@ describe("digitalDjSelector", () => {
       const inactiveItem: MediaItem = {
         id: "inactive",
         type: "music",
+        playbackExperience: "watch",
         title: "Inactive",
         author: "Test",
         url: "https://example.com",
@@ -148,7 +149,7 @@ describe("digitalDjSelector", () => {
     it("respects requested creator filter", () => {
       const request: DigitalDjRequest = {
         durationMinutes: 20,
-        mediaTypes: ["sermon"],
+        playbackExperiences: ["sermon"],
         requestedCreator: "Billy Graham",
       };
       const result = selectMediaForDj(request, LIBRARY);
@@ -177,7 +178,7 @@ describe("digitalDjSelector", () => {
 
     it("prefers items that fit over rounding up with a long one", () => {
       const song = (id: string, dur: string) => ({
-        id, type: "music" as const, title: id, author: "A", url: "https://example.com",
+        id, type: "music" as const, playbackExperience: "watch" as const, title: id, author: "A", url: "https://example.com",
         duration: dur, vibes: ["Gospel" as const], verified: "2026-01-01",
       });
       // A 23-min sermon first in shuffle order must NOT hijack a 10-min ask
@@ -190,7 +191,7 @@ describe("digitalDjSelector", () => {
 
     it("takes the shortest full match only when nothing fits", () => {
       const sermon = (id: string, dur: string) => ({
-        id, type: "sermon" as const, title: id, author: "A", url: "https://example.com",
+        id, type: "sermon" as const, playbackExperience: "sermon" as const, title: id, author: "A", url: "https://example.com",
         duration: dur, vibes: ["Gospel" as const], verified: "2026-01-01",
       });
       const result = selectForDuration([sermon("a", "45:00"), sermon("b", "23:00"), sermon("c", "38:00")], 10);
@@ -208,6 +209,7 @@ describe("digitalDjSelector", () => {
       const items = Array.from({ length: 100 }, (_, i) => ({
         id: `test-${i}`,
         type: "music" as const,
+        playbackExperience: "watch" as const,
         title: `Test ${i}`,
         author: "Test",
         url: "https://example.com",

@@ -1,17 +1,25 @@
 "use client";
 
 // The Now Spinning player — official YouTube IFrame Player API, one instance.
-// Handles play/pause, reports ended (so the deck can spin the next record),
-// and reports unavailable/blocked videos so the deck can offer the official
-// link instead. If the API script itself can't load, it falls back to a plain
-// privacy-friendly embed so playback still works.
+// Drives the site-level control bar: play/pause, real volume + mute, live
+// progress, and seeking, and reports ended (queue advance), unavailable
+// (failed-item skip), and blocked-autoplay (tap-to-resume recovery) states.
+// If the API script itself can't load, it falls back to a plain
+// privacy-friendly embed so playback still works (controls live inside it).
 
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 type YTPlayer = {
   loadVideoById: (id: string) => void;
   playVideo: () => void;
   pauseVideo: () => void;
+  setVolume: (v: number) => void;
+  mute: () => void;
+  unMute: () => void;
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+  getCurrentTime: () => number;
+  getDuration: () => number;
+  getPlayerState: () => number;
   destroy: () => void;
 };
 
@@ -29,7 +37,7 @@ type YTNamespace = {
       };
     },
   ) => YTPlayer;
-  PlayerState: { ENDED: number; PLAYING: number; PAUSED: number };
+  PlayerState: { ENDED: number; PLAYING: number; PAUSED: number; BUFFERING: number; CUED: number };
 };
 
 declare global {
@@ -66,28 +74,88 @@ function loadYouTubeApi(): Promise<YTNamespace> {
   return apiPromise;
 }
 
+export type DJPlayerHandle = {
+  /** Jump to a fraction (0–1) of the current video. */
+  seekToFraction: (fraction: number) => void;
+  /** Restart the current video from the top (repeat-one). */
+  restart: () => void;
+};
+
 export type DJPlayerProps = {
   videoId: string;
   title: string;
   playing: boolean; // desired state from the deck's Play/Pause button
+  volume: number; // 0–100, site-level control
+  muted: boolean;
   onPlaybackChange: (state: "playing" | "paused" | "ended") => void;
+  onProgress?: (currentSeconds: number, durationSeconds: number) => void;
+  onAutoplayBlocked?: () => void; // asked to play, browser said no
   onUnavailable: () => void; // embedding blocked / video gone
 };
 
-export default function DJPlayer({
-  videoId,
-  title,
-  playing,
-  onPlaybackChange,
-  onUnavailable,
-}: DJPlayerProps) {
+const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
+  { videoId, title, playing, volume, muted, onPlaybackChange, onProgress, onAutoplayBlocked, onUnavailable },
+  ref,
+) {
   const boxRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const readyRef = useRef(false);
   const [apiFailed, setApiFailed] = useState(false);
-  // Latest callbacks without re-creating the player.
-  const cbRef = useRef({ onPlaybackChange, onUnavailable, videoId });
-  cbRef.current = { onPlaybackChange, onUnavailable, videoId };
+  const [ready, setReady] = useState(false);
+  // Latest callbacks/values without re-creating the player.
+  const cbRef = useRef({ onPlaybackChange, onProgress, onAutoplayBlocked, onUnavailable, videoId, volume, muted });
+  cbRef.current = { onPlaybackChange, onProgress, onAutoplayBlocked, onUnavailable, videoId, volume, muted };
+  const blockedTimerRef = useRef<number | null>(null);
+
+  const clearBlockedWatchdog = () => {
+    if (blockedTimerRef.current !== null) {
+      window.clearTimeout(blockedTimerRef.current);
+      blockedTimerRef.current = null;
+    }
+  };
+
+  // If we asked for playback and nothing starts within 2.5s, the browser
+  // almost certainly blocked autoplay — surface a tap-to-play recovery
+  // instead of a silent black box.
+  const armBlockedWatchdog = () => {
+    clearBlockedWatchdog();
+    blockedTimerRef.current = window.setTimeout(() => {
+      const p = playerRef.current;
+      if (!p || !readyRef.current) return;
+      try {
+        const state = p.getPlayerState();
+        const YT = window.YT;
+        if (YT && state !== YT.PlayerState.PLAYING && state !== YT.PlayerState.BUFFERING && state !== YT.PlayerState.ENDED) {
+          cbRef.current.onAutoplayBlocked?.();
+        }
+      } catch {
+        // Player mid-teardown.
+      }
+    }, 2500);
+  };
+
+  useImperativeHandle(ref, () => ({
+    seekToFraction: (fraction: number) => {
+      const p = playerRef.current;
+      if (!p || !readyRef.current) return;
+      try {
+        const dur = p.getDuration();
+        if (dur > 0) p.seekTo(Math.min(Math.max(0, fraction), 1) * dur, true);
+      } catch {
+        // Ignore — next poll re-syncs.
+      }
+    },
+    restart: () => {
+      const p = playerRef.current;
+      if (!p || !readyRef.current) return;
+      try {
+        p.seekTo(0, true);
+        p.playVideo();
+      } catch {
+        // Ignore.
+      }
+    },
+  }));
 
   useEffect(() => {
     let cancelled = false;
@@ -106,11 +174,26 @@ export default function DJPlayer({
           events: {
             onReady: () => {
               readyRef.current = true;
+              setReady(true);
+              try {
+                playerRef.current?.setVolume(cbRef.current.volume);
+                if (cbRef.current.muted) playerRef.current?.mute();
+                else playerRef.current?.unMute();
+              } catch {
+                // Volume re-syncs on the next prop change.
+              }
+              armBlockedWatchdog();
             },
             onStateChange: (e) => {
-              if (e.data === YT.PlayerState.ENDED) cbRef.current.onPlaybackChange("ended");
-              else if (e.data === YT.PlayerState.PLAYING) cbRef.current.onPlaybackChange("playing");
-              else if (e.data === YT.PlayerState.PAUSED) cbRef.current.onPlaybackChange("paused");
+              if (e.data === YT.PlayerState.ENDED) {
+                clearBlockedWatchdog();
+                cbRef.current.onPlaybackChange("ended");
+              } else if (e.data === YT.PlayerState.PLAYING) {
+                clearBlockedWatchdog();
+                cbRef.current.onPlaybackChange("playing");
+              } else if (e.data === YT.PlayerState.PAUSED) {
+                cbRef.current.onPlaybackChange("paused");
+              }
             },
             onError: () => cbRef.current.onUnavailable(),
           },
@@ -123,6 +206,7 @@ export default function DJPlayer({
     return () => {
       cancelled = true;
       readyRef.current = false;
+      clearBlockedWatchdog();
       try {
         playerRef.current?.destroy();
       } catch {
@@ -144,15 +228,48 @@ export default function DJPlayer({
       if (videoId !== lastLoadedRef.current) {
         lastLoadedRef.current = videoId;
         p.loadVideoById(videoId);
+        armBlockedWatchdog();
       } else if (playing) {
         p.playVideo();
+        armBlockedWatchdog();
       } else {
+        clearBlockedWatchdog();
         p.pauseVideo();
       }
     } catch {
       // Player mid-teardown — the next render settles it.
     }
-  }, [videoId, playing]);
+  }, [videoId, playing, ready]);
+
+  // Site-level volume + mute — visitors never have to find the tiny
+  // in-iframe controls.
+  useEffect(() => {
+    const p = playerRef.current;
+    if (!p || !readyRef.current) return;
+    try {
+      p.setVolume(volume);
+      if (muted) p.mute();
+      else p.unMute();
+    } catch {
+      // Re-synced on next change.
+    }
+  }, [volume, muted, ready]);
+
+  // Live progress for the control bar, polled while mounted.
+  useEffect(() => {
+    if (apiFailed) return;
+    const timer = window.setInterval(() => {
+      const p = playerRef.current;
+      if (!p || !readyRef.current) return;
+      try {
+        const dur = p.getDuration();
+        if (dur > 0) cbRef.current.onProgress?.(p.getCurrentTime(), dur);
+      } catch {
+        // Player mid-teardown.
+      }
+    }, 500);
+    return () => window.clearInterval(timer);
+  }, [apiFailed]);
 
   if (apiFailed) {
     // Plain official embed — controls live inside the iframe.
@@ -176,4 +293,6 @@ export default function DJPlayer({
       // The IFrame API replaces the inner div with the iframe.
     />
   );
-}
+});
+
+export default DJPlayer;

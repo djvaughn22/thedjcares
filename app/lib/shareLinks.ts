@@ -29,11 +29,12 @@ export type ShareTarget = {
 };
 
 export function mediaTypeLabel(item: MediaItem): string {
+  if (item.type === "playlist") return "Playlist";
   if (item.playbackExperience === "listen") return "Song";
   if (item.playbackExperience === "watch") return "Music Video";
   if (item.playbackExperience === "podcast") return "Podcast";
   if (item.playbackExperience === "sermon") return "Sermon";
-  return "Playlist";
+  return "Song";
 }
 
 export function mediaShareTarget(item: MediaItem): ShareTarget {

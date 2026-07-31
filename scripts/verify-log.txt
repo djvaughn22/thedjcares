@@ -1,0 +1,28 @@
+25/442
+50/442
+75/442
+100/442
+125/442
+150/442
+175/442
+200/442
+225/442
+250/442
+275/442
+300/442
+325/442
+350/442
+375/442
+400/442
+425/442
+done: 442 checked, 10 dead, 206 missing duration, 0 not embeddable
+DEAD: cs-d5nT5WgV7Mg (oembed 403)
+cs-cH6fet8Vw8Q (oembed 403)
+cs-ovFwPk-dq0M (oembed 403)
+cs-s8JBaf2i3PA (oembed 403)
+cs-ZxP8FLt1K1o (oembed 403)
+cs--1-mT5SIIEI (oembed 403)
+cs-ynfhCJFxcVw (oembed 403)
+cs-2xpB2EeCWHk (oembed 403)
+cs-pILRZysBAd4 (oembed 403)
+cs-7-P66dlq2FQ (oembed 403)

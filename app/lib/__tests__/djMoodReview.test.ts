@@ -85,7 +85,9 @@ describe("the class rule, not a one-title exception", () => {
 
   it("flagged items remain available outside mood recommendations (no-mood mixes)", () => {
     // A creator request with no needs must still be able to play Anne Wilson.
-    const result = selectMediaForDj({ durationMinutes: 10, requestedCreator: "Anne Wilson" });
+    // 60 minutes is longer than her whole catalog, so every song — including
+    // the flagged one — must be selected regardless of shuffle order.
+    const result = selectMediaForDj({ durationMinutes: 60, requestedCreator: "Anne Wilson" });
     expect(result.items.some((i) => i.id === "song-my-jesus")).toBe(true);
   });
 

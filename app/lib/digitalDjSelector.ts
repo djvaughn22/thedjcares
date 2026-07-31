@@ -250,6 +250,16 @@ export function resultToShareableIds(result: DigitalDjResult): string {
 export const MAX_SHARED_IDS = 60;
 
 export function shareableIdsToItems(ids: string, items: MediaItem[] = LIBRARY): MediaItem[] {
-  const idSet = new Set(ids.slice(0, 2000).split(",").slice(0, MAX_SHARED_IDS));
-  return items.filter((i) => idSet.has(i.id));
+  const list = ids.slice(0, 2000).split(",").slice(0, MAX_SHARED_IDS);
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const out: MediaItem[] = [];
+  const seen = new Set<string>();
+  for (const id of list) {
+    const item = byId.get(id);
+    if (item && !seen.has(id)) {
+      out.push(item); // shared play order is preserved, duplicates dropped
+      seen.add(id);
+    }
+  }
+  return out;
 }
