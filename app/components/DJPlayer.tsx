@@ -220,6 +220,8 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
   }, []);
 
   // Follow the deck: new record → load it; play/pause toggles.
+  // YouTube's loadVideoById doesn't auto-play, so we must call playVideo() explicitly
+  // when playback is desired. The watchdog only fires if we asked to play but it didn't.
   const lastLoadedRef = useRef(videoId);
   useEffect(() => {
     const p = playerRef.current;
@@ -228,11 +230,20 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
       if (videoId !== lastLoadedRef.current) {
         lastLoadedRef.current = videoId;
         p.loadVideoById(videoId);
-        armBlockedWatchdog();
+        // After loading the next video, sync the desired play state.
+        if (playing) {
+          p.playVideo();
+          armBlockedWatchdog();
+        } else {
+          clearBlockedWatchdog();
+          p.pauseVideo();
+        }
       } else if (playing) {
+        // Same video, ensure it's playing if we want it to be.
         p.playVideo();
         armBlockedWatchdog();
       } else {
+        // Same video, pause it.
         clearBlockedWatchdog();
         p.pauseVideo();
       }
