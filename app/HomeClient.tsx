@@ -111,6 +111,7 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
   const [mixMode, setMixMode] = useState<MixMode>("both");
   const [prefs, setPrefs] = useState<PlayerPrefs>(DEFAULT_PREFS);
   const [progress, setProgress] = useState<{ t: number; d: number } | null>(null);
+  const lastProgressRef = useRef<{ t: number; d: number } | null>(null);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const playerRef = useRef<DJPlayerHandle>(null);
   // Which item the (single, page-level) share sheet is open for.
@@ -361,6 +362,17 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
     }
     next();
   };
+
+  // Fallback for YouTube ENDED event that doesn't always fire reliably.
+  // Monitor progress and trigger auto-advance when video reaches its end.
+  useEffect(() => {
+    if (!progress || !started || !playing) return;
+    lastProgressRef.current = progress;
+    // Detect when video has reached end (within 1 second of duration)
+    if (progress.d > 0 && progress.t >= progress.d - 1) {
+      onEnded();
+    }
+  }, [progress, started, playing]);
 
   const onUnavailable = () => {
     if (!current) return;

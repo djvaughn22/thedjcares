@@ -47,10 +47,14 @@ export function isMusicVideo(item: MediaItem): boolean {
 // Everything a mood queue may draw from: active music with a playable
 // YouTube id (the one provider whose player we can fully control), matching
 // the requested mix, and eligible for the requested mood. "surprise" matches
-// the whole recommendable music library.
+// the whole recommendable music library. Excludes static/still-image videos
+// without real playback (no closed captions support).
 export function moodPool(mood: DjNeed, mode: MixMode, items: MediaItem[] = LIBRARY): MediaItem[] {
   return activeItems(items).filter((i) => {
     if (i.type !== "music" || !i.videoId) return false;
+    // Exclude static images / lyric videos without real video content
+    // Only include items tagged as actual music videos or listen experiences
+    if (!i.playbackExperience || !["listen", "watch"].includes(i.playbackExperience)) return false;
     if (mode === "music" && isMusicVideo(i)) return false;
     if (mode === "videos" && !isMusicVideo(i)) return false;
     return eligibleForSomeNeed(i, [mood]);
