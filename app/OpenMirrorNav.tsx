@@ -9,11 +9,10 @@
 // NOTE: CrossHeartPray renders its own ChpProductNav; sync-ui.sh already
 // syncs theme-only there.
 //
-// Navigation model (2026-07-19): a satellite header belongs to the SATELLITE.
+// Navigation model (2026-07-30): a satellite header belongs to the SATELLITE.
 // The brand on the left is the current site and goes to the site's own home.
-// The ☰ menu holds the site's own pages first, then exactly two family rows:
-// "All Open Mirror projects" (the hub is the directory) and a quiet
-// CrossHeartPray connection. No satellite repeats the whole product family.
+// The ☰ menu holds ONLY the site's own pages. Open Mirror and CrossHeartPray
+// are reached through the shared footer (OpenMirrorFooter), never from here.
 //
 // Each site passes its own rows:
 //   <OpenMirrorNav site="iDontCry.com" accent="#38BDF8"
@@ -29,11 +28,6 @@ import { useEffect, useId, useRef, useState } from "react";
 import OpenMirrorThemeToggle from "./OpenMirrorTheme";
 
 export type OmNavLink = { emoji?: string; name: string; href: string };
-
-const FAMILY_TAIL: OmNavLink[] = [
-  { emoji: "🪞", name: "All Open Mirror projects", href: "https://openmirrorllc.com" },
-  { emoji: "✝️", name: "CrossHeartPray", href: "https://crossheartpray.com" },
-];
 
 // Scoped chrome the inline styles can't express: hover, focus rings, the
 // light-theme panel, and reduced-motion. Keyed to .om-menu-* class names so it
@@ -208,6 +202,7 @@ export default function OpenMirrorNav({
         <span style={{ display: "inline-flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
           <OpenMirrorThemeToggle />
 
+          {links.length > 0 ? (
           <button
             ref={buttonRef}
             type="button"
@@ -240,8 +235,9 @@ export default function OpenMirrorNav({
             </span>
             <span className="om-menu-btn-label">Menu</span>
           </button>
+          ) : null}
 
-          {open ? (
+          {open && links.length > 0 ? (
             <nav
               id={menuId}
               ref={menuRef}
@@ -265,10 +261,6 @@ export default function OpenMirrorNav({
               }}
             >
               {links.map(renderRow)}
-              {links.length > 0 ? (
-                <div aria-hidden="true" style={{ margin: "8px 6px", borderTop: "1px solid #26324c" }} />
-              ) : null}
-              {FAMILY_TAIL.map(renderRow)}
             </nav>
           ) : null}
         </span>
