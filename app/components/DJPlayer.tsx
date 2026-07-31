@@ -11,6 +11,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 
 type YTPlayer = {
   loadVideoById: (id: string) => void;
+  cueVideoById: (id: string) => void;
   playVideo: () => void;
   pauseVideo: () => void;
   setVolume: (v: number) => void;
@@ -220,8 +221,9 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
   }, []);
 
   // Follow the deck: new record → load it; play/pause toggles.
-  // YouTube's loadVideoById doesn't auto-play, so we must call playVideo() explicitly
-  // when playback is desired. The watchdog only fires if we asked to play but it didn't.
+  // Use cueVideoById to load without playing, then playVideo() after a brief delay
+  // to ensure the video is buffered. This respects the user gesture context from
+  // the Play button click and avoids browser autoplay restrictions.
   const lastLoadedRef = useRef(videoId);
   useEffect(() => {
     const p = playerRef.current;
@@ -229,11 +231,19 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
     try {
       if (videoId !== lastLoadedRef.current) {
         lastLoadedRef.current = videoId;
-        p.loadVideoById(videoId);
-        // After loading the next video, sync the desired play state.
+        p.cueVideoById(videoId);
+        // After cueing the next video, sync the desired play state.
+        // Small delay ensures video is buffered before attempting playback.
         if (playing) {
-          p.playVideo();
-          armBlockedWatchdog();
+          const timer = window.setTimeout(() => {
+            try {
+              p.playVideo();
+              armBlockedWatchdog();
+            } catch {
+              // Ignore if player was destroyed.
+            }
+          }, 50);
+          return () => window.clearTimeout(timer);
         } else {
           clearBlockedWatchdog();
           p.pauseVideo();

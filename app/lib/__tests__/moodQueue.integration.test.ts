@@ -17,29 +17,9 @@ import {
 } from "../moodQueue";
 import { LIBRARY, type MediaItem } from "../djCaresLibrary";
 
-// Mock localStorage for tests
-const mockStorage: Record<string, string> = {};
-const localStorageMock = {
-  getItem: (key: string) => mockStorage[key] || null,
-  setItem: (key: string, value: string) => {
-    mockStorage[key] = value;
-  },
-  removeItem: (key: string) => {
-    delete mockStorage[key];
-  },
-  clear: () => {
-    Object.keys(mockStorage).forEach((key) => delete mockStorage[key]);
-  },
-};
-Object.defineProperty(global, "localStorage", {
-  value: localStorageMock,
-  writable: true,
-});
-
 describe("mood queue end-to-end: build → play → advance", () => {
   beforeEach(() => {
-    mockStorage["clear"] = undefined;
-    Object.keys(mockStorage).forEach((key) => delete mockStorage[key]);
+    localStorage.clear();
   });
 
   it("builds a queue with at least 20 items for a full hour of mixed content", () => {
@@ -119,7 +99,7 @@ describe("mood queue end-to-end: build → play → advance", () => {
     expect(isAtQueueEnd(queue, 0, allFailed)).toBe(true);
   });
 
-  it("session serialization and validation roundtrips through parseSession", () => {
+  it("session persistence round-trips: save and restore full state via localStorage", () => {
     const queue = buildQueue("joy", "music");
     if (queue.length < 10) return;
 
@@ -131,29 +111,35 @@ describe("mood queue end-to-end: build → play → advance", () => {
       updatedAt: Date.now(),
     };
 
-    // Serialize and parse (without localStorage)
-    const json = JSON.stringify(sessionData);
-    const parsed = JSON.parse(json);
-    expect(parsed.mood).toBe("joy");
-    expect(parsed.position).toBe(3);
+    saveSession(sessionData);
+    const restored = loadSession();
+
+    expect(restored).not.toBeNull();
+    if (restored) {
+      expect(restored.mood).toBe("joy");
+      expect(restored.mode).toBe("music");
+      expect(restored.position).toBe(3);
+      expect(restored.queueIds).toEqual(sessionData.queueIds);
+    }
   });
 
-  it("session TTL validation: parseSession rejects old sessions", () => {
-    const now = Date.now();
-    const oldUpdatedAt = now - 15 * 24 * 60 * 60 * 1000; // 15 days old
-    const session = {
+  it("session TTL validation: old sessions are not restored", () => {
+    const queue = buildQueue("peace", "videos");
+    if (queue.length < 10) return;
+
+    const oldSession = {
       mood: "peace" as const,
       mode: "videos" as const,
-      queueIds: ["song-1", "song-2"],
+      queueIds: queue.slice(0, 10).map((i) => i.id),
       position: 0,
-      updatedAt: oldUpdatedAt,
+      updatedAt: Date.now() - 15 * 24 * 60 * 60 * 1000, // 15 days old
     };
 
-    // Direct validation without localStorage
-    const json = JSON.stringify(session);
-    // parseSession would reject this due to TTL, but we test the logic independently
-    const ttl = 1000 * 60 * 60 * 24 * 14;
-    expect(now - oldUpdatedAt).toBeGreaterThan(ttl);
+    saveSession(oldSession);
+    const restored = loadSession();
+
+    // TTL is 14 days, so this should not restore
+    expect(restored).toBeNull();
   });
 
   it("resolveQueue converts stored IDs back to MediaItems in order", () => {
@@ -180,27 +166,28 @@ describe("mood queue end-to-end: build → play → advance", () => {
     expect(resolved.map((i) => i.id)).toEqual(ids.filter((id) => id !== "unknown-fake-id"));
   });
 
-  it("preferences serialize and deserialize correctly", () => {
+  it("preferences persist volume, mute, and repeat state via localStorage", () => {
     const prefs: PlayerPrefs = {
       volume: 65,
       muted: true,
       repeat: "one",
     };
 
-    // Test JSON round-trip without localStorage
-    const json = JSON.stringify(prefs);
-    const restored = JSON.parse(json) as PlayerPrefs;
+    savePrefs(prefs);
+    const restored = loadPrefs();
 
     expect(restored.volume).toBe(65);
     expect(restored.muted).toBe(true);
     expect(restored.repeat).toBe("one");
   });
 
-  it("DEFAULT_PREFS provide sensible defaults", () => {
-    // Import and verify DEFAULT_PREFS directly
-    expect(DEFAULT_PREFS.volume).toBe(100);
-    expect(DEFAULT_PREFS.muted).toBe(false);
-    expect(DEFAULT_PREFS.repeat).toBe("queue");
+  it("preferences default to sensible values on cold start", () => {
+    localStorage.clear();
+    const prefs = loadPrefs();
+
+    expect(prefs.volume).toBe(100);
+    expect(prefs.muted).toBe(false);
+    expect(prefs.repeat).toBe("queue");
   });
 
   it("mix mode switching: music-only queue differs from both", () => {
@@ -227,7 +214,7 @@ describe("mood queue end-to-end: build → play → advance", () => {
 
 describe("queue advancement state machine: simulate UI flow", () => {
   beforeEach(() => {
-    Object.keys(mockStorage).forEach((key) => delete mockStorage[key]);
+    localStorage.clear();
   });
 
   it("simulates: start mood → position 0 → ended → position 1 → ended → position 2", () => {
@@ -293,24 +280,26 @@ describe("queue advancement state machine: simulate UI flow", () => {
 
     const position = 5;
 
-    // Simulate a saved session (without using localStorage)
-    const sessionData = {
+    // Save mid-queue via localStorage
+    const session = {
       mood: "family" as const,
       mode: "both" as const,
       queueIds: queue.map((i) => i.id),
       position,
       updatedAt: Date.now(),
     };
+    saveSession(session);
 
-    // Simulate serialization/deserialization
-    const json = JSON.stringify(sessionData);
-    const parsed = JSON.parse(json);
+    // Simulate page reload: restore session
+    const restored = loadSession();
+    expect(restored).not.toBeNull();
+    if (restored) {
+      expect(restored.position).toBe(5);
 
-    expect(parsed.position).toBe(position);
-
-    // Resolve the queue
-    const restoredQueue = resolveQueue(parsed.queueIds);
-    expect(restoredQueue[position].id).toBe(queue[position].id);
+      // Resolve the queue
+      const restoredQueue = resolveQueue(restored.queueIds);
+      expect(restoredQueue[position].id).toBe(queue[position].id);
+    }
   });
 
   it("simulates: multiple unavailable items in a row → skip all to first playable", () => {
