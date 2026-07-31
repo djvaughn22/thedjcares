@@ -221,9 +221,10 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
   }, []);
 
   // Follow the deck: new record → load it; play/pause toggles.
-  // Use cueVideoById to load without playing, then playVideo() after a brief delay
-  // to ensure the video is buffered. This respects the user gesture context from
-  // the Play button click and avoids browser autoplay restrictions.
+  // Use cueVideoById to load without playing, then playVideo() immediately
+  // to start playback. The YouTube IFrame API requires playVideo() to be called
+  // in the user gesture context (the Play button click), so we call it directly
+  // without setTimeout delays that would exit the gesture context.
   const lastLoadedRef = useRef(videoId);
   useEffect(() => {
     const p = playerRef.current;
@@ -232,18 +233,11 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
       if (videoId !== lastLoadedRef.current) {
         lastLoadedRef.current = videoId;
         p.cueVideoById(videoId);
-        // After cueing the next video, sync the desired play state.
-        // Small delay ensures video is buffered before attempting playback.
+        // After cueing the next video, immediately sync the desired play state
+        // while still in the user gesture context (from the Play button click).
         if (playing) {
-          const timer = window.setTimeout(() => {
-            try {
-              p.playVideo();
-              armBlockedWatchdog();
-            } catch {
-              // Ignore if player was destroyed.
-            }
-          }, 50);
-          return () => window.clearTimeout(timer);
+          p.playVideo();
+          armBlockedWatchdog();
         } else {
           clearBlockedWatchdog();
           p.pauseVideo();
