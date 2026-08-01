@@ -186,22 +186,22 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
               armBlockedWatchdog();
             },
             onStateChange: (e) => {
-              const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
+              console.log('[DJPlayer] YouTube state changed:', e.data, '(0=ended, 1=playing, 2=paused, 3=buffering, 5=cued)');
               if (e.data === YT.PlayerState.ENDED) {
-                DEV && console.log('[DJPlayer] YouTube state ENDED (0)');
+                console.log('[DJPlayer] *** ENDED EVENT FIRING ***');
                 clearBlockedWatchdog();
-                DEV && console.log('[DJPlayer] onPlaybackChange("ended") calling');
+                console.log('[DJPlayer] onPlaybackChange("ended") calling');
                 cbRef.current.onPlaybackChange("ended");
-                DEV && console.log('[DJPlayer] onPlaybackChange("ended") called');
+                console.log('[DJPlayer] onPlaybackChange("ended") called');
               } else if (e.data === YT.PlayerState.PLAYING) {
-                DEV && console.log('[DJPlayer] YouTube state PLAYING (1)');
+                console.log('[DJPlayer] PLAYING');
                 clearBlockedWatchdog();
                 cbRef.current.onPlaybackChange("playing");
               } else if (e.data === YT.PlayerState.PAUSED) {
-                DEV && console.log('[DJPlayer] YouTube state PAUSED (2)');
+                console.log('[DJPlayer] PAUSED');
                 cbRef.current.onPlaybackChange("paused");
               } else {
-                DEV && console.log('[DJPlayer] YouTube state', e.data);
+                console.log('[DJPlayer] Other state:', e.data);
               }
             },
             onError: () => cbRef.current.onUnavailable(),
@@ -235,44 +235,43 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
   // without setTimeout delays that would exit the gesture context.
   const lastLoadedRef = useRef(videoId);
   useEffect(() => {
-    const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
     const p = playerRef.current;
-    DEV && console.log('[DJPlayer.effect] videoId:', videoId, 'playing:', playing, 'ready:', ready, 'playerExists:', !!p, 'readyRef:', readyRef.current);
+    console.log('[DJPlayer.effect] TRIGGERED. videoId:', videoId, 'playing:', playing, 'ready:', ready, 'playerExists:', !!p);
     if (!p || !readyRef.current) {
-      DEV && console.log('[DJPlayer.effect] early return: player not ready');
+      console.log('[DJPlayer.effect] EARLY RETURN: player not ready');
       return;
     }
     try {
       if (videoId !== lastLoadedRef.current) {
-        DEV && console.log('[DJPlayer.effect] new videoId detected, old:', lastLoadedRef.current, 'new:', videoId);
+        console.log('[DJPlayer.effect] *** NEW VIDEO ID ***. old:', lastLoadedRef.current, 'new:', videoId);
         lastLoadedRef.current = videoId;
-        DEV && console.log('[DJPlayer.effect] calling cueVideoById');
+        console.log('[DJPlayer.effect] calling cueVideoById');
         p.cueVideoById(videoId);
         // After cueing the next video, immediately sync the desired play state
         // while still in the user gesture context (from the Play button click).
         if (playing) {
-          DEV && console.log('[DJPlayer.effect] playing=true, calling playVideo()');
+          console.log('[DJPlayer.effect] playing=true, calling playVideo()');
           p.playVideo();
           armBlockedWatchdog();
         } else {
-          DEV && console.log('[DJPlayer.effect] playing=false, calling pauseVideo()');
+          console.log('[DJPlayer.effect] playing=false, calling pauseVideo()');
           clearBlockedWatchdog();
           p.pauseVideo();
         }
       } else if (playing) {
         // Same video, ensure it's playing if we want it to be.
-        DEV && console.log('[DJPlayer.effect] same video, playing=true, calling playVideo()');
+        console.log('[DJPlayer.effect] same video, playing=true, calling playVideo()');
         p.playVideo();
         armBlockedWatchdog();
       } else {
         // Same video, pause it.
-        DEV && console.log('[DJPlayer.effect] same video, playing=false, calling pauseVideo()');
+        console.log('[DJPlayer.effect] same video, playing=false, calling pauseVideo()');
         clearBlockedWatchdog();
         p.pauseVideo();
       }
     } catch (e) {
       // Player mid-teardown — the next render settles it.
-      DEV && console.log('[DJPlayer.effect] exception caught:', e);
+      console.log('[DJPlayer.effect] EXCEPTION:', e);
     }
   }, [videoId, playing, ready]);
 

@@ -249,8 +249,7 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
   );
 
   const startItem = useCallback((item: MediaItem, viaSpin = false, inMoodMix = false) => {
-    const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
-    DEV && console.log('[HomeClient.startItem] loading item:', item.id, item.title, 'videoId:', item.videoId);
+    console.log('[HomeClient.startItem] LOADING:', item.title, 'videoId:', item.videoId);
     // A pick outside the mood queue is a new choice — the mood mix steps
     // aside. A pick that IS in the queue jumps the queue there instead.
     if (!inMoodMix && moodQueue) {
@@ -268,9 +267,8 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
     posRef.current = sessionRef.current.length - 1;
     historyRef.current = pushHistory(historyRef.current, item.id, Math.max(pool.length, 2));
     saveHistory(historyRef.current);
-    DEV && console.log('[HomeClient.startItem] setCurrent to:', item.id);
+    console.log('[HomeClient.startItem] setState: current, playing, started=true');
     setCurrent(item);
-    DEV && console.log('[HomeClient.startItem] setPlaying(true)');
     setStarted(true);
     setPlaying(true);
     setBlocked(false);
@@ -322,21 +320,20 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
 
   // Move through the queue, skipping anything that failed to play.
   const moodStep = useCallback((direction: 1 | -1) => {
-    const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
-    DEV && console.log('[HomeClient.moodStep] direction:', direction, 'current position:', moodQueue?.position);
+    console.log('[HomeClient.moodStep] CALLED. direction:', direction);
     if (!moodQueue) {
-      DEV && console.log('[HomeClient.moodStep] no moodQueue, returning');
+      console.log('[HomeClient.moodStep] no moodQueue, returning');
       return;
     }
     const idx = nextPlayableIndex(moodQueue.queue, moodQueue.position, unavailable, direction);
-    DEV && console.log('[HomeClient.moodStep] nextPlayableIndex returned:', idx);
+    console.log('[HomeClient.moodStep] nextPlayableIndex returned:', idx, 'from position:', moodQueue.position);
     if (idx === null) {
-      DEV && console.log('[HomeClient.moodStep] no playable index found');
+      console.log('[HomeClient.moodStep] NO PLAYABLE INDEX - queue has no more items');
       setAnnounce("Nothing in this mix will play right now — cue a new mix.");
       return;
     }
     const nextItem = moodQueue.queue[idx];
-    DEV && console.log('[HomeClient.moodStep] advancing to index:', idx, 'item:', nextItem?.id, nextItem?.title);
+    console.log('[HomeClient.moodStep] ADVANCING to:', idx, 'item:', nextItem?.title);
     const mix = { ...moodQueue, position: idx };
     setMoodQueue(mix);
     persistMoodMix(mix);
@@ -400,22 +397,21 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
   };
 
   const next = useCallback(() => {
-    const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
-    DEV && console.log('[HomeClient.next] moodQueue:', !!moodQueue, 'current:', current?.id);
+    console.log('[HomeClient.next] CALLED. moodQueue:', !!moodQueue);
     if (moodQueue) {
-      DEV && console.log('[HomeClient.next] in mood mix, checking queue end');
+      console.log('[HomeClient.next] in mood mix. position:', moodQueue.position, 'queue length:', moodQueue.queue.length);
       const atEnd = isAtQueueEnd(moodQueue.queue, moodQueue.position, unavailable);
-      DEV && console.log('[HomeClient.next] atQueueEnd:', atEnd);
+      console.log('[HomeClient.next] atEnd:', atEnd);
       if (atEnd) {
-        DEV && console.log('[HomeClient.next] calling moodRollover');
+        console.log('[HomeClient.next] AT END - calling moodRollover');
         moodRollover();
       } else {
-        DEV && console.log('[HomeClient.next] calling moodStep(1)');
+        console.log('[HomeClient.next] NOT at end - calling moodStep(1)');
         moodStep(1);
       }
       return;
     }
-    DEV && console.log('[HomeClient.next] not in mood mix, regular session mode');
+    console.log('[HomeClient.next] regular session mode (not mood mix)');
     if (posRef.current < sessionRef.current.length - 1) {
       posRef.current += 1;
       const item = sessionRef.current[posRef.current];
@@ -430,26 +426,24 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
 
   // A record finished on its own — memoize to prevent stale closures in effects.
   const onEnded = useCallback(() => {
-    const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
-    DEV && console.log('[HomeClient] onEnded callback fired, current item:', current?.id, current?.title);
+    console.log('[HomeClient.onEnded] FIRED. current:', current?.id, current?.title);
     if (prefs.repeat === "one") {
-      DEV && console.log('[HomeClient] repeat=one, restarting current video');
+      console.log('[HomeClient.onEnded] repeat=one, restarting');
       playerRef.current?.restart();
       return;
     }
-    DEV && console.log('[HomeClient] calling next()');
+    console.log('[HomeClient.onEnded] calling next()');
     next();
   }, [current, prefs.repeat, next]);
 
   // Fallback for YouTube ENDED event that doesn't always fire reliably.
   // Monitor progress and trigger auto-advance when video reaches its end.
   useEffect(() => {
-    const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
     if (!progress || !started || !playing) return;
     lastProgressRef.current = progress;
     // Detect when video has reached end (within 1 second of duration)
     if (progress.d > 0 && progress.t >= progress.d - 1) {
-      DEV && console.log('[HomeClient.progressFallback] progress reached end, calling onEnded. t:', progress.t, 'd:', progress.d);
+      console.log('[HomeClient.progressFallback] VIDEO REACHED END - calling onEnded. progress:', progress.t.toFixed(1), '/', progress.d.toFixed(1));
       onEnded();
     }
   }, [progress, started, playing, onEnded]);
