@@ -6,7 +6,7 @@
 // Everything playable comes from the approved library in
 // app/lib/djCaresLibrary.ts. The shuffle (app/lib/spin.ts) never leaves it.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DJPlayer, { type DJPlayerHandle } from "./components/DJPlayer";
 import ChurchSubmitForm from "./components/ChurchSubmitForm";
 import ShareSheet, { ShareTrigger } from "./components/ShareMenu";
