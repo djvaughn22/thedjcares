@@ -79,14 +79,25 @@ function shuffle<T>(list: T[], rand: () => number): T[] {
 
 // Build a fresh queue: the full shuffled pool. `avoidFirst` keeps a rollover
 // (or "new mix" after something played) from immediately repeating the item
-// that just finished — whenever an alternative exists.
+// that just finished — whenever an alternative exists. `avoidAlready` filters
+// out items the user has already heard this session, keeping content fresh.
 export function buildQueue(
   mood: DjNeed,
   mode: MixMode,
-  opts: { avoidFirst?: string; items?: MediaItem[]; rand?: () => number } = {},
+  opts: { avoidFirst?: string; avoidAlready?: Set<string>; items?: MediaItem[]; rand?: () => number } = {},
 ): MediaItem[] {
   const rand = opts.rand ?? Math.random;
-  const pool = moodPool(mood, mode, opts.items ?? LIBRARY);
+  let pool = moodPool(mood, mode, opts.items ?? LIBRARY);
+
+  // Filter out items already heard this session (unless exhausted)
+  if (opts.avoidAlready && opts.avoidAlready.size > 0) {
+    const unheard = pool.filter((i) => !opts.avoidAlready!.has(i.id));
+    if (unheard.length > 0) {
+      pool = unheard;
+    }
+    // If all items heard, use full pool (wrap around for infinite listening)
+  }
+
   let queue = shuffle(pool, rand);
   if (queue.length > 1 && opts.avoidFirst && queue[0].id === opts.avoidFirst) {
     const swapWith = 1 + Math.floor(rand() * (queue.length - 1));

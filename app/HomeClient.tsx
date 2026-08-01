@@ -58,6 +58,17 @@ import {
   type MixMode,
   type PlayerPrefs,
 } from "./lib/moodQueue";
+import {
+  clearSessionHistory,
+  createSessionHistory,
+  getPlayedCount,
+  getPlayOrder,
+  hasPlayed,
+  loadSessionHistory,
+  markAsPlayed,
+  saveSessionHistory,
+  type SessionHistory,
+} from "./lib/sessionHistory";
 import type { DjNeed } from "./lib/digitalDjSelector";
 import { track } from "./lib/analytics";
 
@@ -112,6 +123,8 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
   const [prefs, setPrefs] = useState<PlayerPrefs>(DEFAULT_PREFS);
   const [progress, setProgress] = useState<{ t: number; d: number } | null>(null);
   const lastProgressRef = useRef<{ t: number; d: number } | null>(null);
+  const [sessionHistory, setSessionHistory] = useState<SessionHistory>(createSessionHistory());
+  const playedCountRef = useRef(0);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const playerRef = useRef<DJPlayerHandle>(null);
   // Which item the (single, page-level) share sheet is open for.
@@ -132,6 +145,13 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
     follow();
     window.addEventListener("om-theme", follow);
     return () => window.removeEventListener("om-theme", follow);
+  }, []);
+
+  // Initialize session history on mount
+  useEffect(() => {
+    const history = loadSessionHistory();
+    setSessionHistory(history);
+    playedCountRef.current = getPlayedCount(history);
   }, []);
 
   // Tabs ↔ URL hash (#music, #sermons…), so sections are linkable.
@@ -243,6 +263,13 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
     setBlocked(false);
     setAutoplayBlocked(false);
     setProgress(null);
+
+    // Track this play in session history
+    const newHistory = markAsPlayed(sessionHistory, item.id);
+    setSessionHistory(newHistory);
+    saveSessionHistory(newHistory);
+    playedCountRef.current = getPlayedCount(newHistory);
+
     setAnnounce(`Now spinning: ${item.title} — ${item.author}`);
     track("media_play", { content_type: item.type, content_title: item.title, via: viaSpin ? "spin" : "pick" });
     deckRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -261,7 +288,7 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
 
   // Selecting a mood (or "New mix") builds a fresh shuffled queue and starts it.
   const startMoodMix = (mood: DjNeed, mode: MixMode = mixMode) => {
-    const queue = buildQueue(mood, mode, { avoidFirst: current?.id });
+    const queue = buildQueue(mood, mode, { avoidFirst: current?.id, avoidAlready: sessionHistory.playedIds });
     if (queue.length === 0) {
       setAnnounce("Nothing matches that mix yet — try Both.");
       return;
@@ -294,7 +321,7 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
   // shuffle that never opens on the item that just finished.
   const moodRollover = () => {
     if (!moodQueue) return;
-    const queue = buildQueue(moodQueue.mood, moodQueue.mode, { avoidFirst: current?.id });
+    const queue = buildQueue(moodQueue.mood, moodQueue.mode, { avoidFirst: current?.id, avoidAlready: sessionHistory.playedIds });
     if (queue.length === 0) return;
     const mix = { ...moodQueue, queue, position: 0 };
     setMoodQueue(mix);
