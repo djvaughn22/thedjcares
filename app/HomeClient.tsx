@@ -148,6 +148,17 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
   const posRef = useRef(-1);
   const deckRef = useRef<HTMLDivElement>(null);
 
+  // Track state changes for debugging
+  useEffect(() => {
+    if (current) console.log('[STATE] current:', current.id, current.title, 'videoId:', current.videoId);
+  }, [current?.id]);
+  useEffect(() => {
+    console.log('[STATE] playing:', playing, 'started:', started);
+  }, [playing, started]);
+  useEffect(() => {
+    if (moodQueue) console.log('[STATE] moodQueue: pos', moodQueue.position, 'len', moodQueue.queue.length);
+  }, [moodQueue?.position, moodQueue?.queue.length]);
+
   // Follow the family ☀️/🌙 toggle in the Open Mirror bar.
   useEffect(() => {
     const follow = () => setDark(document.documentElement.dataset.omTheme !== "light");
@@ -753,7 +764,14 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
                 setPlayerState(s);
               }
             }}
-            onProgress={(t, d) => setProgress({ t, d })}
+            onProgress={(t, d) => {
+              // Log periodically to avoid log spam - every 10 seconds or at end
+              const isNearEnd = d > 0 && t >= d - 1;
+              if (isNearEnd || (Math.floor(t) % 10 === 0 && t !== lastProgressRef.current?.t)) {
+                console.log(`[onProgress] t:${t.toFixed(1)}s / d:${d.toFixed(1)}s - ${isNearEnd ? '*** NEAR END ***' : ''}`);
+              }
+              setProgress({ t, d });
+            }}
             onAutoplayBlocked={() => setAutoplayBlocked(true)}
             onUnavailable={onUnavailable}
           />
