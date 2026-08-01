@@ -292,14 +292,24 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
   // Live progress for the control bar, polled while mounted.
   useEffect(() => {
     if (apiFailed) return;
+    let pollCount = 0;
     const timer = window.setInterval(() => {
+      pollCount++;
       const p = playerRef.current;
-      if (!p || !readyRef.current) return;
+      if (!p || !readyRef.current) {
+        if (pollCount % 20 === 0) console.log('[DJPlayer.progress] poll but player not ready');
+        return;
+      }
       try {
         const dur = p.getDuration();
-        if (dur > 0) cbRef.current.onProgress?.(p.getCurrentTime(), dur);
-      } catch {
-        // Player mid-teardown.
+        const t = p.getCurrentTime();
+        if (dur > 0) {
+          cbRef.current.onProgress?.(t, dur);
+        } else {
+          if (pollCount % 10 === 0) console.log('[DJPlayer.progress] duration not positive:', dur);
+        }
+      } catch (e) {
+        console.log('[DJPlayer.progress] ERROR in polling:', e);
       }
     }, 500);
     return () => window.clearInterval(timer);

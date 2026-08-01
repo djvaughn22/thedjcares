@@ -136,6 +136,7 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
   const playedCountRef = useRef(0);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const playerRef = useRef<DJPlayerHandle>(null);
+  const onEndedInProgressRef = useRef(false); // Prevent re-entrance
   // Which item the (single, page-level) share sheet is open for.
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null);
   const [shareTriggerId, setShareTriggerId] = useState<string | null>(null);
@@ -438,13 +439,26 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
   // A record finished on its own — memoize to prevent stale closures in effects.
   const onEnded = useCallback(() => {
     console.log('[HomeClient.onEnded] FIRED. current:', current?.id, current?.title);
+    // Prevent re-entrance - only process once per video end
+    if (onEndedInProgressRef.current) {
+      console.log('[HomeClient.onEnded] BLOCKED - already in progress');
+      return;
+    }
+    onEndedInProgressRef.current = true;
+
     if (prefs.repeat === "one") {
       console.log('[HomeClient.onEnded] repeat=one, restarting');
       playerRef.current?.restart();
+      onEndedInProgressRef.current = false;
       return;
     }
     console.log('[HomeClient.onEnded] calling next()');
     next();
+
+    // Reset after a short delay to allow state updates
+    window.setTimeout(() => {
+      onEndedInProgressRef.current = false;
+    }, 100);
   }, [current, prefs.repeat, next]);
 
   // Fallback for YouTube ENDED event that doesn't always fire reliably.
