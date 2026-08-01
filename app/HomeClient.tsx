@@ -105,6 +105,15 @@ const REQUEST_MAILTO =
 
 export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjEnabled?: boolean }) {
   const [dark, setDark] = useState(true);
+
+  // Enable debug logging with: window.__djDebug = true; in console
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      console.log('%c🎧 The DJ Cares Debug Mode', 'color: #A78BFA; font-weight: 900; font-size: 14px;');
+      console.log('Enable detailed logging: window.__djDebug = true');
+      console.log('Then select a mood and press Play to see the full event chain.');
+    }
+  }, []);
   const [tab, setTab] = useState<Tab>("spin");
 
   // --- deck state ---
@@ -239,7 +248,9 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
     [category, vibe, unavailable],
   );
 
-  const startItem = (item: MediaItem, viaSpin = false, inMoodMix = false) => {
+  const startItem = useCallback((item: MediaItem, viaSpin = false, inMoodMix = false) => {
+    const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
+    DEV && console.log('[HomeClient.startItem] loading item:', item.id, item.title, 'videoId:', item.videoId);
     // A pick outside the mood queue is a new choice — the mood mix steps
     // aside. A pick that IS in the queue jumps the queue there instead.
     if (!inMoodMix && moodQueue) {
@@ -257,7 +268,9 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
     posRef.current = sessionRef.current.length - 1;
     historyRef.current = pushHistory(historyRef.current, item.id, Math.max(pool.length, 2));
     saveHistory(historyRef.current);
+    DEV && console.log('[HomeClient.startItem] setCurrent to:', item.id);
     setCurrent(item);
+    DEV && console.log('[HomeClient.startItem] setPlaying(true)');
     setStarted(true);
     setPlaying(true);
     setBlocked(false);
@@ -273,7 +286,7 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
     setAnnounce(`Now spinning: ${item.title} — ${item.author}`);
     track("media_play", { content_type: item.type, content_title: item.title, via: viaSpin ? "spin" : "pick" });
     deckRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  };
+  }, [moodQueue, pool.length, sessionHistory]);
 
   // --- the mood mix -----------------------------------------------------------
 
@@ -287,12 +300,16 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
   };
 
   // Selecting a mood (or "New mix") builds a fresh shuffled queue and starts it.
-  const startMoodMix = (mood: DjNeed, mode: MixMode = mixMode) => {
+  const startMoodMix = useCallback((mood: DjNeed, mode: MixMode = mixMode) => {
+    const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
+    DEV && console.log('[HomeClient.startMoodMix] mood:', mood, 'mode:', mode);
     const queue = buildQueue(mood, mode, { avoidFirst: current?.id, avoidAlready: sessionHistory.playedIds });
     if (queue.length === 0) {
+      DEV && console.log('[HomeClient.startMoodMix] queue is empty');
       setAnnounce("Nothing matches that mix yet — try Both.");
       return;
     }
+    DEV && console.log('[HomeClient.startMoodMix] queue built with', queue.length, 'items, starting first');
     const mix = { mood, mode, queue, position: 0 };
     setMoodQueue(mix);
     persistMoodMix(mix);
@@ -301,43 +318,62 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
     const label = mood === "surprise" ? "surprise mix" : `${mood} mix`;
     setAnnounce(`Your ${label} is on: ${queue.length} songs, ${queue[0].title} first.`);
     track("mood_mix_start", { mood, mode, size: queue.length });
-  };
+  }, [current, sessionHistory.playedIds, mixMode, startItem]);
 
   // Move through the queue, skipping anything that failed to play.
-  const moodStep = (direction: 1 | -1) => {
-    if (!moodQueue) return;
+  const moodStep = useCallback((direction: 1 | -1) => {
+    const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
+    DEV && console.log('[HomeClient.moodStep] direction:', direction, 'current position:', moodQueue?.position);
+    if (!moodQueue) {
+      DEV && console.log('[HomeClient.moodStep] no moodQueue, returning');
+      return;
+    }
     const idx = nextPlayableIndex(moodQueue.queue, moodQueue.position, unavailable, direction);
+    DEV && console.log('[HomeClient.moodStep] nextPlayableIndex returned:', idx);
     if (idx === null) {
+      DEV && console.log('[HomeClient.moodStep] no playable index found');
       setAnnounce("Nothing in this mix will play right now — cue a new mix.");
       return;
     }
+    const nextItem = moodQueue.queue[idx];
+    DEV && console.log('[HomeClient.moodStep] advancing to index:', idx, 'item:', nextItem?.id, nextItem?.title);
     const mix = { ...moodQueue, position: idx };
     setMoodQueue(mix);
     persistMoodMix(mix);
     startItem(mix.queue[idx], true, true);
-  };
+  }, [moodQueue, unavailable, startItem]);
 
   // When the queue's last playable item ends, repeat the mood with a fresh
   // shuffle that never opens on the item that just finished.
-  const moodRollover = () => {
+  const moodRollover = useCallback(() => {
+    const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
+    DEV && console.log('[HomeClient.moodRollover] rebuilding queue for mood:', moodQueue?.mood);
     if (!moodQueue) return;
     const queue = buildQueue(moodQueue.mood, moodQueue.mode, { avoidFirst: current?.id, avoidAlready: sessionHistory.playedIds });
-    if (queue.length === 0) return;
+    if (queue.length === 0) {
+      DEV && console.log('[HomeClient.moodRollover] new queue is empty');
+      return;
+    }
+    DEV && console.log('[HomeClient.moodRollover] new queue built with', queue.length, 'items, starting first item');
     const mix = { ...moodQueue, queue, position: 0 };
     setMoodQueue(mix);
     persistMoodMix(mix);
     startItem(queue[0], true, true);
     setAnnounce("Back to the top — fresh shuffle, same mood.");
-  };
+  }, [moodQueue, current, sessionHistory.playedIds, startItem]);
 
-  const spin = () => {
+  const spin = useCallback(() => {
+    const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
+    DEV && console.log('[HomeClient.spin] moodQueue:', !!moodQueue);
     if (moodQueue) {
+      DEV && console.log('[HomeClient.spin] in mood mix, calling moodStep(1)');
       moodStep(1);
       return;
     }
-    const next = pickNext(pool, historyRef.current);
-    if (next) startItem(next, true);
-  };
+    const nextItem = pickNext(pool, historyRef.current);
+    DEV && console.log('[HomeClient.spin] picked item:', nextItem?.id, nextItem?.title);
+    if (nextItem) startItem(nextItem, true);
+  }, [moodQueue, pool, moodStep, startItem]);
 
   const spinMinistry = (key: MinistryKey) => {
     endMoodMix();
@@ -363,12 +399,23 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
     setAnnounce(`Now spinning: ${item.title} — ${item.author}`);
   };
 
-  const next = () => {
+  const next = useCallback(() => {
+    const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
+    DEV && console.log('[HomeClient.next] moodQueue:', !!moodQueue, 'current:', current?.id);
     if (moodQueue) {
-      if (isAtQueueEnd(moodQueue.queue, moodQueue.position, unavailable)) moodRollover();
-      else moodStep(1);
+      DEV && console.log('[HomeClient.next] in mood mix, checking queue end');
+      const atEnd = isAtQueueEnd(moodQueue.queue, moodQueue.position, unavailable);
+      DEV && console.log('[HomeClient.next] atQueueEnd:', atEnd);
+      if (atEnd) {
+        DEV && console.log('[HomeClient.next] calling moodRollover');
+        moodRollover();
+      } else {
+        DEV && console.log('[HomeClient.next] calling moodStep(1)');
+        moodStep(1);
+      }
       return;
     }
+    DEV && console.log('[HomeClient.next] not in mood mix, regular session mode');
     if (posRef.current < sessionRef.current.length - 1) {
       posRef.current += 1;
       const item = sessionRef.current[posRef.current];
@@ -379,27 +426,33 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
     } else {
       spin();
     }
-  };
+  }, [moodQueue, unavailable, current, moodRollover, moodStep, spin]);
 
-  // A record finished on its own.
-  const onEnded = () => {
+  // A record finished on its own — memoize to prevent stale closures in effects.
+  const onEnded = useCallback(() => {
+    const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
+    DEV && console.log('[HomeClient] onEnded callback fired, current item:', current?.id, current?.title);
     if (prefs.repeat === "one") {
+      DEV && console.log('[HomeClient] repeat=one, restarting current video');
       playerRef.current?.restart();
       return;
     }
+    DEV && console.log('[HomeClient] calling next()');
     next();
-  };
+  }, [current, prefs.repeat, next]);
 
   // Fallback for YouTube ENDED event that doesn't always fire reliably.
   // Monitor progress and trigger auto-advance when video reaches its end.
   useEffect(() => {
+    const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
     if (!progress || !started || !playing) return;
     lastProgressRef.current = progress;
     // Detect when video has reached end (within 1 second of duration)
     if (progress.d > 0 && progress.t >= progress.d - 1) {
+      DEV && console.log('[HomeClient.progressFallback] progress reached end, calling onEnded. t:', progress.t, 'd:', progress.d);
       onEnded();
     }
-  }, [progress, started, playing]);
+  }, [progress, started, playing, onEnded]);
 
   const onUnavailable = () => {
     if (!current) return;
@@ -683,6 +736,11 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
 
       {showVideo && !blocked && (
         <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
+          {(() => {
+            const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
+            DEV && console.log('[HomeClient.render] DJPlayer props: videoId:', current?.videoId, 'title:', current?.title, 'playing:', playing, 'volume:', prefs.volume);
+            return null;
+          })()}
           <DJPlayer
             ref={playerRef}
             videoId={current!.videoId!}
@@ -691,8 +749,15 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
             volume={prefs.volume}
             muted={prefs.muted}
             onPlaybackChange={(s) => {
-              if (s === "ended") onEnded();
-              else setPlayerState(s);
+              const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
+              DEV && console.log('[DJPlayer.onPlaybackChange] state:', s, 'current video:', current?.videoId);
+              if (s === "ended") {
+                DEV && console.log('[DJPlayer.onPlaybackChange] calling onEnded');
+                onEnded();
+              } else {
+                DEV && console.log('[DJPlayer.onPlaybackChange] setPlayerState:', s);
+                setPlayerState(s);
+              }
             }}
             onProgress={(t, d) => setProgress({ t, d })}
             onAutoplayBlocked={() => setAutoplayBlocked(true)}
