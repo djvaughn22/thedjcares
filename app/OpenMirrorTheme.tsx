@@ -292,13 +292,6 @@ html[data-om-theme="light"] .om-theme-btn {
   border-color: #cbd5e1 !important;
   color: #475569 !important;
 }
-html[data-om-theme="light"] .om-footer {
-  border-top-color: #dbe2ea !important;
-}
-html[data-om-theme="light"] .om-footer p,
-html[data-om-theme="light"] .om-footer a {
-  color: #475569 !important;
-}
 `;
 
 function applyTheme(theme: OmTheme) {

@@ -1,93 +1,74 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CANONICAL SOURCE — shared Open Mirror footer (adopted by all 9 satellites).
+// CANONICAL SOURCE — shared Open Mirror footer (adopted by all satellites).
 // Edit ONLY here: hub repo → packages/openmirror-ui/OpenMirrorFooter.tsx
 // Then run scripts/sync-ui.sh — never edit the copies in site repos.
 //
-// Family footer standard (owner, 2026-07-30). Three lines, in order:
-//   1. the site's own identity line (© year SiteName.com · tagline) — hub
-//      passes no siteName and renders "© year Open Mirror LLC" instead
-//   2. Open Mirror LLC · About Open Mirror · ✝️ ❤️ 🙏  (the three symbols are
-//      ONE link to CrossHeartPray, labeled "Visit CrossHeartPray")
-//   3. Open Mirror LLC is a small independent company. · Disclaimer
-// Open Mirror and CrossHeartPray live HERE, not in hamburger menus.
+// Family footer standard (owner, 2026-08-02). Exactly two bands:
+//   1. Open Mirror LLC (brand link, hub homepage) · CrossHeartPray · About ·
+//      Contact · Disclaimer — one labeled <nav>, links wrap on phones
+//   2. © year Open Mirror LLC. A small independent company.
+// Nothing else: no site identity line, no per-site slogans, no emoji rows,
+// no duplicate legal copy. Self-contained: handles its own light/dark theming
+// for BOTH theme attributes (data-om-theme and data-chp-visual-theme) and
+// pins itself to the bottom of short pages via the body flex column below.
 // ─────────────────────────────────────────────────────────────────────────────
 
+const OM = "https://openmirrorllc.com";
+
+const css = `
+body{min-height:100vh;min-height:100svh;display:flex;flex-direction:column}
+.om-footer{margin-top:auto;width:100%;padding-top:48px}
+.om-footer-rule{border-top:1px solid #26324c}
+.om-footer-in{max-width:1120px;margin:0 auto;padding:14px 24px calc(26px + env(safe-area-inset-bottom,0px))}
+.om-footer-nav{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:24px}
+.om-footer-brand{margin-right:auto;font-size:13.5px;font-weight:700;letter-spacing:.01em;color:#e8edf5;text-decoration:none;padding:8px 0}
+.om-footer-link{font-size:13px;font-weight:500;color:#94a3b8;text-decoration:none;padding:8px 0}
+.om-footer-brand:hover,.om-footer-link:hover{text-decoration:underline;text-underline-offset:4px}
+.om-footer a:focus-visible{outline:2px solid #94a3b8;outline-offset:3px;border-radius:2px}
+.om-footer-legal{margin:2px 0 0;font-size:12px;font-weight:400;color:#94a3b8}
+@media (max-width:640px){.om-footer{padding-top:40px}.om-footer-brand,.om-footer-link{padding:10px 0}}
+html[data-om-theme="light"] .om-footer-rule,html[data-chp-visual-theme="light"] .om-footer-rule{border-top-color:#dbe2ea}
+html[data-om-theme="light"] .om-footer-brand,html[data-chp-visual-theme="light"] .om-footer-brand{color:#172033}
+html[data-om-theme="light"] .om-footer-link,html[data-chp-visual-theme="light"] .om-footer-link{color:#475569}
+html[data-om-theme="light"] .om-footer-legal,html[data-chp-visual-theme="light"] .om-footer-legal{color:#64748b}
+html[data-om-theme="light"] .om-footer a:focus-visible,html[data-chp-visual-theme="light"] .om-footer a:focus-visible{outline-color:#475569}
+`;
+
 type Props = {
-  /** e.g. "iDontCry.com" — omitted (the hub) renders "© year Open Mirror LLC" */
-  siteName?: string;
-  /** the site's own one-liner, e.g. "The Family's Digital Playground" */
-  tagline?: string;
-  /** the site's canonical accent — colors the ".com" in siteName */
-  accent?: string;
-  /** the site's own disclaimer route when it has one; defaults to the hub's */
-  disclaimerHref?: string;
+  /** true only on the Open Mirror hub itself — links stay relative there */
+  hub?: boolean;
 };
 
-// Phrases render as inline-blocks so lines break BETWEEN phrases on phones
-// and tablets, never mid-sentence; on desktop each line stays whole.
-const phrase = { display: "inline-block" } as const;
-
-const linkStyle = {
-  ...phrase,
-  color: "#94a3b8",
-  textDecoration: "none",
-  // Comfortable tap target without breaking the text-line rhythm.
-  padding: "4px 2px",
-} as const;
-
-export default function OpenMirrorFooter({
-  siteName,
-  tagline,
-  accent,
-  disclaimerHref = "https://openmirrorllc.com/disclaimer",
-}: Props) {
-  const baseName =
-    siteName && siteName.endsWith(".com") ? siteName.slice(0, -4) : siteName;
-  const hasCom = Boolean(siteName && siteName.endsWith(".com"));
+export default function OpenMirrorFooter({ hub = false }: Props) {
+  const base = hub ? "" : OM;
+  const links: Array<[string, string]> = [
+    ["CrossHeartPray", "https://crossheartpray.com"],
+    ["About", `${base}/about-open-mirror`],
+    ["Contact", `${base}/contact`],
+    ["Disclaimer", `${base}/disclaimer`],
+  ];
 
   return (
-    <footer className="om-footer" style={{ marginTop: 60, textAlign: "center", borderTop: "1px solid #26324c", padding: "28px 20px 36px" }}>
-      {/* Line 1 — the site's own identity. */}
-      {siteName ? (
-        <p style={{ fontSize: 13, color: "#94a3b8", fontWeight: 700, lineHeight: 1.7, margin: "0 0 6px" }}>
-          <span style={phrase}>
-            © {new Date().getFullYear()} {baseName}
-            {hasCom ? <span style={{ color: accent ?? "#94a3b8" }}>.com</span> : null}
-          </span>
-          {tagline ? (
-            <>
-              {" · "}
-              <span style={phrase}>{tagline}</span>
-            </>
-          ) : null}
-        </p>
-      ) : (
-        <p style={{ fontSize: 13, color: "#94a3b8", fontWeight: 700, lineHeight: 1.7, margin: "0 0 6px" }}>
-          <span style={phrase}>© {new Date().getFullYear()} Open Mirror LLC</span>
-        </p>
-      )}
-
-      {/* Line 2 — Open Mirror LLC · About Open Mirror · ✝️ ❤️ 🙏 */}
-      <p style={{ fontSize: 12, color: "#94a3b8", fontWeight: 700, lineHeight: 1.9, margin: 0 }}>
-        <a href="https://openmirrorllc.com" style={linkStyle}>Open Mirror LLC</a>
-        {" · "}
-        <a href="https://openmirrorllc.com/about-open-mirror" style={linkStyle}>About Open Mirror</a>
-        {" · "}
-        <a
-          href="https://crossheartpray.com"
-          aria-label="Visit CrossHeartPray"
-          style={linkStyle}
-        >
-          <span aria-hidden="true">✝️ ❤️ 🙏</span>
-        </a>
-      </p>
-
-      {/* Line 3 — plain sentence, then the disclaimer link. */}
-      <p style={{ fontSize: 12, color: "#94a3b8", fontWeight: 700, lineHeight: 1.9, margin: "2px 0 0" }}>
-        <span style={phrase}>Open Mirror LLC is a small independent company.</span>
-        {" · "}
-        <a href={disclaimerHref} style={{ ...linkStyle, textDecoration: "underline" }}>Disclaimer</a>
-      </p>
+    <footer className="om-footer">
+      <style>{css}</style>
+      <div className="om-footer-rule">
+        <div className="om-footer-in">
+          <nav aria-label="Open Mirror LLC" className="om-footer-nav">
+            <a className="om-footer-brand" href={hub ? "/" : OM}>
+              Open Mirror LLC
+            </a>
+            {links.map(([label, href]) => (
+              <a key={label} className="om-footer-link" href={href}>
+                {label}
+              </a>
+            ))}
+          </nav>
+          <p className="om-footer-legal">
+            © {new Date().getFullYear()} Open Mirror LLC. A small independent
+            company.
+          </p>
+        </div>
+      </div>
     </footer>
   );
 }
