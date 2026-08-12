@@ -71,6 +71,7 @@ import {
 } from "./lib/sessionHistory";
 import type { DjNeed } from "./lib/digitalDjSelector";
 import { track } from "./lib/analytics";
+import type { DailyEncouragement } from "./lib/dailyEncouragement";
 
 const TABS = [
   { id: "spin", label: "Spin", emoji: "🎧" },
@@ -103,7 +104,13 @@ const REQUEST_MAILTO =
     "What I'd love on The DJ Cares:\n\nTitle / name:\nArtist or speaker:\nLink (YouTube, Apple Music, or Spotify):\nWhy it encourages:\n",
   );
 
-export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjEnabled?: boolean }) {
+export default function TheDJCaresPage({
+  digitalDjEnabled = true,
+  daily = null,
+}: {
+  digitalDjEnabled?: boolean;
+  daily?: DailyEncouragement | null;
+}) {
   const [dark, setDark] = useState(true);
 
   // Enable debug logging with: window.__djDebug = true; in console
@@ -958,79 +965,51 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
           </p>
         </div>
 
-        {/* Digital DJ console (server decides existence). Compact: identity,
-            the three dials it offers, artwork from the approved catalog, and
-            one clear way in. */}
-        {digitalDjEnabled && tab === "spin" && (
+        {/* Daily Encouragement — the reason to arrive. Same pick /today shows,
+            reused via the shared buildDailyEncouragement adapter (no cloned
+            selection logic). Tapping the card plays it right here, same as
+            any other MediaCard; the CTA opens the dedicated, shareable page. */}
+        {tab === "spin" && daily && (
           <section
-            aria-label="Digital DJ"
-            style={{ background: card, border: `2px solid ${activeBorder}`, borderRadius: 22, padding: "18px 20px", marginBottom: 20 }}
+            aria-label="Daily Encouragement"
+            style={{ background: card, border: `2px solid ${activeBorder}`, borderRadius: 22, padding: "18px 20px 20px", marginBottom: 20 }}
           >
-            <div style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
-              <div style={{ flex: "1 1 250px", minWidth: 0 }}>
-                <p style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 8px" }}>
-                  <span className="djc-eq" aria-hidden>
-                    <span /><span /><span /><span />
-                  </span>
-                  Digital DJ
-                </p>
-                <p style={{ fontSize: 21, fontWeight: 900, color: text, margin: "0 0 4px" }}>What should we play?</p>
-                <p style={{ fontSize: 13.5, color: sub, margin: "0 0 12px", lineHeight: 1.55 }}>
-                  Choose your time and mood. The DJ will cue an approved session.
-                </p>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-                  {[
-                    ["⏱", "5–60 min"],
-                    ["💜", "9 moods"],
-                    ["🎧", "Music · Videos · Sermons · Podcasts"],
-                  ].map(([emoji, label]) => (
-                    <span
-                      key={label}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 5, border: `2px solid ${border}`, borderRadius: 50, padding: "4px 10px", fontSize: 12, fontWeight: 800, color: sub }}
-                    >
-                      <span aria-hidden>{emoji}</span> {label}
-                    </span>
-                  ))}
-                </div>
-                <a
-                  href="/digital-dj"
-                  onClick={() => track("digital_dj_homepage_click")}
-                  style={{ display: "inline-block", background: accent, color: ink, borderRadius: 50, padding: "12px 24px", fontSize: 15, fontWeight: 900, textDecoration: "none", whiteSpace: "nowrap" }}
-                >
-                  🎛️ Cue my session
-                </a>
-              </div>
-              {/* A taste of the shelf: artwork from approved catalog records. */}
-              <div aria-hidden style={{ position: "relative", width: 150, height: 108, flexShrink: 0 }}>
-                {["song-my-jesus", "bg-seoul-1973", "song-way-maker"].map((id, i) => {
-                  const item = LIBRARY.find((x) => x.id === id);
-                  const art = item ? artworkUrl(item) : null;
-                  if (!art) return null;
-                  return (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={id}
-                      src={art}
-                      alt=""
-                      loading="lazy"
-                      width={116}
-                      height={65}
-                      style={{
-                        position: "absolute",
-                        top: i * 16,
-                        right: i * 14,
-                        width: 116,
-                        height: 65,
-                        objectFit: "cover",
-                        borderRadius: 10,
-                        border: `2px solid ${border}`,
-                        boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
-                      }}
-                    />
-                  );
-                })}
-              </div>
+            <p style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 4px" }}>
+              <span aria-hidden>🌅</span> Daily Encouragement
+            </p>
+            <p style={{ fontSize: 13, fontWeight: 700, color: sub, margin: "0 0 14px" }}>
+              {daily.label} · {daily.post.fullDate}
+            </p>
+            <div style={{ maxWidth: 340, margin: "0 auto" }}>
+              <MediaCard item={daily.item} />
             </div>
+            <div style={{ textAlign: "center", marginTop: 14 }}>
+              <a
+                href="/today"
+                onClick={() => track("daily_encouragement_homepage_click")}
+                style={{ display: "inline-block", background: accent, color: ink, borderRadius: 50, padding: "12px 24px", fontSize: 15, fontWeight: 900, textDecoration: "none", whiteSpace: "nowrap" }}
+              >
+                Open Today&apos;s Encouragement →
+              </a>
+            </div>
+          </section>
+        )}
+
+        {/* Music Videos preview — hand-picked songs, same MediaCard grid the
+            Videos tab uses, just a taste of it up front. */}
+        {tab === "spin" && songs.length > 0 && (
+          <section aria-label="Music Videos preview" style={{ marginBottom: 20 }}>
+            <p style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 12px" }}>
+              <span aria-hidden>🎬</span> Music Videos
+            </p>
+            <div style={grid}>
+              {songs.slice(0, 6).map((i) => (
+                <MediaCard key={i.id} item={i} />
+              ))}
+            </div>
+            <button onClick={() => goTab("videos")} style={{ ...quietButton, width: "100%", marginTop: 14 }}>
+              All videos →
+            </button>
           </section>
         )}
 
@@ -1109,6 +1088,22 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
 
         {tab === "spin" && (
           <>
+            <h2 style={sectionH}>✝️ Sermons</h2>
+            <p style={sectionSub}>Tap a name and The DJ spins one of their messages — approved ministers, official channels only.</p>
+            <div style={{ ...optionGrid, marginBottom: 30 }}>
+              {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0).map((m) => (
+                <button key={m.key} onClick={() => spinMinistry(m.key)} style={pill(false)}>
+                  {m.speaker}
+                </button>
+              ))}
+              <button onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={{ ...bigButton, borderRadius: 50, padding: "10px 8px", fontSize: 13.5 }}>
+                🔀 Surprise me
+              </button>
+              <button onClick={() => goTab("sermons")} style={pill(false)}>
+                Browse all →
+              </button>
+            </div>
+
             <h2 style={sectionH}>🎙️ Podcasts</h2>
             <p style={sectionSub}>Bible-first shows — press play, they stream right here.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 12 }}>
@@ -1132,21 +1127,80 @@ export default function TheDJCaresPage({ digitalDjEnabled = true }: { digitalDjE
               All podcasts →
             </button>
 
-            <h2 style={sectionH}>✝️ Sermons</h2>
-            <p style={sectionSub}>Tap a name and The DJ spins one of their messages — approved ministers, official channels only.</p>
-            <div style={{ ...optionGrid, marginBottom: 30 }}>
-              {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0).map((m) => (
-                <button key={m.key} onClick={() => spinMinistry(m.key)} style={pill(false)}>
-                  {m.speaker}
-                </button>
-              ))}
-              <button onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={{ ...bigButton, borderRadius: 50, padding: "10px 8px", fontSize: 13.5 }}>
-                🔀 Surprise me
-              </button>
-              <button onClick={() => goTab("sermons")} style={pill(false)}>
-                Browse all →
-              </button>
-            </div>
+            {/* Digital DJ — a secondary discovery tool now that Daily
+                Encouragement leads the page. Same card, just demoted. */}
+            {digitalDjEnabled && (
+              <section
+                aria-label="Digital DJ"
+                style={{ background: card, border: `2px solid ${activeBorder}`, borderRadius: 22, padding: "18px 20px", marginBottom: 30 }}
+              >
+                <div style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
+                  <div style={{ flex: "1 1 250px", minWidth: 0 }}>
+                    <p style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 8px" }}>
+                      <span className="djc-eq" aria-hidden>
+                        <span /><span /><span /><span />
+                      </span>
+                      Digital DJ
+                    </p>
+                    <p style={{ fontSize: 21, fontWeight: 900, color: text, margin: "0 0 4px" }}>What should we play?</p>
+                    <p style={{ fontSize: 13.5, color: sub, margin: "0 0 12px", lineHeight: 1.55 }}>
+                      Choose your time and mood. The DJ will cue an approved session.
+                    </p>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                      {[
+                        ["⏱", "5–60 min"],
+                        ["💜", "9 moods"],
+                        ["🎧", "Music · Videos · Sermons · Podcasts"],
+                      ].map(([emoji, label]) => (
+                        <span
+                          key={label}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 5, border: `2px solid ${border}`, borderRadius: 50, padding: "4px 10px", fontSize: 12, fontWeight: 800, color: sub }}
+                        >
+                          <span aria-hidden>{emoji}</span> {label}
+                        </span>
+                      ))}
+                    </div>
+                    <a
+                      href="/digital-dj"
+                      onClick={() => track("digital_dj_homepage_click")}
+                      style={{ display: "inline-block", background: accent, color: ink, borderRadius: 50, padding: "12px 24px", fontSize: 15, fontWeight: 900, textDecoration: "none", whiteSpace: "nowrap" }}
+                    >
+                      🎛️ Cue my session
+                    </a>
+                  </div>
+                  {/* A taste of the shelf: artwork from approved catalog records. */}
+                  <div aria-hidden style={{ position: "relative", width: 150, height: 108, flexShrink: 0 }}>
+                    {["song-my-jesus", "bg-seoul-1973", "song-way-maker"].map((id, i) => {
+                      const item = LIBRARY.find((x) => x.id === id);
+                      const art = item ? artworkUrl(item) : null;
+                      if (!art) return null;
+                      return (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          key={id}
+                          src={art}
+                          alt=""
+                          loading="lazy"
+                          width={116}
+                          height={65}
+                          style={{
+                            position: "absolute",
+                            top: i * 16,
+                            right: i * 14,
+                            width: 116,
+                            height: 65,
+                            objectFit: "cover",
+                            borderRadius: 10,
+                            border: `2px solid ${border}`,
+                            boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
+            )}
 
             <button onClick={() => goTab("churches")} className="pop" style={{ width: "100%", background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "18px 22px", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
               <span style={{ fontSize: 14.5, fontWeight: 800, color: text }}>Does your church stream on YouTube?</span>

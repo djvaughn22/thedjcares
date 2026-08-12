@@ -9,6 +9,8 @@
 import type { Metadata } from "next";
 import HomeClient from "./HomeClient";
 import { getCurrentAccessMode } from "./lib/featureAccess";
+import { buildDailyEncouragement, type DailyEncouragement } from "./lib/dailyEncouragement";
+import { chicagoDateKey } from "./lib/dailySocialCore";
 import {
   findShareChurch,
   findShareMedia,
@@ -16,6 +18,17 @@ import {
   mediaTypeLabel,
   PRODUCTION_ORIGIN,
 } from "./lib/shareLinks";
+
+// The homepage hero surfaces the same pick /today shows. If the library ever
+// yields no eligible item, the hero just doesn't render — homepage never 500s
+// on account of the daily pick.
+async function getHomepageDaily(): Promise<DailyEncouragement | null> {
+  try {
+    return await buildDailyEncouragement(chicagoDateKey());
+  } catch {
+    return null;
+  }
+}
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -69,12 +82,13 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
 
 export default async function Page({ searchParams }: { searchParams: SearchParams }) {
   const link = resolveDeepLink(await searchParams);
+  const daily = await getHomepageDaily();
   return (
     <>
       {link && <link rel="canonical" href={link.canonical} />}
       {link && <meta property="og:url" content={link.canonical} />}
       {/* Server decides whether the Digital DJ card exists at all. */}
-      <HomeClient digitalDjEnabled={getCurrentAccessMode("digital_dj") !== "off"} />
+      <HomeClient digitalDjEnabled={getCurrentAccessMode("digital_dj") !== "off"} daily={daily} />
     </>
   );
 }
