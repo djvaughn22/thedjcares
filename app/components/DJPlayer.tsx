@@ -245,15 +245,13 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
       if (videoId !== lastLoadedRef.current) {
         console.log('[DJPlayer.effect] *** NEW VIDEO ID ***. old:', lastLoadedRef.current, 'new:', videoId);
         lastLoadedRef.current = videoId;
-        console.log('[DJPlayer.effect] calling cueVideoById');
-        p.cueVideoById(videoId);
-        // After cueing the next video, immediately sync the desired play state
-        // while still in the user gesture context (from the Play button click).
         if (playing) {
-          console.log('[DJPlayer.effect] playing=true, calling playVideo()');
-          p.playVideo();
+          console.log('[DJPlayer.effect] playing=true, calling loadVideoById()');
+          p.loadVideoById(videoId);
           armBlockedWatchdog();
         } else {
+          console.log('[DJPlayer.effect] playing=false, calling cueVideoById()');
+          p.cueVideoById(videoId);
           console.log('[DJPlayer.effect] playing=false, calling pauseVideo()');
           clearBlockedWatchdog();
           p.pauseVideo();
