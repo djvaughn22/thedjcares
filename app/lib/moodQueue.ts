@@ -68,7 +68,7 @@ export function moodPoolMinutes(mood: DjNeed, mode: MixMode, items: MediaItem[] 
   return Math.round(seconds / 60);
 }
 
-function shuffle<T>(list: T[], rand: () => number): T[] {
+export function shuffle<T>(list: T[], rand: () => number): T[] {
   const copy = [...list];
   for (let i = copy.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));

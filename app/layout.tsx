@@ -36,12 +36,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           site="TheDJCares.com"
           accent="#A78BFA"
           links={[
-            { emoji: "🎧", name: "Now Spinning", href: "/" },
-            { emoji: "🎵", name: "Music", href: "/#music" },
+            { emoji: "🌅", name: "Daily Encouragement", href: "/#daily-encouragement" },
             { emoji: "📺", name: "Music Videos", href: "/#videos" },
+            { emoji: "🎵", name: "Music", href: "/#music" },
+            { emoji: "✝️", name: "Sermons", href: "/#sermons" },
             { emoji: "🎙️", name: "Podcasts", href: "/#podcasts" },
-            { emoji: "⛪", name: "Sermons", href: "/#sermons" },
-            { emoji: "🌅", name: "Daily Encouragement", href: "/today" },
+            { emoji: "🎧", name: "Now Spinning", href: "/#now-playing" },
             { emoji: "ℹ️", name: "About TheDJCares", href: "/#about" },
           ]}
         />

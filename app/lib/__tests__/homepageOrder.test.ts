@@ -1,48 +1,75 @@
-// Homepage hierarchy guard (owner, 2026-08-11): Daily Encouragement is the
-// reason to arrive — it must lead the Spin-tab content journey, with Videos,
-// Playlists, Sermons, Podcasts following and Digital DJ demoted to a
-// secondary discovery tool after them. The nav's Daily Encouragement item
-// must still resolve, and /today must stay intact as the dedicated,
-// shareable daily page.
-import { readFileSync } from "node:fs";
+// Single-page homepage guard (owner, 2026-08-12): Daily Encouragement leads
+// into ONE continuous Now Playing player, then Videos, Music, Sermons,
+// Podcasts, and Digital DJ last — all on "/", reachable by menu anchors
+// rather than route navigation. /today is retired as a destination (old
+// links/bookmarks redirect gracefully instead of duplicating the UI).
+import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const app = join(__dirname, "../..");
+const root = join(app, "..");
 const homeClient = readFileSync(join(app, "HomeClient.tsx"), "utf8");
 const layout = readFileSync(join(app, "layout.tsx"), "utf8");
 const page = readFileSync(join(app, "page.tsx"), "utf8");
-const today = readFileSync(join(app, "today/page.tsx"), "utf8");
+const nextConfig = readFileSync(join(root, "next.config.ts"), "utf8");
 
-// Index of the first match, or -1. Fails loudly (via the caller's assertion)
-// rather than silently comparing two -1s as "in order".
 const at = (haystack: string, needle: string) => haystack.indexOf(needle);
 
-describe("homepage content order", () => {
-  it("Daily Encouragement hero leads, ahead of every other homepage section", () => {
-    const hero = at(homeClient, 'aria-label="Daily Encouragement"');
-    const videos = at(homeClient, 'aria-label="Music Videos preview"');
-    const music = at(homeClient, 'aria-label="The Music"');
-    const sermons = at(homeClient, ">✝️ Sermons</h2>");
-    const podcasts = at(homeClient, ">🎙️ Podcasts</h2>");
+describe("homepage section order", () => {
+  it("Daily Encouragement, then Now Playing, then Videos/Music/Sermons/Podcasts, Digital DJ last", () => {
+    // `deck` (id="now-playing") is a const defined well above the return
+    // statement and referenced by name where it actually renders — so its
+    // render POSITION is this insertion line, not its definition's id=.
+    const daily = at(homeClient, 'id="daily-encouragement"');
+    const nowPlaying = at(homeClient, '(tab === "spin" || started) && deck');
+    const videos = at(homeClient, 'id="videos"');
+    const music = at(homeClient, 'id="music"');
+    const sermons = at(homeClient, 'id="sermons"');
+    const podcasts = at(homeClient, 'id="podcasts"');
     const digitalDj = at(homeClient, 'aria-label="Digital DJ"');
 
-    for (const idx of [hero, videos, music, sermons, podcasts, digitalDj]) {
+    for (const idx of [daily, nowPlaying, videos, music, sermons, podcasts, digitalDj]) {
       expect(idx).toBeGreaterThan(-1);
     }
-    expect(hero).toBeLessThan(videos);
+    expect(daily).toBeLessThan(nowPlaying);
+    expect(nowPlaying).toBeLessThan(videos);
     expect(videos).toBeLessThan(music);
     expect(music).toBeLessThan(sermons);
     expect(sermons).toBeLessThan(podcasts);
     expect(podcasts).toBeLessThan(digitalDj);
   });
 
-  it("Digital DJ is demoted below the primary content journey, not deleted", () => {
+  it('the Now Playing player carries the id="now-playing" anchor', () => {
+    expect(homeClient).toContain('id="now-playing"');
+  });
+
+  it("Digital DJ is demoted, not deleted", () => {
     expect(homeClient).toContain("What should we play?");
     expect(homeClient).toContain('href="/digital-dj"');
   });
 
-  it("the homepage fetches the same daily pick /today shows, and never crashes the page if it fails", () => {
+  it("one click on the Daily Encouragement CTA starts playback via the shared startItem pipeline", () => {
+    expect(homeClient).toMatch(/onClick=\{\(\) => startItem\(daily\.item\)\}/);
+  });
+
+  it("clicking a video card seeds the continuous queue (not a one-off play)", () => {
+    expect(homeClient).toContain("buildVideoQueueFrom(item, itemsOfType(\"music\"))");
+  });
+
+  it("provides Shuffle and Repeat controls", () => {
+    expect(homeClient).toContain("toggleMainShuffle");
+    expect(homeClient).toContain("setMainRepeat");
+  });
+
+  it("reuses EncouragementActions rather than re-implementing share/download/source-link", () => {
+    expect(homeClient).toContain("<EncouragementActions");
+    expect(homeClient).not.toContain("djc_today_viewed"); // that tracking lives inside the reused component, not duplicated here
+  });
+});
+
+describe("Daily Encouragement selection", () => {
+  it("the homepage fetches the same canonical daily pick /today used to show, and never crashes the page if it fails", () => {
     expect(page).toContain("buildDailyEncouragement");
     expect(page).toContain("chicagoDateKey");
     expect(page).toMatch(/catch\s*\{?\s*return null/);
@@ -50,15 +77,45 @@ describe("homepage content order", () => {
   });
 });
 
-describe("Daily Encouragement navigation", () => {
-  it("the nav's Daily Encouragement item resolves to the daily experience", () => {
-    const match = layout.match(/name:\s*"Daily Encouragement",\s*href:\s*"([^"]+)"/);
-    expect(match).not.toBeNull();
-    expect(match![1]).toBe("/today");
+describe("single-page menu navigation", () => {
+  const anchors: Record<string, string> = {
+    "Daily Encouragement": "/#daily-encouragement",
+    "Music Videos": "/#videos",
+    Music: "/#music",
+    Sermons: "/#sermons",
+    Podcasts: "/#podcasts",
+    "Now Spinning": "/#now-playing",
+  };
+
+  for (const [name, href] of Object.entries(anchors)) {
+    it(`"${name}" targets the homepage anchor ${href}, not a separate route`, () => {
+      const re = new RegExp(`name:\\s*"${name}",\\s*href:\\s*"([^"]+)"`);
+      const match = layout.match(re);
+      expect(match).not.toBeNull();
+      expect(match![1]).toBe(href);
+    });
+  }
+
+  it("every menu href is an absolute homepage anchor (works from any route), never a bare #hash", () => {
+    const hrefs = [...layout.matchAll(/href:\s*"([^"]+)"/g)].map((m) => m[1]);
+    for (const href of hrefs) {
+      if (href.includes("#")) expect(href.startsWith("/#")).toBe(true);
+    }
+  });
+});
+
+describe("/today retirement", () => {
+  it("the live /today page is gone — no duplicate Daily Encouragement UI", () => {
+    expect(existsSync(join(app, "today/page.tsx"))).toBe(false);
   });
 
-  it("/today remains the dedicated, shareable daily page", () => {
-    expect(today).toContain("DailyEncouragementView");
-    expect(today).toContain("buildDailyEncouragement");
+  it("/today permanently redirects to the homepage hero", () => {
+    expect(nextConfig).toMatch(/source:\s*"\/today"/);
+    expect(nextConfig).toMatch(/destination:\s*"\/#daily-encouragement"/);
+    expect(nextConfig).toMatch(/permanent:\s*true/);
+  });
+
+  it("the dated archive (a distinct history feature) is untouched", () => {
+    expect(existsSync(join(app, "today/[date]/page.tsx"))).toBe(true);
   });
 });

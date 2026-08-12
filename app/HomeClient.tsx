@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DJPlayer, { type DJPlayerHandle } from "./components/DJPlayer";
 import ChurchSubmitForm from "./components/ChurchSubmitForm";
+import EncouragementActions from "./components/EncouragementActions";
 import ShareSheet, { ShareTrigger } from "./components/ShareMenu";
 import {
   APPROVED_CHURCHES,
@@ -33,6 +34,7 @@ import {
   mediaShareTarget,
   mediaTypeLabel as typeLabel,
   ministryShareTarget,
+  PRODUCTION_ORIGIN,
   type ShareTarget,
 } from "./lib/shareLinks";
 import {
@@ -72,6 +74,7 @@ import {
 import type { DjNeed } from "./lib/digitalDjSelector";
 import { track } from "./lib/analytics";
 import type { DailyEncouragement } from "./lib/dailyEncouragement";
+import { buildVideoQueueFrom, reorderUpcoming, shouldStopAtQueueEnd } from "./lib/mainQueue";
 
 const TABS = [
   { id: "spin", label: "Spin", emoji: "🎧" },
@@ -136,6 +139,10 @@ export default function TheDJCaresPage({
   // --- mood mix state ---
   const [moodQueue, setMoodQueue] = useState<{ mood: DjNeed; mode: MixMode; queue: MediaItem[]; position: number } | null>(null);
   const [mixMode, setMixMode] = useState<MixMode>("both");
+  // --- main (Daily Encouragement → Videos) continuous queue state ---
+  const [mainQueue, setMainQueue] = useState<{ queue: MediaItem[]; position: number } | null>(null);
+  const [mainShuffle, setMainShuffle] = useState(false);
+  const [mainRepeat, setMainRepeat] = useState(false);
   const [prefs, setPrefs] = useState<PlayerPrefs>(DEFAULT_PREFS);
   const [progress, setProgress] = useState<{ t: number; d: number } | null>(null);
   const lastProgressRef = useRef<{ t: number; d: number } | null>(null);
@@ -182,14 +189,31 @@ export default function TheDJCaresPage({
     playedCountRef.current = getPlayedCount(history);
   }, []);
 
-  // Tabs ↔ URL hash (#music, #sermons…), so sections are linkable.
+  // Homepage section anchors — the single-page nav menu's destinations.
+  // These land on the Spin tab (where the sections live) and scroll to the
+  // matching element, rather than switching to an isolated exclusive tab.
+  const SECTION_IDS = ["daily-encouragement", "now-playing", "videos", "music", "sermons", "podcasts"];
+
+  // URL hash ↔ page state. Two namespaces share one hash string:
+  //  - bare section names (#videos, #music, #sermons, #podcasts, plus
+  //    #daily-encouragement / #now-playing) scroll to a homepage section;
+  //  - "#tab-<id>" switches to that exclusive browsing tab (written by
+  //    goTab below, so reload/back-forward lands back on the right tab
+  //    instead of bouncing to its same-named homepage section).
+  // Bare legacy tab ids (e.g. #about, #ministries, #churches) still switch
+  // tabs directly, for old links that predate the tab-* scheme.
   useEffect(() => {
     const fromHash = () => {
       const h = window.location.hash.replace("#", "");
-      // Old #playlists links land on Music — that's where the playlists live now.
-      if (h === "playlists") {
-        setTab("music");
-        window.history.replaceState(null, "", "#music");
+      const alias = h === "playlists" ? "music" : h; // old #playlists → Music section
+      if (SECTION_IDS.includes(alias)) {
+        setTab("spin");
+        window.setTimeout(() => document.getElementById(alias)?.scrollIntoView({ block: "start" }), 80);
+        return;
+      }
+      if (h.startsWith("tab-")) {
+        const tabId = h.slice(4);
+        if (TABS.some((t) => t.id === tabId)) setTab(tabId as Tab);
         return;
       }
       if (TABS.some((t) => t.id === h)) setTab(h as Tab);
@@ -197,11 +221,12 @@ export default function TheDJCaresPage({
     fromHash();
     window.addEventListener("hashchange", fromHash);
     return () => window.removeEventListener("hashchange", fromHash);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const goTab = (t: Tab) => {
     setTab(t);
-    window.history.replaceState(null, "", t === "spin" ? window.location.pathname : `#${t}`);
+    window.history.replaceState(null, "", t === "spin" ? window.location.pathname : `#tab-${t}`);
     window.scrollTo({ top: 0 });
     track("tab_view", { tab: t });
   };
@@ -225,12 +250,12 @@ export default function TheDJCaresPage({
       // The Music section keeps the full Apple player mounted — select it there.
       setHeroPlaylistId(shared.id);
       setAnnounce(`Ready to play: ${shared.title}`);
-      bringIntoView("djc-the-music");
+      bringIntoView("music");
     } else if (shared && isPlayable(shared)) {
       // Cue it on the deck, ready for one tap of Play.
       setCurrent(shared);
       setAnnounce(`Ready to play: ${shared.title} — ${shared.author}`);
-      bringIntoView("djc-deck");
+      bringIntoView("now-playing");
       return;
     } else if (shared) {
       // Link-out podcasts play at their official homes — show their card.
@@ -259,15 +284,17 @@ export default function TheDJCaresPage({
         return;
       }
     }
-    setCurrent(LIBRARY.find((i) => i.featured && i.type === "music") ?? LIBRARY[0]);
-  }, []);
+    // Default cue: today's Daily Encouragement pick — the homepage's whole
+    // reason to arrive. No deep link, no saved session? Lead with it.
+    setCurrent(daily?.item ?? LIBRARY.find((i) => i.featured && i.type === "music") ?? LIBRARY[0]);
+  }, [daily]);
 
   const pool = useMemo(
     () => spinPool({ category, vibe }).filter((i) => !unavailable.has(i.id)),
     [category, vibe, unavailable],
   );
 
-  const startItem = useCallback((item: MediaItem, viaSpin = false, inMoodMix = false) => {
+  const startItem = useCallback((item: MediaItem, viaSpin = false, inMoodMix = false, fromMainQueue = false) => {
     console.log('[HomeClient.startItem] LOADING:', item.title, 'videoId:', item.videoId);
     // A pick outside the mood queue is a new choice — the mood mix steps
     // aside. A pick that IS in the queue jumps the queue there instead.
@@ -279,6 +306,19 @@ export default function TheDJCaresPage({
         const mix = { ...moodQueue, position: qIdx };
         setMoodQueue(mix);
         persistMoodMix(mix);
+      }
+    }
+    // A direct pick (not an internal mood/main-queue advance) becomes the
+    // new continuous-playback anchor: the Daily Encouragement item, or any
+    // playable video, seeds a fresh queue of it + the rest of the video
+    // catalog so playback keeps going after it ends. Anything else (a
+    // sermon, a podcast, a playlist) drops any active main queue.
+    if (!inMoodMix && !fromMainQueue) {
+      const isDailyPick = Boolean(daily && item.id === daily.item.id);
+      if ((item.type === "music" && item.videoId) || isDailyPick) {
+        setMainQueue({ queue: buildVideoQueueFrom(item, itemsOfType("music")), position: 0 });
+      } else {
+        setMainQueue(null);
       }
     }
     // New play cuts the session's forward branch (like a browser history).
@@ -303,7 +343,7 @@ export default function TheDJCaresPage({
     setAnnounce(`Now spinning: ${item.title} — ${item.author}`);
     track("media_play", { content_type: item.type, content_title: item.title, via: viaSpin ? "spin" : "pick" });
     deckRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [moodQueue, pool.length, sessionHistory]);
+  }, [moodQueue, pool.length, sessionHistory, daily]);
 
   // --- the mood mix -----------------------------------------------------------
 
@@ -378,6 +418,39 @@ export default function TheDJCaresPage({
     setAnnounce("Back to the top — fresh shuffle, same mood.");
   }, [moodQueue, current, sessionHistory.playedIds, startItem]);
 
+  // Advance the main (Daily Encouragement → Videos) queue. Returns false if
+  // there's no main queue to advance, so callers can fall through to the
+  // legacy spin behavior. At the end of the queue: stop cleanly unless
+  // Repeat is on (then nextPlayableIndex's own wraparound continues it).
+  const mainNext = useCallback((direction: 1 | -1): boolean => {
+    if (!mainQueue) return false;
+    if (direction === 1 && shouldStopAtQueueEnd(mainQueue.queue, mainQueue.position, unavailable, mainRepeat)) {
+      setPlaying(false);
+      setAnnounce("That's the whole video queue — turn on Repeat to keep it going, or pick something else.");
+      return true;
+    }
+    const idx = nextPlayableIndex(mainQueue.queue, mainQueue.position, unavailable, direction);
+    if (idx === null) {
+      setMainQueue(null);
+      return false;
+    }
+    const q = { ...mainQueue, position: idx };
+    setMainQueue(q);
+    startItem(q.queue[idx], true, false, true);
+    return true;
+  }, [mainQueue, mainRepeat, unavailable, startItem]);
+
+  // Shuffle rebuilds only the UPCOMING portion of the queue — the currently
+  // playing item and everything before it stay put. Turning shuffle off
+  // restores canonical catalog order for whatever's left to play.
+  const toggleMainShuffle = () => {
+    setMainShuffle((wasOn) => {
+      const on = !wasOn;
+      setMainQueue((q) => (q ? { ...q, queue: reorderUpcoming(q.queue, q.position, on, itemsOfType("music")) } : q));
+      return on;
+    });
+  };
+
   const spin = useCallback(() => {
     const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
     DEV && console.log('[HomeClient.spin] moodQueue:', !!moodQueue);
@@ -438,10 +511,11 @@ export default function TheDJCaresPage({
       setPlaying(true);
       setBlocked(false);
       setAnnounce(`Now spinning: ${item.title} — ${item.author}`);
-    } else {
-      spin();
+      return;
     }
-  }, [moodQueue, unavailable, current, moodRollover, moodStep, spin]);
+    if (mainNext(1)) return;
+    spin();
+  }, [moodQueue, unavailable, current, moodRollover, moodStep, mainNext, spin]);
 
   // A record finished on its own — memoize to prevent stale closures in effects.
   const onEnded = useCallback(() => {
@@ -493,6 +567,18 @@ export default function TheDJCaresPage({
         setMoodQueue(mix);
         persistMoodMix(mix);
         startItem(mix.queue[idx], true, true);
+        return;
+      }
+    }
+    if (mainQueue) {
+      // One bad video never stops the queue — skip it and keep playing.
+      setAnnounce(`${current.title} won't play here — skipping to the next one.`);
+      const failed = new Set([...unavailable, current.id]);
+      const idx = nextPlayableIndex(mainQueue.queue, mainQueue.position, failed, 1);
+      if (idx !== null && mainQueue.queue[idx].id !== current.id) {
+        const q = { ...mainQueue, position: idx };
+        setMainQueue(q);
+        startItem(q.queue[idx], true, false, true);
         return;
       }
     }
@@ -719,7 +805,7 @@ export default function TheDJCaresPage({
   const deck = (
     <section
       ref={deckRef}
-      id="djc-deck"
+      id="now-playing"
       aria-label="Now Spinning"
       style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 28 }}
     >
@@ -807,7 +893,7 @@ export default function TheDJCaresPage({
             <a href={current.url} target="_blank" rel="noopener noreferrer" style={{ ...quietButton, textDecoration: "none", display: "inline-block" }}>
               Watch on YouTube ↗
             </a>
-            <button onClick={spin} style={bigButton}>🔀 Spin Another</button>
+            <button onClick={spin} style={bigButton}>🎲 Spin Something Else</button>
           </div>
         </div>
       )}
@@ -836,6 +922,18 @@ export default function TheDJCaresPage({
         </div>
       )}
 
+      {/* continuous-queue status — only meaningful outside a mood mix, which
+          has its own always-shuffled, always-looping behavior below. */}
+      {mainQueue && !moodQueue && (
+        <p role="status" style={{ textAlign: "center", fontSize: 12.5, fontWeight: 700, color: sub, margin: "12px 0 0" }}>
+          {mainQueue.position + 1 < mainQueue.queue.length
+            ? `Video ${mainQueue.position + 1} of ${mainQueue.queue.length} — up next: ${mainQueue.queue[mainQueue.position + 1].title}`
+            : mainRepeat
+              ? `Video ${mainQueue.position + 1} of ${mainQueue.queue.length} — Repeat is on, back to the top after this`
+              : `Video ${mainQueue.position + 1} of ${mainQueue.queue.length} — last one queued`}
+        </p>
+      )}
+
       {/* controls */}
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 16 }}>
         <button onClick={prev} disabled={posRef.current <= 0} aria-label="Previous" style={{ ...quietButton, opacity: posRef.current <= 0 ? 0.45 : 1, cursor: posRef.current <= 0 ? "default" : "pointer" }}>
@@ -849,8 +947,18 @@ export default function TheDJCaresPage({
           <button onClick={() => startItem(current)} style={bigButton}>▶ Play</button>
         ) : null}
         <button onClick={next} aria-label="Next" style={quietButton}>⏭</button>
+        {!moodQueue && (
+          <>
+            <button onClick={toggleMainShuffle} aria-pressed={mainShuffle} aria-label={`Shuffle ${mainShuffle ? "on" : "off"}`} style={pill(mainShuffle)}>
+              🔀 Shuffle {mainShuffle ? "On" : "Off"}
+            </button>
+            <button onClick={() => setMainRepeat((r) => !r)} aria-pressed={mainRepeat} aria-label={`Repeat ${mainRepeat ? "on" : "off"}`} style={pill(mainRepeat)}>
+              🔁 Repeat {mainRepeat ? "On" : "Off"}
+            </button>
+          </>
+        )}
         <button onClick={spin} disabled={deckPoolEmpty && !moodQueue} style={{ ...bigButton, opacity: deckPoolEmpty && !moodQueue ? 0.5 : 1 }}>
-          🔀 Spin Another
+          🎲 Spin Something Else
         </button>
         {current && share(mediaShareTarget(current), "deck")}
         <button onClick={() => updatePrefs({ muted: !prefs.muted })} aria-label={prefs.muted ? "Unmute" : "Mute"} style={quietButton}>
@@ -965,40 +1073,73 @@ export default function TheDJCaresPage({
           </p>
         </div>
 
-        {/* Daily Encouragement — the reason to arrive. Same pick /today shows,
-            reused via the shared buildDailyEncouragement adapter (no cloned
-            selection logic). Tapping the card plays it right here, same as
-            any other MediaCard; the CTA opens the dedicated, shareable page. */}
+        {/* Daily Encouragement — the reason to arrive. Same pick /today used
+            to show, reused via the shared buildDailyEncouragement adapter
+            (no cloned selection logic). One click plays it in the Now
+            Playing player right below; EncouragementActions (unchanged,
+            reused as-is) carries everything /today offered — source link,
+            share, and the download card — so nothing is lost. */}
         {tab === "spin" && daily && (
           <section
+            id="daily-encouragement"
             aria-label="Daily Encouragement"
-            style={{ background: card, border: `2px solid ${activeBorder}`, borderRadius: 22, padding: "18px 20px 20px", marginBottom: 20 }}
+            style={{ background: card, border: `2px solid ${activeBorder}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20 }}
           >
             <p style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 4px" }}>
               <span aria-hidden>🌅</span> Daily Encouragement
             </p>
-            <p style={{ fontSize: 13, fontWeight: 700, color: sub, margin: "0 0 14px" }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: sub, margin: "0 0 16px" }}>
               {daily.label} · {daily.post.fullDate}
             </p>
-            <div style={{ maxWidth: 340, margin: "0 auto" }}>
-              <MediaCard item={daily.item} />
+            <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+              {artworkUrl(daily.item) && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={artworkUrl(daily.item)!}
+                  alt=""
+                  loading="lazy"
+                  width={116}
+                  height={65}
+                  style={{ width: 116, height: 65, objectFit: "cover", borderRadius: 10, border: `2px solid ${border}`, flexShrink: 0 }}
+                />
+              )}
+              <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+                <p style={{ fontSize: 19, fontWeight: 900, color: text, margin: 0 }}>{daily.item.title}</p>
+                <p style={{ fontSize: 13.5, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{daily.item.author}</p>
+                {daily.item.summary && (
+                  <p style={{ fontSize: 13, color: sub, margin: "4px 0 0", lineHeight: 1.5 }}>{daily.item.summary}</p>
+                )}
+              </div>
             </div>
-            <div style={{ textAlign: "center", marginTop: 14 }}>
-              <a
-                href="/today"
-                onClick={() => track("daily_encouragement_homepage_click")}
-                style={{ display: "inline-block", background: accent, color: ink, borderRadius: 50, padding: "12px 24px", fontSize: 15, fontWeight: 900, textDecoration: "none", whiteSpace: "nowrap" }}
-              >
-                Open Today&apos;s Encouragement →
-              </a>
+            <div style={{ textAlign: "center", marginTop: 16 }}>
+              <button onClick={() => startItem(daily.item)} style={{ ...bigButton, padding: "14px 30px" }}>
+                ▶ Play Today&apos;s Encouragement
+              </button>
+            </div>
+            <div style={{ marginTop: 14, borderTop: `1px solid ${border}`, paddingTop: 14 }}>
+              <EncouragementActions
+                contentId={daily.item.id}
+                label={daily.label}
+                title={daily.item.title}
+                pageUrl={`${PRODUCTION_ORIGIN}/#daily-encouragement`}
+                sourceUrl={daily.sourceUrl}
+                cardPath={daily.post.imagePath}
+                cardFileName={daily.post.imageFileName}
+              />
             </div>
           </section>
         )}
 
+        {/* the spin deck (Now Playing) sits right under the Daily hero —
+            one click there starts the continuous queue; on other tabs it
+            stays up top once something is playing */}
+        {(tab === "spin" || started) && deck}
+
         {/* Music Videos preview — hand-picked songs, same MediaCard grid the
-            Videos tab uses, just a taste of it up front. */}
+            Videos tab uses, just a taste of it up front. Clicking one makes
+            it the new Now Playing anchor (see startItem's queue seeding). */}
         {tab === "spin" && songs.length > 0 && (
-          <section aria-label="Music Videos preview" style={{ marginBottom: 20 }}>
+          <section id="videos" aria-label="Music Videos preview" style={{ marginBottom: 20 }}>
             <p style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 12px" }}>
               <span aria-hidden>🎬</span> Music Videos
             </p>
@@ -1013,10 +1154,10 @@ export default function TheDJCaresPage({
           </section>
         )}
 
-        {/* the site opens with the DJ's music: Faith Playlist on Apple Music,
-            with one-tap filters for the other playlists */}
+        {/* the DJ's music: Faith Playlist on Apple Music, with one-tap
+            filters for the other playlists */}
         {tab === "spin" && heroPlaylist && (
-          <section id="djc-the-music" aria-label="The Music" style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20 }}>
+          <section id="music" aria-label="The Music" style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20 }}>
             <p style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 12px" }}>
               <span aria-hidden>🎶</span> The Music
             </p>
@@ -1056,10 +1197,6 @@ export default function TheDJCaresPage({
           </section>
         )}
 
-        {/* the spin deck sits right under the music: always on Spin; on other
-            tabs it stays up top once something is playing */}
-        {(tab === "spin" || started) && deck}
-
         {/* navigation — a symmetric grid: three rows, every row full
             (8 tabs on 6 columns: 2-spans, then two 3-spans on the last row) */}
         <nav aria-label="Sections" style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 8, maxWidth: 560, margin: "0 auto 26px" }}>
@@ -1088,44 +1225,48 @@ export default function TheDJCaresPage({
 
         {tab === "spin" && (
           <>
-            <h2 style={sectionH}>✝️ Sermons</h2>
-            <p style={sectionSub}>Tap a name and The DJ spins one of their messages — approved ministers, official channels only.</p>
-            <div style={{ ...optionGrid, marginBottom: 30 }}>
-              {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0).map((m) => (
-                <button key={m.key} onClick={() => spinMinistry(m.key)} style={pill(false)}>
-                  {m.speaker}
+            <section id="sermons">
+              <h2 style={sectionH}>✝️ Sermons</h2>
+              <p style={sectionSub}>Tap a name and The DJ spins one of their messages — approved ministers, official channels only.</p>
+              <div style={{ ...optionGrid, marginBottom: 30 }}>
+                {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0).map((m) => (
+                  <button key={m.key} onClick={() => spinMinistry(m.key)} style={pill(false)}>
+                    {m.speaker}
+                  </button>
+                ))}
+                <button onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={{ ...bigButton, borderRadius: 50, padding: "10px 8px", fontSize: 13.5 }}>
+                  🔀 Surprise me
                 </button>
-              ))}
-              <button onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={{ ...bigButton, borderRadius: 50, padding: "10px 8px", fontSize: 13.5 }}>
-                🔀 Surprise me
-              </button>
-              <button onClick={() => goTab("sermons")} style={pill(false)}>
-                Browse all →
-              </button>
-            </div>
+                <button onClick={() => goTab("sermons")} style={pill(false)}>
+                  Browse all →
+                </button>
+              </div>
+            </section>
 
-            <h2 style={sectionH}>🎙️ Podcasts</h2>
-            <p style={sectionSub}>Bible-first shows — press play, they stream right here.</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 12 }}>
-              {podcasts.filter((p) => p.spotifyEmbed).map((p) => (
-                <div key={p.id} className="pop" style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, padding: "16px 18px" }}>
-                  <p style={{ fontSize: 16, fontWeight: 900, color: text, margin: 0 }}>{p.title}</p>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{p.author}</p>
-                  {p.summary && <p style={{ fontSize: 13, color: sub, margin: "4px 0 0", lineHeight: 1.5 }}>{p.summary}</p>}
-                  <iframe
-                    src={p.spotifyEmbed}
-                    title={p.title}
-                    loading="lazy"
-                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                    style={{ width: "100%", height: 232, border: 0, borderRadius: 12, marginTop: 12 }}
-                  />
-                  <div style={{ marginTop: 10 }}>{share(mediaShareTarget(p))}</div>
-                </div>
-              ))}
-            </div>
-            <button onClick={() => goTab("podcasts")} style={{ ...quietButton, width: "100%", marginBottom: 30 }}>
-              All podcasts →
-            </button>
+            <section id="podcasts">
+              <h2 style={sectionH}>🎙️ Podcasts</h2>
+              <p style={sectionSub}>Bible-first shows — press play, they stream right here.</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 12 }}>
+                {podcasts.filter((p) => p.spotifyEmbed).map((p) => (
+                  <div key={p.id} className="pop" style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, padding: "16px 18px" }}>
+                    <p style={{ fontSize: 16, fontWeight: 900, color: text, margin: 0 }}>{p.title}</p>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{p.author}</p>
+                    {p.summary && <p style={{ fontSize: 13, color: sub, margin: "4px 0 0", lineHeight: 1.5 }}>{p.summary}</p>}
+                    <iframe
+                      src={p.spotifyEmbed}
+                      title={p.title}
+                      loading="lazy"
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                      style={{ width: "100%", height: 232, border: 0, borderRadius: 12, marginTop: 12 }}
+                    />
+                    <div style={{ marginTop: 10 }}>{share(mediaShareTarget(p))}</div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => goTab("podcasts")} style={{ ...quietButton, width: "100%", marginBottom: 30 }}>
+                All podcasts →
+              </button>
+            </section>
 
             {/* Digital DJ — a secondary discovery tool now that Daily
                 Encouragement leads the page. Same card, just demoted. */}

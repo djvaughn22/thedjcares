@@ -32,7 +32,7 @@ export default function EncouragementActions({
 
   async function share() {
     track("djc_shared", { content_id: contentId });
-    const text = `${label}: ${title} — on TheDJCares.com/today`;
+    const text = `${label}: ${title} — on TheDJCares.com`;
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({ title, text, url: pageUrl });
