@@ -17,6 +17,152 @@
 .djc-record { border-radius: 50%; overflow: hidden; position: relative; }
 .djc-record.spinning { animation: djc-spin-record 7s linear infinite; }
 
+/* ── Today's Record — a real CSS turntable, no external assets ── */
+
+/* box the vinyl sits in; also reserves room for the tonearm so it never
+   overflows the box (and therefore never overflows the page) */
+.djc-turntable {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+/* the deck surface under the platter */
+.djc-platter {
+  position: absolute;
+  left: 4%;
+  right: -6%;
+  top: -6%;
+  bottom: 4%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, rgba(255,255,255,0.10), rgba(255,255,255,0) 42%),
+    radial-gradient(circle at 50% 50%, #1c2740 0%, #0c1220 72%);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
+}
+
+/* the vinyl disc: grooves via repeating rings + a soft light sheen */
+.djc-vinyl {
+  position: absolute;
+  left: 0;
+  right: 10%;
+  top: 10%;
+  bottom: 0;
+  border-radius: 50%;
+  display: block;
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255,255,255,0.16), rgba(255,255,255,0) 40%),
+    repeating-radial-gradient(circle at 50% 50%, #171717 0, #171717 3%, #0b0b0d 3%, #0b0b0d 6%),
+    #0a0a0c;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 12px 28px rgba(0,0,0,0.55), inset 0 0 32px rgba(0,0,0,0.6);
+  cursor: pointer;
+}
+.djc-vinyl.spinning { animation: djc-spin-record 1.8s linear infinite; }
+
+/* today's artwork as the center label — NOT filling the whole disc */
+.djc-vinyl-label {
+  position: absolute;
+  inset: 30%;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.55), 0 2px 10px rgba(0,0,0,0.45);
+}
+.djc-vinyl-label img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* the spindle */
+.djc-vinyl-spindle {
+  position: absolute;
+  inset: calc(50% - 4px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #05070c;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.18);
+}
+
+/* the tonearm — pivots from the upper right, lowers onto the record when
+   playing. Kept fully inside .djc-turntable's own box: never overflows. */
+.djc-tonearm {
+  position: absolute;
+  right: 5%;
+  top: 3%;
+  width: 26%;
+  height: 38%;
+  transform-origin: 80% 12%;
+  transform: rotate(-22deg);
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+.djc-tonearm.lowered { transform: rotate(-3deg); }
+.djc-tonearm-pivot {
+  position: absolute;
+  right: 4%;
+  top: 0;
+  width: 30%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #dbe2ea, #7c8494 75%);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.45);
+}
+.djc-tonearm-shaft {
+  position: absolute;
+  right: 10%;
+  top: 8%;
+  width: 11%;
+  height: 80%;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #dbe2ea, #8f97a8);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+.djc-tonearm-head {
+  position: absolute;
+  right: 2%;
+  bottom: 6%;
+  width: 38%;
+  height: 12%;
+  border-radius: 3px;
+  background: #1c2740;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* tiny status light — lit while today's pick is playing */
+.djc-power-light {
+  position: absolute;
+  left: 6%;
+  bottom: 2%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3a4863;
+  box-shadow: inset 0 0 2px rgba(0,0,0,0.6);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+.djc-power-light.on {
+  background: #b9ffb0;
+  box-shadow: 0 0 8px 2px rgba(120, 255, 130, 0.55);
+}
+
+/* compact vinyl badge next to the Now Spinning label in the deck */
+.djc-mini-vinyl {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex: none;
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255,255,255,0.2), rgba(255,255,255,0) 40%),
+    repeating-radial-gradient(circle at 50% 50%, #171717 0, #171717 3%, #0b0b0d 3%, #0b0b0d 6%),
+    #0a0a0c;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
+}
+.djc-mini-vinyl.spinning { animation: djc-spin-record 1.8s linear infinite; }
+.djc-mini-vinyl::after {
+  content: "";
+  position: absolute;
+  inset: 38%;
+  border-radius: 50%;
+  background: #A78BFA;
+}
+
 /* subtle equalizer while something is playing */
 @keyframes djc-eq {
   0%, 100% { transform: scaleY(0.3); }

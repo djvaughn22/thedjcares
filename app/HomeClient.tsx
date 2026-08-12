@@ -802,10 +802,9 @@ export default function TheDJCaresPage({
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
         <p style={{ display: "inline-flex", alignItems: "center", gap: 10, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: 0 }}>
-          {playerState === "playing" ? (
+          <span className={`djc-mini-vinyl${playerState === "playing" ? " spinning" : ""}`} aria-hidden />
+          {playerState === "playing" && (
             <span className="djc-eq" aria-hidden><span /><span /><span /><span /></span>
-          ) : (
-            <span aria-hidden>🎧</span>
           )}
           Now Spinning
         </p>
@@ -1048,6 +1047,7 @@ export default function TheDJCaresPage({
   const [sermonMinistry, setSermonMinistry] = useState<MinistryKey | null>(null);
   const [expandedSermons, setExpandedSermons] = useState<Record<string, boolean>>({});
   const heroPlaylist = playlists.find((p) => p.id === heroPlaylistId) ?? playlists[0];
+  const isDailyPlaying = Boolean(daily && started && current?.id === daily.item.id && playerState === "playing");
 
   return (
     <main style={{ background: bg, minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -1072,38 +1072,58 @@ export default function TheDJCaresPage({
           <section
             id="daily-encouragement"
             aria-label="Daily Encouragement"
-            style={{ background: card, border: `2px solid ${activeBorder}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20 }}
+            style={{ textAlign: "center", padding: "4px 0 26px", marginBottom: 10 }}
           >
-            <p style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 4px" }}>
+            <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 4px" }}>
               <span aria-hidden>🌅</span> Daily Encouragement · Now Spinning
             </p>
-            <p style={{ fontSize: 13, fontWeight: 700, color: sub, margin: "0 0 16px" }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: sub, margin: "0 0 22px" }}>
               {daily.label} · {daily.post.fullDate}
             </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 18, alignItems: "center", textAlign: "center" }}>
-              {artworkUrl(daily.item) && (
-                <button onClick={() => startItem(daily.item)} aria-label={`Play ${daily.item.title}`} style={{ background: "none", border: 0, padding: 0, cursor: "pointer" }}>
-                  <span className="djc-record" style={{ display: "block", width: "min(340px, 78vw)", aspectRatio: "1", border: `10px solid ${dark ? "#0c1220" : "#dbe2ea"}` }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={artworkUrl(daily.item)!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+
+            {artworkUrl(daily.item) && (
+              <div style={{ width: "min(270px, 68vw)", margin: "0 auto 22px" }}>
+                <div className="djc-turntable">
+                  <span className="djc-platter" aria-hidden />
+                  <a
+                    href={daily.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Open ${daily.item.title} video`}
+                    onClick={() => track("djc_source_opened", { content_id: daily.item.id, via: "vinyl" })}
+                    className={`djc-vinyl${isDailyPlaying ? " spinning" : ""}`}
+                  >
+                    <span className="djc-vinyl-label">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={artworkUrl(daily.item)!} alt="" />
+                    </span>
+                    <span className="djc-vinyl-spindle" aria-hidden />
+                  </a>
+                  <span className={`djc-tonearm${isDailyPlaying ? " lowered" : ""}`} aria-hidden>
+                    <span className="djc-tonearm-pivot" />
+                    <span className="djc-tonearm-shaft" />
+                    <span className="djc-tonearm-head" />
                   </span>
-                </button>
-              )}
-              <div style={{ width: "100%", minWidth: 0 }}>
-                <p style={{ fontSize: 28, fontWeight: 900, color: text, margin: 0 }}>{daily.item.title}</p>
-                <p style={{ fontSize: 13.5, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{daily.item.author}</p>
-                {daily.item.summary && (
-                  <p style={{ fontSize: 13, color: sub, margin: "4px 0 0", lineHeight: 1.5 }}>{daily.item.summary}</p>
-                )}
+                  <span className={`djc-power-light${isDailyPlaying ? " on" : ""}`} aria-hidden />
+                </div>
               </div>
-            </div>
-            <div style={{ textAlign: "center", marginTop: 16 }}>
+            )}
+
+            <p style={{ fontSize: 26, fontWeight: 900, color: text, margin: 0 }}>{daily.item.title}</p>
+            <p style={{ fontSize: 13.5, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{daily.item.author}</p>
+            {daily.item.summary && (
+              <p style={{ fontSize: 13, color: sub, margin: "6px auto 0", maxWidth: 420, lineHeight: 1.5 }}>{daily.item.summary}</p>
+            )}
+
+            <div style={{ marginTop: 20 }}>
               <button onClick={() => startItem(daily.item)} style={{ ...bigButton, padding: "14px 30px" }}>
                 ▶ Play Today&apos;s Encouragement
               </button>
             </div>
-            <div style={{ marginTop: 14, borderTop: `1px solid ${border}`, paddingTop: 14 }}>
+
+            <div style={{ marginTop: 20 }}>
               <EncouragementActions
+                variant="compact"
                 contentId={daily.item.id}
                 label={daily.label}
                 title={daily.item.title}
