@@ -19,6 +19,24 @@
 
 /* ── Today's Record — a real CSS turntable, no external assets ── */
 
+/* outer wrap: handles the click "settle" shift and the hover/focus life
+   the vinyl itself can't own (its transform is reserved for spin) */
+.djc-turntable-wrap {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  /* the platter and a rotated tonearm both bleed a few percent past the
+     vinyl's own box by design (depth, swing) — clip to the wrap's box so
+     that bleed can never push past the viewport edge on narrow screens */
+  overflow: hidden;
+  border-radius: 8px;
+}
+.djc-turntable-wrap:hover,
+.djc-turntable-wrap:focus-within {
+  transform: scale(1.015);
+}
+.djc-turntable-wrap.engaged {
+  transform: scale(0.97);
+}
+
 /* box the vinyl sits in; also reserves room for the tonearm so it never
    overflows the box (and therefore never overflows the page) */
 .djc-turntable {
@@ -27,20 +45,26 @@
   aspect-ratio: 1;
 }
 
-/* the deck surface under the platter */
+/* the deck surface under the platter — a slab with real depth, not just a
+   dark circle behind the record */
 .djc-platter {
   position: absolute;
-  left: 4%;
-  right: -6%;
-  top: -6%;
-  bottom: 4%;
+  left: 2%;
+  right: -8%;
+  top: -8%;
+  bottom: 2%;
   border-radius: 50%;
-  background: radial-gradient(circle at 32% 28%, rgba(255,255,255,0.10), rgba(255,255,255,0) 42%),
-    radial-gradient(circle at 50% 50%, #1c2740 0%, #0c1220 72%);
-  box-shadow: 0 18px 40px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
+  background: radial-gradient(circle at 30% 26%, rgba(255,255,255,0.14), rgba(255,255,255,0) 46%),
+    radial-gradient(circle at 50% 50%, #232f4a 0%, #0c1220 74%);
+  box-shadow:
+    0 22px 48px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(255,255,255,0.04),
+    0 0 0 6px rgba(8,12,22,0.9),
+    inset 0 0 0 1px rgba(255,255,255,0.06);
 }
 
-/* the vinyl disc: grooves via repeating rings + a soft light sheen */
+/* the vinyl disc: dense grooves + a rotating glint pseudo-element so it
+   reads as glossy plastic, not a flat black circle */
 .djc-vinyl {
   position: absolute;
   left: 0;
@@ -49,89 +73,179 @@
   bottom: 0;
   border-radius: 50%;
   display: block;
+  overflow: hidden;
   background:
-    radial-gradient(circle at 34% 26%, rgba(255,255,255,0.16), rgba(255,255,255,0) 40%),
-    repeating-radial-gradient(circle at 50% 50%, #171717 0, #171717 3%, #0b0b0d 3%, #0b0b0d 6%),
-    #0a0a0c;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 12px 28px rgba(0,0,0,0.55), inset 0 0 32px rgba(0,0,0,0.6);
+    repeating-radial-gradient(circle at 50% 50%,
+      #1c1c1f 0, #1c1c1f 1.4%,
+      #0a0a0c 1.4%, #0a0a0c 2.6%),
+    radial-gradient(circle at 50% 50%, #141416 0%, #050506 88%);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.07),
+    0 14px 32px rgba(0,0,0,0.6),
+    inset 0 0 0 10px rgba(0,0,0,0.35),
+    inset 0 0 40px rgba(0,0,0,0.7);
   cursor: pointer;
+  transition: filter 0.25s ease;
+  /* always attached, just paused — so pausing playback freezes the record
+     wherever it stopped instead of snapping back to 0deg */
+  animation: djc-spin-record 1.8s linear infinite;
+  animation-play-state: paused;
 }
-.djc-vinyl.spinning { animation: djc-spin-record 1.8s linear infinite; }
+.djc-turntable-wrap:hover .djc-vinyl,
+.djc-turntable-wrap:focus-within .djc-vinyl {
+  filter: brightness(1.1);
+}
+.djc-vinyl.spinning { animation-play-state: running; }
 
-/* today's artwork as the center label — large enough to recognize at a
-   glance, without swallowing the grooves that read as "record" */
+/* a soft highlight that slowly drifts across the grooves even at rest —
+   the "is this alive?" cue before anyone presses play */
+@keyframes djc-vinyl-glint {
+  0%, 100% { opacity: 0.28; transform: rotate(-6deg); }
+  50% { opacity: 0.6; transform: rotate(10deg); }
+}
+.djc-vinyl-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 210deg at 32% 28%, rgba(255,255,255,0.4), rgba(255,255,255,0) 32%);
+  mix-blend-mode: screen;
+  animation: djc-vinyl-glint 5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* today's artwork as the center label — bigger, so it actually reads as
+   "today's song" and not just a turntable decoration */
 .djc-vinyl-label {
   position: absolute;
-  inset: 26%;
+  inset: 21%;
   border-radius: 50%;
   overflow: hidden;
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.55), 0 2px 10px rgba(0,0,0,0.45);
+  box-shadow: 0 0 0 3px #050506, 0 0 0 4px rgba(255,255,255,0.14), 0 2px 14px rgba(0,0,0,0.55);
 }
 .djc-vinyl-label img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* the spindle */
+/* the spindle — brushed metal, not a flat dot */
 .djc-vinyl-spindle {
   position: absolute;
-  inset: calc(50% - 4px);
-  width: 8px;
-  height: 8px;
+  inset: calc(50% - 5px);
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: #05070c;
-  box-shadow: 0 0 0 2px rgba(255,255,255,0.18);
+  background: radial-gradient(circle at 35% 30%, #f1f4f9, #9aa4b6 55%, #4b5568 100%);
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.6), 0 1px 3px rgba(0,0,0,0.5);
 }
 
-/* the tonearm — pivots from the upper right, lowers onto the record when
-   playing. Kept fully inside .djc-turntable's own box: never overflows. */
-.djc-tonearm {
+/* the unmistakable play affordance, centered over the artwork. Fades away
+   once the record is engaged instead of just vanishing on mount, so the
+   click feels like it did something. */
+.djc-vinyl-playcue {
   position: absolute;
-  right: 5%;
-  top: 3%;
-  width: 26%;
-  height: 38%;
-  transform-origin: 80% 12%;
-  transform: rotate(-22deg);
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  inset: 21%;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: #fff;
+  background: radial-gradient(circle, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.08) 62%, rgba(0,0,0,0) 75%);
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.35s ease, transform 0.35s ease;
   pointer-events: none;
 }
-.djc-tonearm.lowered { transform: rotate(-3deg); }
+.djc-vinyl.engaged .djc-vinyl-playcue {
+  opacity: 0;
+  transform: scale(0.85);
+}
+.djc-vinyl-playcue-tri {
+  font-size: clamp(20px, 7vw, 30px);
+  line-height: 1;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.6));
+}
+.djc-vinyl-playcue-txt {
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 5px rgba(0,0,0,0.6);
+}
+
+/* the tonearm — pivots from the upper right, lowers onto the record the
+   instant the record is engaged (doesn't wait on playback to actually
+   start, so the click feels instant). Kept fully inside .djc-turntable's
+   own box: never overflows. */
+.djc-tonearm {
+  position: absolute;
+  right: 4%;
+  top: 2%;
+  width: 30%;
+  height: 42%;
+  transform-origin: 82% 10%;
+  transform: rotate(-26deg);
+  transition: transform 0.55s cubic-bezier(0.34, 1.2, 0.4, 1);
+  pointer-events: none;
+}
+.djc-tonearm.lowered { transform: rotate(-2deg); }
+.djc-tonearm-counterweight {
+  position: absolute;
+  right: -2%;
+  top: -6%;
+  width: 22%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4b5568, #1c2740 75%);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
 .djc-tonearm-pivot {
   position: absolute;
   right: 4%;
   top: 0;
-  width: 30%;
+  width: 26%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #dbe2ea, #7c8494 75%);
+  background: radial-gradient(circle at 35% 30%, #f1f4f9, #7c8494 75%);
   box-shadow: 0 2px 5px rgba(0,0,0,0.45);
 }
 .djc-tonearm-shaft {
   position: absolute;
-  right: 10%;
-  top: 8%;
-  width: 11%;
-  height: 80%;
+  right: 10.5%;
+  top: 7%;
+  width: 8%;
+  height: 82%;
   border-radius: 4px;
-  background: linear-gradient(180deg, #dbe2ea, #8f97a8);
+  background: linear-gradient(90deg, #8f97a8, #eef1f6 45%, #8f97a8);
   box-shadow: 0 2px 6px rgba(0,0,0,0.4);
 }
 .djc-tonearm-head {
   position: absolute;
-  right: 2%;
-  bottom: 6%;
-  width: 38%;
-  height: 12%;
+  right: 0%;
+  bottom: 4%;
+  width: 42%;
+  height: 14%;
   border-radius: 3px;
-  background: #1c2740;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  background: linear-gradient(135deg, #2a3757, #141d2e);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+.djc-tonearm-head::after {
+  content: "";
+  position: absolute;
+  left: -6%;
+  bottom: 10%;
+  width: 10%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #e8edf5;
+  box-shadow: 0 0 4px rgba(232,237,245,0.7);
 }
 
-/* tiny status light — lit while today's pick is playing */
+/* status light — lights the instant the record is engaged */
 .djc-power-light {
   position: absolute;
-  left: 6%;
-  bottom: 2%;
-  width: 8px;
-  height: 8px;
+  left: 5%;
+  bottom: 1%;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: #3a4863;
   box-shadow: inset 0 0 2px rgba(0,0,0,0.6);
@@ -139,18 +253,18 @@
 }
 .djc-power-light.on {
   background: #b9ffb0;
-  box-shadow: 0 0 8px 2px rgba(120, 255, 130, 0.55);
+  box-shadow: 0 0 9px 2px rgba(120, 255, 130, 0.6);
 }
 
-/* record → video: the inline player fades/grows into the hero's spot the
-   instant it mounts, instead of just popping in underneath the fold.
-   Reduced-motion is handled by the global animation-duration override
-   above, so this needs no separate override. */
+/* record → video: the player unfolds open beneath the still-spinning
+   record instead of just popping in underneath the fold. Reduced-motion is
+   handled by the global animation-duration override below, so this needs
+   no separate override. */
 @keyframes djc-daily-open {
-  from { opacity: 0; transform: scale(0.94); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: scaleY(0.72); }
+  to { opacity: 1; transform: scaleY(1); }
 }
-.djc-daily-video-enter { animation: djc-daily-open 0.45s ease-out; }
+.djc-daily-video-enter { animation: djc-daily-open 0.5s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: top center; }
 
 /* compact vinyl badge next to the Now Spinning label in the deck */
 .djc-mini-vinyl {

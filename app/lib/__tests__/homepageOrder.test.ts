@@ -47,8 +47,8 @@ describe("homepage section order", () => {
     expect(homeClient).toContain('href="/digital-dj"');
   });
 
-  it("one click on the Daily Encouragement CTA starts playback via the shared startItem pipeline", () => {
-    expect(homeClient).toMatch(/onClick=\{\(\) => startItem\(daily\.item\)\}/);
+  it("one click on the Daily Encouragement record starts playback via the shared startItem pipeline", () => {
+    expect(homeClient).toMatch(/startItem\(daily\.item\)/);
   });
 
   it("clicking a video card seeds the continuous queue (not a one-off play)", () => {

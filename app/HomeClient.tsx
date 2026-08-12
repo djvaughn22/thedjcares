@@ -790,19 +790,10 @@ export default function TheDJCaresPage({
   const deckPoolEmpty = pool.length === 0;
   const showVideo = started && current?.videoId;
   const showEmbed = started && current && !current.videoId && (current.spotifyEmbed || current.appleEmbed);
-  // Today's pick is the current record — drives the "Daily Encouragement ·
-  // Now Playing" header, the record → video entrance animation, and the
-  // "Back to record" control. False for every other queue/spin/browse pick.
+  // Today's pick is the current record — drives the "Daily Encouragement"
+  // hero turntable staying mounted through playback, and the video's entrance
+  // animation. False for every other queue/spin/browse pick.
   const isDaily = Boolean(daily && current?.id === daily.item.id);
-
-  // Closes today's inline video and returns to the big record — stays on
-  // this page (just re-shows the !started hero), doesn't touch the queue.
-  const backToRecord = () => {
-    setPlaying(false);
-    setStarted(false);
-    setAnnounce("Back to today's record.");
-    track("djc_daily_back_to_record", { content_id: daily?.item.id });
-  };
 
   const deck = (
     <section
@@ -813,16 +804,21 @@ export default function TheDJCaresPage({
     >
       <div aria-live="polite" className="djc-sr-only">{announce}</div>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
-        <p style={{ display: "inline-flex", alignItems: "center", gap: 10, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: 0 }}>
-          <span className={`djc-mini-vinyl${playerState === "playing" ? " spinning" : ""}`} aria-hidden />
-          {playerState === "playing" && (
-            <span className="djc-eq" aria-hidden><span /><span /><span /><span /></span>
-          )}
-          {isDaily ? "Daily Encouragement · Now Playing" : "Now Spinning"}
-        </p>
-        {current && <span style={{ fontSize: 12, fontWeight: 800, color: sub, textTransform: "uppercase", letterSpacing: "0.08em" }}>{typeLabel(current)}</span>}
-      </div>
+      {/* the giant hero vinyl above already reads as "Daily Encouragement ·
+          Now Playing" while it's spinning — this row would just repeat it,
+          so it only appears for picks the hero isn't showing. */}
+      {!isDaily && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
+          <p style={{ display: "inline-flex", alignItems: "center", gap: 10, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: 0 }}>
+            <span className={`djc-mini-vinyl${playerState === "playing" ? " spinning" : ""}`} aria-hidden />
+            {playerState === "playing" && (
+              <span className="djc-eq" aria-hidden><span /><span /><span /><span /></span>
+            )}
+            Now Spinning
+          </p>
+          {current && <span style={{ fontSize: 12, fontWeight: 800, color: sub, textTransform: "uppercase", letterSpacing: "0.08em" }}>{typeLabel(current)}</span>}
+        </div>
+      )}
 
       {/* the record / player */}
       {!started && current && (
@@ -909,8 +905,9 @@ export default function TheDJCaresPage({
         />
       )}
 
-      {/* what's on the platter */}
-      {current && !blocked && (
+      {/* what's on the platter — the hero vinyl already shows title/author
+          for today's pick, so this only repeats them for other picks. */}
+      {current && !blocked && !isDaily && (
         <div style={{ textAlign: "center", margin: "14px 0 0" }}>
           <p style={{ fontSize: 18, fontWeight: 900, color: text, margin: 0 }}>{current.title}</p>
           <p style={{ fontSize: 14, fontWeight: 700, color: accent, margin: "2px 0 0" }}>
@@ -919,15 +916,6 @@ export default function TheDJCaresPage({
           </p>
           {!started && current.summary && (
             <p style={{ fontSize: 13.5, color: sub, margin: "6px auto 0", maxWidth: 420, lineHeight: 1.55 }}>{current.summary}</p>
-          )}
-          {isDaily && started && (
-            <button
-              onClick={backToRecord}
-              aria-label="Back to today's record"
-              style={{ ...quietButton, marginTop: 12, padding: "8px 16px", fontSize: 13 }}
-            >
-              ← Back to record
-            </button>
           )}
         </div>
       )}
@@ -1086,83 +1074,97 @@ export default function TheDJCaresPage({
 
         {/* Daily Encouragement — the reason to arrive. Same pick /today used
             to show, reused via the shared buildDailyEncouragement adapter
-            (no cloned selection logic). The record and the CTA both play it
-            inline in the deck right below (id="daily-encouragement" is
-            reused there) — nobody leaves TheDJCares to watch it.
-            EncouragementActions ("compact") carries Share/Download/Browse;
-            source attribution is screen-reader only, since the record no
-            longer links out. */}
-        {tab === "spin" && daily && !started && (
+            (no cloned selection logic). The turntable stays mounted through
+            playback (isDaily) instead of swapping out for the generic deck,
+            so the video opens directly beneath the record instead of
+            replacing it. EncouragementActions ("compact") carries
+            Share/Download/Browse; source attribution is screen-reader only,
+            since the record plays inline and never links out. */}
+        {tab === "spin" && daily && (!started || isDaily) && (
           <section
             id="daily-encouragement"
             aria-label="Daily Encouragement"
-            style={{ textAlign: "center", padding: "4px 0 26px", marginBottom: 10 }}
+            style={{ textAlign: "center", padding: "4px 0 20px", marginBottom: 6 }}
           >
-            <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 4px" }}>
-              <span aria-hidden>🌅</span> Daily Encouragement · Now Spinning
+            <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 2px" }}>
+              <span aria-hidden>🌅</span> Daily Encouragement
             </p>
-            <p style={{ fontSize: 13, fontWeight: 700, color: sub, margin: "0 0 22px" }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: sub, margin: "0 0 20px" }}>
               {daily.label} · {daily.post.fullDate}
             </p>
 
             {artworkUrl(daily.item) && (
-              <div style={{ width: "min(440px, 84vw)", margin: "0 auto 22px" }}>
+              <div className={`djc-turntable-wrap${started ? " engaged" : ""}`} style={{ width: "min(460px, 88vw)", margin: "0 auto 18px" }}>
                 <div className="djc-turntable">
                   <span className="djc-platter" aria-hidden />
                   <button
                     type="button"
-                    onClick={() => startItem(daily.item)}
-                    aria-label={`Play today's encouragement: ${daily.item.title}`}
-                    className={`djc-vinyl${isDailyPlaying ? " spinning" : ""}`}
+                    onClick={() => {
+                      if (isDaily && started) {
+                        setPlaying(playerState !== "playing");
+                      } else {
+                        startItem(daily.item);
+                      }
+                    }}
+                    aria-label={
+                      started
+                        ? playerState === "playing"
+                          ? "Pause today's encouragement"
+                          : "Resume today's encouragement"
+                        : `Play today's encouragement: ${daily.item.title}`
+                    }
+                    className={`djc-vinyl${isDailyPlaying ? " spinning" : ""}${started ? " engaged" : ""}`}
                     style={{ WebkitAppearance: "none", appearance: "none", border: 0, padding: 0, margin: 0, font: "inherit", color: "inherit" }}
                   >
+                    <span className="djc-vinyl-sheen" aria-hidden />
                     <span className="djc-vinyl-label">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={artworkUrl(daily.item)!} alt="" />
                     </span>
                     <span className="djc-vinyl-spindle" aria-hidden />
+                    <span className="djc-vinyl-playcue" aria-hidden>
+                      <span className="djc-vinyl-playcue-tri">▶</span>
+                      <span className="djc-vinyl-playcue-txt">Play Today</span>
+                    </span>
                   </button>
-                  <span className={`djc-tonearm${isDailyPlaying ? " lowered" : ""}`} aria-hidden>
+                  <span className={`djc-tonearm${started ? " lowered" : ""}`} aria-hidden>
+                    <span className="djc-tonearm-counterweight" />
                     <span className="djc-tonearm-pivot" />
                     <span className="djc-tonearm-shaft" />
                     <span className="djc-tonearm-head" />
                   </span>
-                  <span className={`djc-power-light${isDailyPlaying ? " on" : ""}`} aria-hidden />
+                  <span className={`djc-power-light${started ? " on" : ""}`} aria-hidden />
                 </div>
               </div>
             )}
 
-            <p style={{ fontSize: 26, fontWeight: 900, color: text, margin: 0 }}>{daily.item.title}</p>
-            <p style={{ fontSize: 13.5, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{daily.item.author}</p>
-            {daily.item.summary && (
+            <p style={{ fontSize: started ? 19 : 24, fontWeight: 900, color: text, margin: 0, transition: "font-size 0.3s ease" }}>{daily.item.title}</p>
+            <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{daily.item.author}</p>
+            {!started && daily.item.summary && (
               <p style={{ fontSize: 13, color: sub, margin: "6px auto 0", maxWidth: 420, lineHeight: 1.5 }}>{daily.item.summary}</p>
             )}
 
-            <div style={{ marginTop: 20 }}>
-              <button onClick={() => startItem(daily.item)} style={{ ...bigButton, padding: "14px 30px" }}>
-                ▶ Play Today&apos;s Encouragement
-              </button>
-            </div>
-
-            <div style={{ marginTop: 20 }}>
-              <EncouragementActions
-                variant="compact"
-                contentId={daily.item.id}
-                label={daily.label}
-                title={daily.item.title}
-                pageUrl={`${PRODUCTION_ORIGIN}/#daily-encouragement`}
-                sourceUrl={daily.sourceUrl}
-                cardPath={daily.post.imagePath}
-                cardFileName={daily.post.imageFileName}
-              />
-            </div>
+            {!started && (
+              <div style={{ marginTop: 18 }}>
+                <EncouragementActions
+                  variant="compact"
+                  contentId={daily.item.id}
+                  label={daily.label}
+                  title={daily.item.title}
+                  pageUrl={`${PRODUCTION_ORIGIN}/#daily-encouragement`}
+                  sourceUrl={daily.sourceUrl}
+                  cardPath={daily.post.imagePath}
+                  cardFileName={daily.post.imageFileName}
+                />
+              </div>
+            )}
           </section>
         )}
 
-        {/* the spin deck (Now Playing) sits right under the Daily hero —
-            one click there starts the continuous queue; on other tabs it
-            stays up top once something is playing */}
-        {started && <div id="daily-encouragement">{deck}</div>}
+        {/* the spin deck (Now Playing) opens directly beneath the hero
+            turntable once something's playing — for today's pick the record
+            above stays visible and spinning the whole time. */}
+        {started && deck}
 
         {/* Music Videos preview — hand-picked songs, same MediaCard grid the
             Videos tab uses, just a taste of it up front. Clicking one makes
