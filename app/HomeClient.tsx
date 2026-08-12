@@ -790,6 +790,19 @@ export default function TheDJCaresPage({
   const deckPoolEmpty = pool.length === 0;
   const showVideo = started && current?.videoId;
   const showEmbed = started && current && !current.videoId && (current.spotifyEmbed || current.appleEmbed);
+  // Today's pick is the current record — drives the "Daily Encouragement ·
+  // Now Playing" header, the record → video entrance animation, and the
+  // "Back to record" control. False for every other queue/spin/browse pick.
+  const isDaily = Boolean(daily && current?.id === daily.item.id);
+
+  // Closes today's inline video and returns to the big record — stays on
+  // this page (just re-shows the !started hero), doesn't touch the queue.
+  const backToRecord = () => {
+    setPlaying(false);
+    setStarted(false);
+    setAnnounce("Back to today's record.");
+    track("djc_daily_back_to_record", { content_id: daily?.item.id });
+  };
 
   const deck = (
     <section
@@ -806,7 +819,7 @@ export default function TheDJCaresPage({
           {playerState === "playing" && (
             <span className="djc-eq" aria-hidden><span /><span /><span /><span /></span>
           )}
-          Now Spinning
+          {isDaily ? "Daily Encouragement · Now Playing" : "Now Spinning"}
         </p>
         {current && <span style={{ fontSize: 12, fontWeight: 800, color: sub, textTransform: "uppercase", letterSpacing: "0.08em" }}>{typeLabel(current)}</span>}
       </div>
@@ -835,7 +848,7 @@ export default function TheDJCaresPage({
       )}
 
       {showVideo && !blocked && (
-        <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
+        <div className={isDaily ? "djc-daily-video-enter" : undefined} style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
           {(() => {
             const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
             DEV && console.log('[HomeClient.render] DJPlayer props: videoId:', current?.videoId, 'title:', current?.title, 'playing:', playing, 'volume:', prefs.volume);
@@ -906,6 +919,15 @@ export default function TheDJCaresPage({
           </p>
           {!started && current.summary && (
             <p style={{ fontSize: 13.5, color: sub, margin: "6px auto 0", maxWidth: 420, lineHeight: 1.55 }}>{current.summary}</p>
+          )}
+          {isDaily && started && (
+            <button
+              onClick={backToRecord}
+              aria-label="Back to today's record"
+              style={{ ...quietButton, marginTop: 12, padding: "8px 16px", fontSize: 13 }}
+            >
+              ← Back to record
+            </button>
           )}
         </div>
       )}
@@ -1064,10 +1086,12 @@ export default function TheDJCaresPage({
 
         {/* Daily Encouragement — the reason to arrive. Same pick /today used
             to show, reused via the shared buildDailyEncouragement adapter
-            (no cloned selection logic). One click plays it in the Now
-            Playing player right below; EncouragementActions (unchanged,
-            reused as-is) carries everything /today offered — source link,
-            share, and the download card — so nothing is lost. */}
+            (no cloned selection logic). The record and the CTA both play it
+            inline in the deck right below (id="daily-encouragement" is
+            reused there) — nobody leaves TheDJCares to watch it.
+            EncouragementActions ("compact") carries Share/Download/Browse;
+            source attribution is screen-reader only, since the record no
+            longer links out. */}
         {tab === "spin" && daily && !started && (
           <section
             id="daily-encouragement"
@@ -1082,23 +1106,22 @@ export default function TheDJCaresPage({
             </p>
 
             {artworkUrl(daily.item) && (
-              <div style={{ width: "min(270px, 68vw)", margin: "0 auto 22px" }}>
+              <div style={{ width: "min(440px, 84vw)", margin: "0 auto 22px" }}>
                 <div className="djc-turntable">
                   <span className="djc-platter" aria-hidden />
-                  <a
-                    href={daily.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Open ${daily.item.title} video`}
-                    onClick={() => track("djc_source_opened", { content_id: daily.item.id, via: "vinyl" })}
+                  <button
+                    type="button"
+                    onClick={() => startItem(daily.item)}
+                    aria-label={`Play today's encouragement: ${daily.item.title}`}
                     className={`djc-vinyl${isDailyPlaying ? " spinning" : ""}`}
+                    style={{ WebkitAppearance: "none", appearance: "none", border: 0, padding: 0, margin: 0, font: "inherit", color: "inherit" }}
                   >
                     <span className="djc-vinyl-label">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={artworkUrl(daily.item)!} alt="" />
                     </span>
                     <span className="djc-vinyl-spindle" aria-hidden />
-                  </a>
+                  </button>
                   <span className={`djc-tonearm${isDailyPlaying ? " lowered" : ""}`} aria-hidden>
                     <span className="djc-tonearm-pivot" />
                     <span className="djc-tonearm-shaft" />

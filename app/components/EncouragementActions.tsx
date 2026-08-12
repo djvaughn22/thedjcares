@@ -92,15 +92,11 @@ export default function EncouragementActions({
             Browse the library
           </a>
         </div>
-        <a
-          href={sourceUrl}
-          target="_blank"
-          rel="noreferrer"
-          onClick={() => track("djc_source_opened", { content_id: contentId })}
-          className="text-xs font-semibold text-[#94a3b8] underline decoration-dotted underline-offset-4 transition hover:text-[#A78BFA]"
-        >
-          Source: {hostnameOf(sourceUrl)} ↗
-        </a>
+        {/* Attribution stays for screen readers and the record's own
+            aria-label; it no longer needs a visible outbound link in the
+            hero now that the record and CTA both play inline — the video
+            itself plays on TheDJCares, not on {hostnameOf(sourceUrl)}. */}
+        <span className="djc-sr-only">Source: {hostnameOf(sourceUrl)}</span>
       </div>
     );
   }
