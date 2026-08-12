@@ -542,17 +542,6 @@ export default function TheDJCaresPage({
     }, 100);
   }, [current, prefs.repeat, next]);
 
-  // Fallback for YouTube ENDED event that doesn't always fire reliably.
-  // Monitor progress and trigger auto-advance when video reaches its end.
-  useEffect(() => {
-    if (!progress || !started || !playing) return;
-    lastProgressRef.current = progress;
-    // Detect when video has reached end (within 1 second of duration)
-    if (progress.d > 0 && progress.t >= progress.d - 1) {
-      console.log('[HomeClient.progressFallback] VIDEO REACHED END - calling onEnded. progress:', progress.t.toFixed(1), '/', progress.d.toFixed(1));
-      onEnded();
-    }
-  }, [progress, started, playing, onEnded]);
 
   const onUnavailable = () => {
     if (!current) return;
