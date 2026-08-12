@@ -1068,32 +1068,29 @@ export default function TheDJCaresPage({
             Playing player right below; EncouragementActions (unchanged,
             reused as-is) carries everything /today offered — source link,
             share, and the download card — so nothing is lost. */}
-        {tab === "spin" && daily && (
+        {tab === "spin" && daily && !started && (
           <section
             id="daily-encouragement"
             aria-label="Daily Encouragement"
             style={{ background: card, border: `2px solid ${activeBorder}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20 }}
           >
             <p style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 4px" }}>
-              <span aria-hidden>🌅</span> Daily Encouragement
+              <span aria-hidden>🌅</span> Daily Encouragement · Now Spinning
             </p>
             <p style={{ fontSize: 13, fontWeight: 700, color: sub, margin: "0 0 16px" }}>
               {daily.label} · {daily.post.fullDate}
             </p>
-            <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18, alignItems: "center", textAlign: "center" }}>
               {artworkUrl(daily.item) && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={artworkUrl(daily.item)!}
-                  alt=""
-                  loading="lazy"
-                  width={116}
-                  height={65}
-                  style={{ width: 116, height: 65, objectFit: "cover", borderRadius: 10, border: `2px solid ${border}`, flexShrink: 0 }}
-                />
+                <button onClick={() => startItem(daily.item)} aria-label={`Play ${daily.item.title}`} style={{ background: "none", border: 0, padding: 0, cursor: "pointer" }}>
+                  <span className="djc-record" style={{ display: "block", width: "min(340px, 78vw)", aspectRatio: "1", border: `10px solid ${dark ? "#0c1220" : "#dbe2ea"}` }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={artworkUrl(daily.item)!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </span>
+                </button>
               )}
-              <div style={{ flex: "1 1 200px", minWidth: 0 }}>
-                <p style={{ fontSize: 19, fontWeight: 900, color: text, margin: 0 }}>{daily.item.title}</p>
+              <div style={{ width: "100%", minWidth: 0 }}>
+                <p style={{ fontSize: 28, fontWeight: 900, color: text, margin: 0 }}>{daily.item.title}</p>
                 <p style={{ fontSize: 13.5, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{daily.item.author}</p>
                 {daily.item.summary && (
                   <p style={{ fontSize: 13, color: sub, margin: "4px 0 0", lineHeight: 1.5 }}>{daily.item.summary}</p>
@@ -1122,7 +1119,7 @@ export default function TheDJCaresPage({
         {/* the spin deck (Now Playing) sits right under the Daily hero —
             one click there starts the continuous queue; on other tabs it
             stays up top once something is playing */}
-        {(tab === "spin" || started) && deck}
+        {started && <div id="daily-encouragement">{deck}</div>}
 
         {/* Music Videos preview — hand-picked songs, same MediaCard grid the
             Videos tab uses, just a taste of it up front. Clicking one makes

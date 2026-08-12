@@ -17,23 +17,21 @@ const nextConfig = readFileSync(join(root, "next.config.ts"), "utf8");
 const at = (haystack: string, needle: string) => haystack.indexOf(needle);
 
 describe("homepage section order", () => {
-  it("Daily Encouragement, then Now Playing, then Videos/Music/Sermons/Podcasts, Digital DJ last", () => {
+  it("merged Daily Encouragement / Now Playing hero, then Videos/Music/Sermons/Podcasts, Digital DJ last", () => {
     // `deck` (id="now-playing") is a const defined well above the return
     // statement and referenced by name where it actually renders — so its
     // render POSITION is this insertion line, not its definition's id=.
     const daily = at(homeClient, 'id="daily-encouragement"');
-    const nowPlaying = at(homeClient, '(tab === "spin" || started) && deck');
     const videos = at(homeClient, 'id="videos"');
     const music = at(homeClient, 'id="music"');
     const sermons = at(homeClient, 'id="sermons"');
     const podcasts = at(homeClient, 'id="podcasts"');
     const digitalDj = at(homeClient, 'aria-label="Digital DJ"');
 
-    for (const idx of [daily, nowPlaying, videos, music, sermons, podcasts, digitalDj]) {
+    for (const idx of [daily, videos, music, sermons, podcasts, digitalDj]) {
       expect(idx).toBeGreaterThan(-1);
     }
-    expect(daily).toBeLessThan(nowPlaying);
-    expect(nowPlaying).toBeLessThan(videos);
+    expect(daily).toBeLessThan(videos);
     expect(videos).toBeLessThan(music);
     expect(music).toBeLessThan(sermons);
     expect(sermons).toBeLessThan(podcasts);
