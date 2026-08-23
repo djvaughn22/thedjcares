@@ -111,6 +111,7 @@ export type DailyEncouragement = {
   post: DailySocialPost;
   item: MediaItem;
   label: string;
+  audioUrl: string | null;
   embedUrl: string | null;
   sourceUrl: string;
 };
@@ -160,6 +161,7 @@ export async function buildDailyEncouragement(
   return {
     item,
     label,
+    audioUrl: item.audioUrl ?? null,
     embedUrl: getEmbedUrl(item),
     sourceUrl: getWatchUrl(item),
     post: {

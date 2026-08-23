@@ -171,6 +171,10 @@ export default function TheDJCaresPage({
   // both live in the same hero container; switching back never restarts or
   // reshuffles the song.
   const [heroView, setHeroView] = useState<"record" | "player">("record");
+  // Whether Daily Encouragement's card has expanded into its inline player
+  // (mirrors EncouragementActions' own internal toggle so the summary
+  // paragraph above it can hide while the player is open).
+  const [dailyExpanded, setDailyExpanded] = useState(false);
   const historyRef = useRef<string[]>([]);
   // This session's play order, for real Previous/Next.
   const sessionRef = useRef<MediaItem[]>([]);
@@ -975,7 +979,10 @@ export default function TheDJCaresPage({
         <button onClick={prev} disabled={posRef.current <= 0} aria-label="Previous" style={{ ...quietButton, opacity: posRef.current <= 0 ? 0.45 : 1, cursor: posRef.current <= 0 ? "default" : "pointer" }}>
           ⏮
         </button>
-        {current?.videoId && started && !blocked ? (
+        {/* the hero above already has its own Play/Pause for this exact
+            item — showing it again here would be a second, equally
+            prominent control for the same media. */}
+        {isHeroCurrent ? null : current?.videoId && started && !blocked ? (
           <button onClick={() => setPlaying(playerState !== "playing")} aria-label={playerState === "playing" ? "Pause" : "Play"} style={quietButton}>
             {playerState === "playing" ? "⏸ Pause" : "▶ Play"}
           </button>
@@ -996,7 +1003,8 @@ export default function TheDJCaresPage({
         <button onClick={spin} disabled={deckPoolEmpty && !moodQueue} style={{ ...bigButton, opacity: deckPoolEmpty && !moodQueue ? 0.5 : 1 }}>
           🎲 Spin Something Else
         </button>
-        {current && share(mediaShareTarget(current), "deck")}
+        {/* same reasoning — the hero already has its own Share for this item. */}
+        {current && !isHeroCurrent && share(mediaShareTarget(current), "deck")}
         <button onClick={() => updatePrefs({ muted: !prefs.muted })} aria-label={prefs.muted ? "Unmute" : "Mute"} style={quietButton}>
           {prefs.muted ? "🔇" : "🔊"}
         </button>
@@ -1237,14 +1245,21 @@ export default function TheDJCaresPage({
           </section>
         )}
 
-        {/* Daily Encouragement — its own content block, below the hero and
-            completely separate from it. It never seeds `current`, never
-            starts inline playback in the deck, and never influences the
-            vinyl — it's DJ's daily podcast/sermon pick. Compact variant:
-            stays on TheDJCares.com first (Share/Download/Browse), plays
-            inline when the source has a real embed, and only falls back to
-            an outbound source link — visible, not hidden — when it truly
-            can't be embedded. */}
+        {/* the spin deck (Now Playing): Previous/Next, Play/Pause, Shuffle,
+            Repeat, Spin Something Else, Mood Mixes. Opens directly beneath
+            the hero — every control that operates the music player stays
+            grouped with it, with nothing (Daily Encouragement included)
+            wedged in between. */}
+        {started && deck}
+
+        {/* Daily Encouragement — its own content block, after the whole
+            music experience and completely separate from it. It never
+            seeds `current`, never starts inline playback in the deck, and
+            never influences the vinyl — it's DJ's daily podcast/sermon
+            pick. Compact variant: Listen expands the card into an inline
+            player (native <audio> or a real provider embed) in place, and
+            only falls back to a visible (never hidden) source link when
+            there's truly nothing to play inline. */}
         {tab === "spin" && daily && (
           <section
             id="daily-encouragement"
@@ -1259,7 +1274,7 @@ export default function TheDJCaresPage({
             </p>
             <p style={{ fontSize: 20, fontWeight: 900, color: text, margin: 0 }}>{daily.item.title}</p>
             <p style={{ fontSize: 13.5, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{daily.item.author}</p>
-            {daily.item.summary && (
+            {!dailyExpanded && daily.item.summary && (
               <p style={{ fontSize: 13.5, color: sub, margin: "6px auto 0", maxWidth: 460, lineHeight: 1.55 }}>{daily.item.summary}</p>
             )}
             <div style={{ marginTop: 16 }}>
@@ -1270,18 +1285,15 @@ export default function TheDJCaresPage({
                 title={daily.item.title}
                 pageUrl={`${PRODUCTION_ORIGIN}/#daily-encouragement`}
                 sourceUrl={daily.sourceUrl}
+                audioUrl={daily.audioUrl}
                 embedUrl={daily.embedUrl}
                 cardPath={daily.post.imagePath}
                 cardFileName={daily.post.imageFileName}
+                onExpandedChange={setDailyExpanded}
               />
             </div>
           </section>
         )}
-
-        {/* the spin deck (Now Playing) opens directly beneath the hero
-            turntable once something's playing — for today's pick the record
-            above stays visible and spinning the whole time. */}
-        {started && deck}
 
         {/* Music Videos preview — hand-picked songs, same MediaCard grid the
             Videos tab uses, just a taste of it up front. Clicking one makes

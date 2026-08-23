@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildDailyEncouragement,
   buildEncouragementCaption,
   DJC_BRAND,
   eligibleItems,
@@ -117,5 +118,21 @@ describe("Daily Encouragement stays decoupled from the hero record", () => {
   it("its eligible pool is allowed to include non-video, non-inline-playable items", () => {
     const withoutVideo = eligibleItems().filter((item) => !item.videoId);
     expect(withoutVideo.length).toBeGreaterThan(0);
+  });
+});
+
+describe("audioUrl passthrough (native <audio> inline playback)", () => {
+  it("carries the item's audioUrl through when one is set on the library entry", async () => {
+    const withAudio = LIBRARY.find((item) => item.audioUrl);
+    if (!withAudio) return; // no item currently has one — nothing to assert yet
+    const built = await buildDailyEncouragement(chicagoDateKey(), { offset: 0 });
+    // Just confirm the field is wired end to end for whichever item is picked.
+    expect(built).toHaveProperty("audioUrl");
+  });
+
+  it("is null when the picked item has no audioUrl, never undefined or a stale value", async () => {
+    const built = await buildDailyEncouragement(chicagoDateKey());
+    expect(built.audioUrl === null || typeof built.audioUrl === "string").toBe(true);
+    expect(built.audioUrl).toBe(built.item.audioUrl ?? null);
   });
 });

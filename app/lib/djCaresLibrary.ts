@@ -73,6 +73,7 @@ export type MediaItem = {
   shortTitle?: string; // compact label for filter pills
   url: string; // canonical official source
   videoId?: string; // YouTube (oEmbed-verified)
+  audioUrl?: string; // direct playable audio file — plays via native <audio>
   appleEmbed?: string; // embed.music.apple.com URL
   spotifyEmbed?: string; // open.spotify.com/embed URL
   spotifyAlt?: string; // Spotify twin for Apple playlists

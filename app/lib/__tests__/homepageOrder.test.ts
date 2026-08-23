@@ -23,6 +23,9 @@ describe("homepage section order", () => {
     // statement and referenced by name where it actually renders — so its
     // render POSITION is this insertion line, not its definition's id=.
     const hero = at(homeClient, 'id="video-of-the-day"');
+    // `deck` is a const defined well above the return statement — its
+    // render POSITION is where it's actually inserted into the tree.
+    const deckInsertion = at(homeClient, "{started && deck}");
     const daily = at(homeClient, 'id="daily-encouragement"');
     const videos = at(homeClient, 'id="videos"');
     const music = at(homeClient, 'id="music"');
@@ -30,10 +33,14 @@ describe("homepage section order", () => {
     const podcasts = at(homeClient, 'id="podcasts"');
     const digitalDj = at(homeClient, 'aria-label="Digital DJ"');
 
-    for (const idx of [hero, daily, videos, music, sermons, podcasts, digitalDj]) {
+    for (const idx of [hero, deckInsertion, daily, videos, music, sermons, podcasts, digitalDj]) {
       expect(idx).toBeGreaterThan(-1);
     }
-    expect(hero).toBeLessThan(daily);
+    // The whole music experience (hero + its Previous/Next/Shuffle/Repeat/
+    // Spin Something Else/Mood Mixes controls) stays grouped together —
+    // Daily Encouragement never sits between them.
+    expect(hero).toBeLessThan(deckInsertion);
+    expect(deckInsertion).toBeLessThan(daily);
     expect(daily).toBeLessThan(videos);
     expect(videos).toBeLessThan(music);
     expect(music).toBeLessThan(sermons);
@@ -91,18 +98,34 @@ describe("homepage section order", () => {
   it("reuses EncouragementActions in its compact, stay-on-site-first variant rather than re-implementing share/download/source-link", () => {
     expect(homeClient).toContain("<EncouragementActions");
     expect(homeClient).toMatch(/variant="compact"/);
+    expect(homeClient).toContain("audioUrl={daily.audioUrl}");
     expect(homeClient).not.toContain("djc_today_viewed"); // that tracking lives inside the reused component, not duplicated here
+  });
+
+  it("the deck never shows a second Play/Pause or Share for the item the hero is already showing", () => {
+    expect(homeClient).toMatch(/isHeroCurrent \? null : current\?\.videoId/);
+    expect(homeClient).toContain("current && !isHeroCurrent && share(mediaShareTarget(current)");
   });
 });
 
-describe("Daily Encouragement compact variant: inline-first, source link only as a fallback", () => {
-  it("plays the item's own embed inline when one exists", () => {
-    expect(encouragementActions).toContain("embedUrl && (");
+describe("Daily Encouragement compact variant: Listen expands into an inline player, source link always visible as fallback", () => {
+  it("prefers a direct audio URL (native <audio controls>) over an embed", () => {
+    expect(encouragementActions).toContain("audioUrl ? (");
+    expect(encouragementActions).toContain("<audio controls");
+  });
+
+  it("falls back to the provider embed only when there's no direct audio URL", () => {
     expect(encouragementActions).toContain("<iframe");
   });
 
-  it("shows the source link visibly only when there's truly nothing to embed, never as the primary CTA", () => {
-    expect(encouragementActions).toMatch(/embedUrl \? \(\s*<span className="djc-sr-only">/);
+  it("Listen is the primary action only when something is actually playable", () => {
+    expect(encouragementActions).toContain("const playable = Boolean(audioUrl || embedUrl);");
+    expect(encouragementActions).toMatch(/playable && \(\s*<button[^]*?▶ Listen/);
+  });
+
+  it("the source link is always visible — never sr-only", () => {
+    expect(encouragementActions).not.toContain("djc-sr-only");
+    expect(encouragementActions).toContain("Original source ↗");
   });
 });
 
