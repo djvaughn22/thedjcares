@@ -11,6 +11,8 @@ import HomeClient from "./HomeClient";
 import { getCurrentAccessMode } from "./lib/featureAccess";
 import { buildDailyEncouragement, type DailyEncouragement } from "./lib/dailyEncouragement";
 import { chicagoDateKey } from "./lib/dailySocialCore";
+import { selectVideoOfTheDay } from "./lib/videoOfTheDay";
+import type { MediaItem } from "./lib/djCaresLibrary";
 import {
   findShareChurch,
   findShareMedia,
@@ -19,12 +21,23 @@ import {
   PRODUCTION_ORIGIN,
 } from "./lib/shareLinks";
 
-// The homepage hero surfaces the same pick /today shows. If the library ever
-// yields no eligible item, the hero just doesn't render — homepage never 500s
-// on account of the daily pick.
+// Daily Encouragement — its own content block, not the hero record. If the
+// library ever yields no eligible item, that block just doesn't render —
+// homepage never 500s on account of the daily pick.
 async function getHomepageDaily(): Promise<DailyEncouragement | null> {
   try {
     return await buildDailyEncouragement(chicagoDateKey());
+  } catch {
+    return null;
+  }
+}
+
+// The hero record — always a real music video (thumbnail + inline
+// playback), never Daily Encouragement's podcast/sermon rotation. Same
+// never-500 guarantee: no eligible video, hero record just doesn't render.
+function getHomepageVideoOfTheDay(): MediaItem | null {
+  try {
+    return selectVideoOfTheDay(chicagoDateKey());
   } catch {
     return null;
   }
@@ -83,12 +96,17 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
 export default async function Page({ searchParams }: { searchParams: SearchParams }) {
   const link = resolveDeepLink(await searchParams);
   const daily = await getHomepageDaily();
+  const videoOfTheDay = getHomepageVideoOfTheDay();
   return (
     <>
       {link && <link rel="canonical" href={link.canonical} />}
       {link && <meta property="og:url" content={link.canonical} />}
       {/* Server decides whether the Digital DJ card exists at all. */}
-      <HomeClient digitalDjEnabled={getCurrentAccessMode("digital_dj") !== "off"} daily={daily} />
+      <HomeClient
+        digitalDjEnabled={getCurrentAccessMode("digital_dj") !== "off"}
+        daily={daily}
+        videoOfTheDay={videoOfTheDay}
+      />
     </>
   );
 }

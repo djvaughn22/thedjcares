@@ -47,8 +47,12 @@ describe("homepage section order", () => {
     expect(homeClient).toContain('href="/digital-dj"');
   });
 
-  it("one click on the Daily Encouragement record starts playback via the shared startItem pipeline", () => {
-    expect(homeClient).toMatch(/startItem\(daily\.item\)/);
+  it("one click on the Video of the Day record starts playback via the shared startItem pipeline", () => {
+    expect(homeClient).toMatch(/startItem\(videoOfTheDay\)/);
+  });
+
+  it("Daily Encouragement never seeds the hero record's playback (decoupled)", () => {
+    expect(homeClient).not.toMatch(/startItem\(daily\.item\)/);
   });
 
   it("clicking a video card seeds the continuous queue (not a one-off play)", () => {

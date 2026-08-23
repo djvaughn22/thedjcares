@@ -110,9 +110,13 @@ const REQUEST_MAILTO =
 export default function TheDJCaresPage({
   digitalDjEnabled = true,
   daily = null,
+  videoOfTheDay = null,
 }: {
   digitalDjEnabled?: boolean;
   daily?: DailyEncouragement | null;
+  // The hero record's own pick — always a real music video, completely
+  // independent from Daily Encouragement (see app/lib/videoOfTheDay.ts).
+  videoOfTheDay?: MediaItem | null;
 }) {
   const [dark, setDark] = useState(true);
 
@@ -139,7 +143,7 @@ export default function TheDJCaresPage({
   // --- mood mix state ---
   const [moodQueue, setMoodQueue] = useState<{ mood: DjNeed; mode: MixMode; queue: MediaItem[]; position: number } | null>(null);
   const [mixMode, setMixMode] = useState<MixMode>("both");
-  // --- main (Daily Encouragement → Videos) continuous queue state ---
+  // --- main (Video of the Day → Videos) continuous queue state ---
   const [mainQueue, setMainQueue] = useState<{ queue: MediaItem[]; position: number } | null>(null);
   const [mainShuffle, setMainShuffle] = useState(false);
   const [mainRepeat, setMainRepeat] = useState(false);
@@ -192,11 +196,12 @@ export default function TheDJCaresPage({
   // Homepage section anchors — the single-page nav menu's destinations.
   // These land on the Spin tab (where the sections live) and scroll to the
   // matching element, rather than switching to an isolated exclusive tab.
-  const SECTION_IDS = ["daily-encouragement", "now-playing", "videos", "music", "sermons", "podcasts"];
+  const SECTION_IDS = ["video-of-the-day", "daily-encouragement", "now-playing", "videos", "music", "sermons", "podcasts"];
 
   // URL hash ↔ page state. Two namespaces share one hash string:
   //  - bare section names (#videos, #music, #sermons, #podcasts, plus
-  //    #daily-encouragement / #now-playing) scroll to a homepage section;
+  //    #video-of-the-day / #daily-encouragement / #now-playing) scroll to a
+  //    homepage section;
   //  - "#tab-<id>" switches to that exclusive browsing tab (written by
   //    goTab below, so reload/back-forward lands back on the right tab
   //    instead of bouncing to its same-named homepage section).
@@ -284,10 +289,10 @@ export default function TheDJCaresPage({
         return;
       }
     }
-    // Default cue: today's Daily Encouragement pick — the homepage's whole
-    // reason to arrive. No deep link, no saved session? Lead with it.
-    setCurrent(daily?.item ?? LIBRARY.find((i) => i.featured && i.type === "music") ?? LIBRARY[0]);
-  }, [daily]);
+    // Default cue: today's Video of the Day — the hero's whole reason to
+    // arrive. No deep link, no saved session? Lead with it.
+    setCurrent(videoOfTheDay ?? LIBRARY.find((i) => i.featured && i.type === "music") ?? LIBRARY[0]);
+  }, [videoOfTheDay]);
 
   const pool = useMemo(
     () => spinPool({ category, vibe }).filter((i) => !unavailable.has(i.id)),
@@ -309,13 +314,13 @@ export default function TheDJCaresPage({
       }
     }
     // A direct pick (not an internal mood/main-queue advance) becomes the
-    // new continuous-playback anchor: the Daily Encouragement item, or any
-    // playable video, seeds a fresh queue of it + the rest of the video
-    // catalog so playback keeps going after it ends. Anything else (a
-    // sermon, a podcast, a playlist) drops any active main queue.
+    // new continuous-playback anchor: any playable video (Video of the Day
+    // included — it's always a music item with a videoId) seeds a fresh
+    // queue of it + the rest of the video catalog so playback keeps going
+    // after it ends. Anything else (a sermon, a podcast, a playlist) drops
+    // any active main queue.
     if (!inMoodMix && !fromMainQueue) {
-      const isDailyPick = Boolean(daily && item.id === daily.item.id);
-      if ((item.type === "music" && item.videoId) || isDailyPick) {
+      if (item.type === "music" && item.videoId) {
         setMainQueue({ queue: buildVideoQueueFrom(item, itemsOfType("music")), position: 0 });
       } else {
         setMainQueue(null);
@@ -343,7 +348,7 @@ export default function TheDJCaresPage({
     setAnnounce(`Now spinning: ${item.title} — ${item.author}`);
     track("media_play", { content_type: item.type, content_title: item.title, via: viaSpin ? "spin" : "pick" });
     deckRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [moodQueue, pool.length, sessionHistory, daily]);
+  }, [moodQueue, pool.length, sessionHistory]);
 
   // --- the mood mix -----------------------------------------------------------
 
@@ -418,7 +423,7 @@ export default function TheDJCaresPage({
     setAnnounce("Back to the top — fresh shuffle, same mood.");
   }, [moodQueue, current, sessionHistory.playedIds, startItem]);
 
-  // Advance the main (Daily Encouragement → Videos) queue. Returns false if
+  // Advance the main (Video of the Day → Videos) queue. Returns false if
   // there's no main queue to advance, so callers can fall through to the
   // legacy spin behavior. At the end of the queue: stop cleanly unless
   // Repeat is on (then nextPlayableIndex's own wraparound continues it).
@@ -790,10 +795,11 @@ export default function TheDJCaresPage({
   const deckPoolEmpty = pool.length === 0;
   const showVideo = started && current?.videoId;
   const showEmbed = started && current && !current.videoId && (current.spotifyEmbed || current.appleEmbed);
-  // Today's pick is the current record — drives the "Daily Encouragement"
-  // hero turntable staying mounted through playback, and the video's entrance
-  // animation. False for every other queue/spin/browse pick.
-  const isDaily = Boolean(daily && current?.id === daily.item.id);
+  // Today's Video of the Day is the current record — drives the hero
+  // turntable staying mounted through playback, and the video's entrance
+  // animation. False for every other queue/spin/browse pick. Daily
+  // Encouragement never reaches this — it has no influence on the record.
+  const isVideoOfTheDay = Boolean(videoOfTheDay && current?.id === videoOfTheDay.id);
 
   const deck = (
     <section
@@ -804,10 +810,10 @@ export default function TheDJCaresPage({
     >
       <div aria-live="polite" className="djc-sr-only">{announce}</div>
 
-      {/* the giant hero vinyl above already reads as "Daily Encouragement ·
+      {/* the giant hero vinyl above already reads as "Video of the Day ·
           Now Playing" while it's spinning — this row would just repeat it,
           so it only appears for picks the hero isn't showing. */}
-      {!isDaily && (
+      {!isVideoOfTheDay && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
           <p style={{ display: "inline-flex", alignItems: "center", gap: 10, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: 0 }}>
             <span className={`djc-mini-vinyl${playerState === "playing" ? " spinning" : ""}`} aria-hidden />
@@ -844,7 +850,7 @@ export default function TheDJCaresPage({
       )}
 
       {showVideo && !blocked && (
-        <div className={isDaily ? "djc-daily-video-enter" : undefined} style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
+        <div className={isVideoOfTheDay ? "djc-daily-video-enter" : undefined} style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
           {(() => {
             const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
             DEV && console.log('[HomeClient.render] DJPlayer props: videoId:', current?.videoId, 'title:', current?.title, 'playing:', playing, 'volume:', prefs.volume);
@@ -907,7 +913,7 @@ export default function TheDJCaresPage({
 
       {/* what's on the platter — the hero vinyl already shows title/author
           for today's pick, so this only repeats them for other picks. */}
-      {current && !blocked && !isDaily && (
+      {current && !blocked && !isVideoOfTheDay && (
         <div style={{ textAlign: "center", margin: "14px 0 0" }}>
           <p style={{ fontSize: 18, fontWeight: 900, color: text, margin: 0 }}>{current.title}</p>
           <p style={{ fontSize: 14, fontWeight: 700, color: accent, margin: "2px 0 0" }}>
@@ -1057,13 +1063,12 @@ export default function TheDJCaresPage({
   const [sermonMinistry, setSermonMinistry] = useState<MinistryKey | null>(null);
   const [expandedSermons, setExpandedSermons] = useState<Record<string, boolean>>({});
   const heroPlaylist = playlists.find((p) => p.id === heroPlaylistId) ?? playlists[0];
-  const isDailyPlaying = Boolean(daily && started && current?.id === daily.item.id && playerState === "playing");
-  // Most daily picks are YouTube videos (artwork + inline play), but the
-  // rotation also includes podcasts/sermons with only an external `url` —
-  // no videoId, no Spotify/Apple embed, nothing this app can play inline.
-  // The record must still appear for those (branded label instead of
-  // artwork), but tapping it can't pretend to "play" — it opens the source.
-  const dailyPlayable = Boolean(daily && isPlayable(daily.item));
+  // Video of the Day is always a real music video (see videoOfTheDay.ts's
+  // eligibility filter: type "music" + a real videoId), so — unlike Daily
+  // Encouragement — it never needs a branded-fallback label or an
+  // open-the-source escape hatch. It always has real artwork and always
+  // plays inline.
+  const isVideoOfTheDayPlaying = Boolean(videoOfTheDay && started && current?.id === videoOfTheDay.id && playerState === "playing");
 
   return (
     <main style={{ background: bg, minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -1078,131 +1083,123 @@ export default function TheDJCaresPage({
           </p>
         </div>
 
-        {/* Daily Encouragement — the reason to arrive. Same pick /today used
-            to show, reused via the shared buildDailyEncouragement adapter
-            (no cloned selection logic). The turntable stays mounted through
-            playback (isDaily) instead of swapping out for the generic deck,
-            so the video opens directly beneath the record instead of
-            replacing it. EncouragementActions ("compact") carries
-            Share/Download/Browse; source attribution is screen-reader only,
-            since the record plays inline and never links out. */}
-        {tab === "spin" && daily && (!started || isDaily) && (
+        {/* VIDEO OF THE DAY — the hero record. Always a real music video
+            (see app/lib/videoOfTheDay.ts's eligibility filter), so it
+            always has real artwork for the label and always plays inline
+            via the same startItem/DJPlayer pipeline every other video on
+            the page uses — no second player, no fallback label, no
+            link-out. The turntable stays mounted through playback
+            (isVideoOfTheDay) instead of swapping out for the generic deck,
+            so the video opens directly beneath the still-spinning record. */}
+        {tab === "spin" && videoOfTheDay && (!started || isVideoOfTheDay) && (
           <section
-            id="daily-encouragement"
-            aria-label="Daily Encouragement"
+            id="video-of-the-day"
+            aria-label="Video of the Day"
             style={{ textAlign: "center", padding: "4px 0 20px", marginBottom: 6 }}
           >
-            <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 2px" }}>
-              <span aria-hidden>🌅</span> Daily Encouragement
-            </p>
-            <p style={{ fontSize: 12, fontWeight: 700, color: sub, margin: "0 0 20px" }}>
-              {daily.label} · {daily.post.fullDate}
+            <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 20px" }}>
+              <span aria-hidden>📀</span> Video of the Day
             </p>
 
-            {(() => {
-              const art = artworkUrl(daily.item);
-              const label = art ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={art} alt="" />
-              ) : (
-                <span className="djc-vinyl-label-fallback" aria-hidden>🎧</span>
-              );
-              const face = (
-                <>
+            <div className={`djc-turntable-wrap${started ? " engaged" : ""}`} style={{ width: "min(460px, 88vw)", margin: "0 auto 18px" }}>
+              <div className="djc-turntable">
+                <span className="djc-platter" aria-hidden />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isVideoOfTheDay && started) {
+                      setPlaying(playerState !== "playing");
+                    } else {
+                      startItem(videoOfTheDay);
+                    }
+                  }}
+                  aria-label={
+                    started
+                      ? playerState === "playing"
+                        ? "Pause the video of the day"
+                        : "Resume the video of the day"
+                      : `Play the video of the day: ${videoOfTheDay.title}`
+                  }
+                  className={`djc-vinyl${isVideoOfTheDayPlaying ? " spinning" : ""}${started ? " engaged" : ""}`}
+                  style={{ WebkitAppearance: "none", appearance: "none", border: 0, padding: 0, margin: 0, font: "inherit", color: "inherit" }}
+                >
                   <span className="djc-vinyl-sheen" aria-hidden />
-                  <span className="djc-vinyl-label">{label}</span>
+                  <span className="djc-vinyl-label">
+                    {artworkUrl(videoOfTheDay) ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={artworkUrl(videoOfTheDay)!} alt="" />
+                    ) : (
+                      // Defensive only — every eligible video-of-the-day pick
+                      // has a real YouTube thumbnail by construction, so this
+                      // never shows in the normal path.
+                      <span className="djc-vinyl-label-fallback" aria-hidden>🎧</span>
+                    )}
+                  </span>
                   <span className="djc-vinyl-spindle" aria-hidden />
                   <span className="djc-vinyl-playcue" aria-hidden>
-                    <span className="djc-vinyl-playcue-tri">{dailyPlayable ? "▶" : "↗"}</span>
-                    <span className="djc-vinyl-playcue-txt">{dailyPlayable ? "Play Today" : "Listen at Source"}</span>
+                    <span className="djc-vinyl-playcue-tri">▶</span>
+                    <span className="djc-vinyl-playcue-txt">Play Today</span>
                   </span>
-                </>
-              );
-              const vinylClassName = `djc-vinyl${isDailyPlaying ? " spinning" : ""}${started ? " engaged" : ""}`;
-              const vinylStyle: React.CSSProperties = {
-                WebkitAppearance: "none",
-                appearance: "none",
-                border: 0,
-                padding: 0,
-                margin: 0,
-                font: "inherit",
-                color: "inherit",
-                textDecoration: "none",
-              };
-              return (
-                <div className={`djc-turntable-wrap${started ? " engaged" : ""}`} style={{ width: "min(460px, 88vw)", margin: "0 auto 18px" }}>
-                  <div className="djc-turntable">
-                    <span className="djc-platter" aria-hidden />
-                    {dailyPlayable ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isDaily && started) {
-                            setPlaying(playerState !== "playing");
-                          } else {
-                            startItem(daily.item);
-                          }
-                        }}
-                        aria-label={
-                          started
-                            ? playerState === "playing"
-                              ? "Pause today's encouragement"
-                              : "Resume today's encouragement"
-                            : `Play today's encouragement: ${daily.item.title}`
-                        }
-                        className={vinylClassName}
-                        style={vinylStyle}
-                      >
-                        {face}
-                      </button>
-                    ) : (
-                      // No inline playback exists for this pick (podcast/sermon
-                      // with only an external url) — the record is the "open
-                      // the source" affordance instead of a broken play button.
-                      <a
-                        href={daily.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => track("djc_source_opened", { content_id: daily.item.id })}
-                        aria-label={`Listen to today's pick at the source: ${daily.item.title}`}
-                        className={vinylClassName}
-                        style={vinylStyle}
-                      >
-                        {face}
-                      </a>
-                    )}
-                    <span className={`djc-tonearm${started ? " lowered" : ""}`} aria-hidden>
-                      <span className="djc-tonearm-counterweight" />
-                      <span className="djc-tonearm-pivot" />
-                      <span className="djc-tonearm-shaft" />
-                      <span className="djc-tonearm-head" />
-                    </span>
-                    <span className={`djc-power-light${started ? " on" : ""}`} aria-hidden />
-                  </div>
-                </div>
-              );
-            })()}
+                </button>
+                <span className={`djc-tonearm${started ? " lowered" : ""}`} aria-hidden>
+                  <span className="djc-tonearm-counterweight" />
+                  <span className="djc-tonearm-pivot" />
+                  <span className="djc-tonearm-shaft" />
+                  <span className="djc-tonearm-head" />
+                </span>
+                <span className={`djc-power-light${started ? " on" : ""}`} aria-hidden />
+              </div>
+            </div>
 
-            <p style={{ fontSize: started ? 19 : 24, fontWeight: 900, color: text, margin: 0, transition: "font-size 0.3s ease" }}>{daily.item.title}</p>
-            <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{daily.item.author}</p>
-            {!started && daily.item.summary && (
-              <p style={{ fontSize: 13, color: sub, margin: "6px auto 0", maxWidth: 420, lineHeight: 1.5 }}>{daily.item.summary}</p>
+            <p style={{ fontSize: started ? 19 : 24, fontWeight: 900, color: text, margin: 0, transition: "font-size 0.3s ease" }}>{videoOfTheDay.title}</p>
+            <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{videoOfTheDay.author}</p>
+            {!started && videoOfTheDay.summary && (
+              <p style={{ fontSize: 13, color: sub, margin: "6px auto 0", maxWidth: 420, lineHeight: 1.5 }}>{videoOfTheDay.summary}</p>
             )}
 
             {!started && (
               <div style={{ marginTop: 18 }}>
-                <EncouragementActions
-                  variant="compact"
-                  contentId={daily.item.id}
-                  label={daily.label}
-                  title={daily.item.title}
-                  pageUrl={`${PRODUCTION_ORIGIN}/#daily-encouragement`}
-                  sourceUrl={daily.sourceUrl}
-                  cardPath={daily.post.imagePath}
-                  cardFileName={daily.post.imageFileName}
-                />
+                {share(mediaShareTarget(videoOfTheDay))}
               </div>
             )}
+          </section>
+        )}
+
+        {/* Daily Encouragement — its own content block, completely separate
+            from the hero record above. It never seeds `current`, never
+            starts inline playback here, and never influences the vinyl —
+            it's DJ's daily podcast/sermon pick with its own source link
+            (EncouragementActions "default": source button, Share, Download
+            card, Browse). Stays visible regardless of what's playing. */}
+        {tab === "spin" && daily && (
+          <section
+            id="daily-encouragement"
+            aria-label="Daily Encouragement"
+            style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20, textAlign: "center" }}
+          >
+            <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 2px" }}>
+              <span aria-hidden>🌅</span> Daily Encouragement
+            </p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: sub, margin: "0 0 14px" }}>
+              {daily.label} · {daily.post.fullDate}
+            </p>
+            <p style={{ fontSize: 20, fontWeight: 900, color: text, margin: 0 }}>{daily.item.title}</p>
+            <p style={{ fontSize: 13.5, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{daily.item.author}</p>
+            {daily.item.summary && (
+              <p style={{ fontSize: 13.5, color: sub, margin: "6px auto 0", maxWidth: 460, lineHeight: 1.55 }}>{daily.item.summary}</p>
+            )}
+            <div style={{ marginTop: 16 }}>
+              <EncouragementActions
+                variant="default"
+                contentId={daily.item.id}
+                label={daily.label}
+                title={daily.item.title}
+                pageUrl={`${PRODUCTION_ORIGIN}/#daily-encouragement`}
+                sourceUrl={daily.sourceUrl}
+                cardPath={daily.post.imagePath}
+                cardFileName={daily.post.imageFileName}
+              />
+            </div>
           </section>
         )}
 
