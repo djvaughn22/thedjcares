@@ -6,7 +6,7 @@ import {
   selectItemForDate,
   typeLabelFor,
 } from "../dailyEncouragement";
-import { LIBRARY } from "../djCaresLibrary";
+import { artworkUrl, isPlayable, LIBRARY } from "../djCaresLibrary";
 import {
   addDaysToDateKey,
   captionMarkerForDate,
@@ -102,5 +102,44 @@ describe("caption parity", () => {
     const today = chicagoDateKey();
     const item = selectItemForDate(today);
     expect(item).not.toBeNull();
+  });
+});
+
+// Regression: the homepage hero's "Daily Encouragement" record renders a
+// real YouTube thumbnail as its center label most days, but the rotation
+// also cycles through podcasts/sermons with no video (e.g. "pod-in-touch"
+// on 2026-08-22) — items with no artworkUrl and, for a few, no inline
+// playback source at all (isPlayable false, just an external `url`). The
+// hero must never depend on either being present: it needs a branded
+// fallback label when there's no thumbnail, and a working external link
+// when there's no inline player. This locks the two invariants that make
+// that safe for every item the rotation can ever land on.
+describe("every eligible item is safe for the hero record (regression)", () => {
+  it("has a usable image OR a graceful (branded) fallback — never a broken img", () => {
+    for (const item of eligibleItems()) {
+      // artworkUrl is null exactly when there's no videoId — the hero
+      // switches to its branded fallback label in that case, so either
+      // outcome is fine as long as it's one of the two, deterministically.
+      expect(artworkUrl(item) === null || artworkUrl(item)!.startsWith("https://")).toBe(true);
+    }
+  });
+
+  it("every non-playable item still has a valid absolute source link to open instead", () => {
+    const nonPlayable = eligibleItems().filter((item) => !isPlayable(item));
+    // Sanity: this scenario is real and small, not hypothetical (today's
+    // pick regression was exactly this: pod-in-touch, a podcast with no
+    // videoId/spotifyEmbed/appleEmbed).
+    expect(nonPlayable.length).toBeGreaterThan(0);
+    for (const item of nonPlayable) {
+      expect(item.url.startsWith("http")).toBe(true);
+    }
+  });
+
+  it("2026-08-22's pick (the exact regression trigger) has no artwork and is not inline-playable", () => {
+    const item = selectItemForDate("2026-08-22")!;
+    expect(item.id).toBe("pod-in-touch");
+    expect(artworkUrl(item)).toBeNull();
+    expect(isPlayable(item)).toBe(false);
+    expect(item.url.startsWith("http")).toBe(true);
   });
 });

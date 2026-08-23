@@ -1058,6 +1058,12 @@ export default function TheDJCaresPage({
   const [expandedSermons, setExpandedSermons] = useState<Record<string, boolean>>({});
   const heroPlaylist = playlists.find((p) => p.id === heroPlaylistId) ?? playlists[0];
   const isDailyPlaying = Boolean(daily && started && current?.id === daily.item.id && playerState === "playing");
+  // Most daily picks are YouTube videos (artwork + inline play), but the
+  // rotation also includes podcasts/sermons with only an external `url` —
+  // no videoId, no Spotify/Apple embed, nothing this app can play inline.
+  // The record must still appear for those (branded label instead of
+  // artwork), but tapping it can't pretend to "play" — it opens the source.
+  const dailyPlayable = Boolean(daily && isPlayable(daily.item));
 
   return (
     <main style={{ background: bg, minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -1093,50 +1099,89 @@ export default function TheDJCaresPage({
               {daily.label} · {daily.post.fullDate}
             </p>
 
-            {artworkUrl(daily.item) && (
-              <div className={`djc-turntable-wrap${started ? " engaged" : ""}`} style={{ width: "min(460px, 88vw)", margin: "0 auto 18px" }}>
-                <div className="djc-turntable">
-                  <span className="djc-platter" aria-hidden />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (isDaily && started) {
-                        setPlaying(playerState !== "playing");
-                      } else {
-                        startItem(daily.item);
-                      }
-                    }}
-                    aria-label={
-                      started
-                        ? playerState === "playing"
-                          ? "Pause today's encouragement"
-                          : "Resume today's encouragement"
-                        : `Play today's encouragement: ${daily.item.title}`
-                    }
-                    className={`djc-vinyl${isDailyPlaying ? " spinning" : ""}${started ? " engaged" : ""}`}
-                    style={{ WebkitAppearance: "none", appearance: "none", border: 0, padding: 0, margin: 0, font: "inherit", color: "inherit" }}
-                  >
-                    <span className="djc-vinyl-sheen" aria-hidden />
-                    <span className="djc-vinyl-label">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={artworkUrl(daily.item)!} alt="" />
-                    </span>
-                    <span className="djc-vinyl-spindle" aria-hidden />
-                    <span className="djc-vinyl-playcue" aria-hidden>
-                      <span className="djc-vinyl-playcue-tri">▶</span>
-                      <span className="djc-vinyl-playcue-txt">Play Today</span>
-                    </span>
-                  </button>
-                  <span className={`djc-tonearm${started ? " lowered" : ""}`} aria-hidden>
-                    <span className="djc-tonearm-counterweight" />
-                    <span className="djc-tonearm-pivot" />
-                    <span className="djc-tonearm-shaft" />
-                    <span className="djc-tonearm-head" />
+            {(() => {
+              const art = artworkUrl(daily.item);
+              const label = art ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={art} alt="" />
+              ) : (
+                <span className="djc-vinyl-label-fallback" aria-hidden>🎧</span>
+              );
+              const face = (
+                <>
+                  <span className="djc-vinyl-sheen" aria-hidden />
+                  <span className="djc-vinyl-label">{label}</span>
+                  <span className="djc-vinyl-spindle" aria-hidden />
+                  <span className="djc-vinyl-playcue" aria-hidden>
+                    <span className="djc-vinyl-playcue-tri">{dailyPlayable ? "▶" : "↗"}</span>
+                    <span className="djc-vinyl-playcue-txt">{dailyPlayable ? "Play Today" : "Listen at Source"}</span>
                   </span>
-                  <span className={`djc-power-light${started ? " on" : ""}`} aria-hidden />
+                </>
+              );
+              const vinylClassName = `djc-vinyl${isDailyPlaying ? " spinning" : ""}${started ? " engaged" : ""}`;
+              const vinylStyle: React.CSSProperties = {
+                WebkitAppearance: "none",
+                appearance: "none",
+                border: 0,
+                padding: 0,
+                margin: 0,
+                font: "inherit",
+                color: "inherit",
+                textDecoration: "none",
+              };
+              return (
+                <div className={`djc-turntable-wrap${started ? " engaged" : ""}`} style={{ width: "min(460px, 88vw)", margin: "0 auto 18px" }}>
+                  <div className="djc-turntable">
+                    <span className="djc-platter" aria-hidden />
+                    {dailyPlayable ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isDaily && started) {
+                            setPlaying(playerState !== "playing");
+                          } else {
+                            startItem(daily.item);
+                          }
+                        }}
+                        aria-label={
+                          started
+                            ? playerState === "playing"
+                              ? "Pause today's encouragement"
+                              : "Resume today's encouragement"
+                            : `Play today's encouragement: ${daily.item.title}`
+                        }
+                        className={vinylClassName}
+                        style={vinylStyle}
+                      >
+                        {face}
+                      </button>
+                    ) : (
+                      // No inline playback exists for this pick (podcast/sermon
+                      // with only an external url) — the record is the "open
+                      // the source" affordance instead of a broken play button.
+                      <a
+                        href={daily.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => track("djc_source_opened", { content_id: daily.item.id })}
+                        aria-label={`Listen to today's pick at the source: ${daily.item.title}`}
+                        className={vinylClassName}
+                        style={vinylStyle}
+                      >
+                        {face}
+                      </a>
+                    )}
+                    <span className={`djc-tonearm${started ? " lowered" : ""}`} aria-hidden>
+                      <span className="djc-tonearm-counterweight" />
+                      <span className="djc-tonearm-pivot" />
+                      <span className="djc-tonearm-shaft" />
+                      <span className="djc-tonearm-head" />
+                    </span>
+                    <span className={`djc-power-light${started ? " on" : ""}`} aria-hidden />
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             <p style={{ fontSize: started ? 19 : 24, fontWeight: 900, color: text, margin: 0, transition: "font-size 0.3s ease" }}>{daily.item.title}</p>
             <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{daily.item.author}</p>
