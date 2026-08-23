@@ -9,12 +9,16 @@ type EncouragementActionsProps = {
   title: string;
   pageUrl: string;
   sourceUrl: string;
+  // The item's own embeddable player (Spotify/Apple show embed), when the
+  // source has one — lets "compact" play it inline instead of linking out.
+  embedUrl?: string | null;
   cardPath: string;
   cardFileName: string;
   // "default" (unchanged) is what /today and the dated archive use — a big
-  // pill CTA to the source. "compact" is for the homepage hero, where the
-  // big CTA is "Play Today's Encouragement" and the source link should not
-  // compete with it — same actions, just quieter, source demoted to text.
+  // pill CTA to the source. "compact" is for the homepage, stay-on-site
+  // first: inline embed when one exists, Share/Download/Browse quiet and
+  // primary, and the source link only as a visible secondary escape hatch
+  // when there's truly nothing to embed.
   variant?: "default" | "compact";
 };
 
@@ -33,6 +37,7 @@ export default function EncouragementActions({
   title,
   pageUrl,
   sourceUrl,
+  embedUrl = null,
   cardPath,
   cardFileName,
   variant = "default",
@@ -72,6 +77,15 @@ export default function EncouragementActions({
       "inline-flex items-center justify-center gap-1 rounded-full border border-[#26324c] bg-transparent px-3.5 py-1.5 text-xs font-bold text-[#94a3b8] transition hover:border-[#A78BFA] hover:text-[#e8edf5]";
     return (
       <div className="flex flex-col items-center gap-3">
+        {embedUrl && (
+          <iframe
+            src={embedUrl}
+            title={title}
+            allow="autoplay *; encrypted-media *; clipboard-write"
+            sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+            style={{ width: "100%", maxWidth: 420, height: 180, border: 0, borderRadius: 14, overflow: "hidden", background: "transparent" }}
+          />
+        )}
         <div className="flex flex-wrap justify-center gap-2">
           <button type="button" onClick={share} className={quietBtn}>
             {copied ? "Link copied" : "Share"}
@@ -92,11 +106,23 @@ export default function EncouragementActions({
             Browse the library
           </a>
         </div>
-        {/* Attribution stays for screen readers and the record's own
-            aria-label; it no longer needs a visible outbound link in the
-            hero now that the record and CTA both play inline — the video
-            itself plays on TheDJCares, not on {hostnameOf(sourceUrl)}. */}
-        <span className="djc-sr-only">Source: {hostnameOf(sourceUrl)}</span>
+        {/* Plays inline here — no outbound link needed, it's already
+            playing on TheDJCares. Without an embed, there's genuinely
+            nothing to play on-site, so the source link stays visible as
+            the honest secondary escape hatch rather than sr-only. */}
+        {embedUrl ? (
+          <span className="djc-sr-only">Source: {hostnameOf(sourceUrl)}</span>
+        ) : (
+          <a
+            href={sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => track("djc_source_opened", { content_id: contentId })}
+            className="text-xs font-bold text-[#94a3b8] underline decoration-dotted underline-offset-2 hover:text-[#e8edf5]"
+          >
+            Open original source ↗ ({hostnameOf(sourceUrl)})
+          </a>
+        )}
       </div>
     );
   }

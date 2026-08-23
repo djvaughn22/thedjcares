@@ -75,6 +75,7 @@ import type { DjNeed } from "./lib/digitalDjSelector";
 import { track } from "./lib/analytics";
 import type { DailyEncouragement } from "./lib/dailyEncouragement";
 import { buildVideoQueueFrom, reorderUpcoming, shouldStopAtQueueEnd } from "./lib/mainQueue";
+import { eligibleVideosOfTheDay } from "./lib/videoOfTheDay";
 
 const TABS = [
   { id: "spin", label: "Spin", emoji: "🎧" },
@@ -161,6 +162,15 @@ export default function TheDJCaresPage({
   // The record shop window: which of the DJ's Apple Music playlists is open
   // up top. Faith Playlist leads (share deep links can pick another).
   const [heroPlaylistId, setHeroPlaylistId] = useState("apple-faith-playlist");
+  // The hero record's own pick — starts as today's Video of the Day, but
+  // Shuffle can swap it for another eligible video without touching
+  // playback at all (see shuffleHeroVideo below). Independent of `current`
+  // until the hero item is actually played.
+  const [heroVideo, setHeroVideo] = useState<MediaItem | null>(videoOfTheDay);
+  // Whether the hero shows the spinning record or the inline video player —
+  // both live in the same hero container; switching back never restarts or
+  // reshuffles the song.
+  const [heroView, setHeroView] = useState<"record" | "player">("record");
   const historyRef = useRef<string[]>([]);
   // This session's play order, for real Previous/Next.
   const sessionRef = useRef<MediaItem[]>([]);
@@ -349,6 +359,20 @@ export default function TheDJCaresPage({
     track("media_play", { content_type: item.type, content_title: item.title, via: viaSpin ? "spin" : "pick" });
     deckRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [moodQueue, pool.length, sessionHistory]);
+
+  // "Put another record on" — swaps which video is cued on the hero platter.
+  // Reuses the same never-repeat-recent pickNext the rest of the page's
+  // shuffle already relies on, scoped to the Video of the Day eligible pool.
+  // Never touches current/started/playerState, so playback (if anything
+  // unrelated is playing) and the hero's own record view are untouched.
+  const shuffleHeroVideo = useCallback(() => {
+    const eligible = eligibleVideosOfTheDay();
+    const next = pickNext(eligible, historyRef.current);
+    if (next) {
+      setHeroVideo(next);
+      track("hero_shuffle", { content_title: next.title });
+    }
+  }, []);
 
   // --- the mood mix -----------------------------------------------------------
 
@@ -795,11 +819,54 @@ export default function TheDJCaresPage({
   const deckPoolEmpty = pool.length === 0;
   const showVideo = started && current?.videoId;
   const showEmbed = started && current && !current.videoId && (current.spotifyEmbed || current.appleEmbed);
-  // Today's Video of the Day is the current record — drives the hero
-  // turntable staying mounted through playback, and the video's entrance
-  // animation. False for every other queue/spin/browse pick. Daily
-  // Encouragement never reaches this — it has no influence on the record.
-  const isVideoOfTheDay = Boolean(videoOfTheDay && current?.id === videoOfTheDay.id);
+  // True whenever the item actually playing right now is whatever the hero
+  // record currently has cued (today's Video of the Day, or a shuffled
+  // stand-in) — drives the hero's own record⇄player toggle, and keeps the
+  // deck below from rendering a second copy of that same video. False for
+  // every other queue/spin/browse pick. Daily Encouragement never reaches
+  // this — it has no influence on the record.
+  const isHeroCurrent = Boolean(heroVideo && current?.id === heroVideo.id);
+
+  // The actual inline video element — rendered once, then placed either
+  // inside the hero container (isHeroCurrent) or the generic deck below
+  // (anything else), never both, so there's only ever one player mounted.
+  const videoPanelNode = showVideo && !blocked && (
+    <div className={isHeroCurrent ? "djc-daily-video-enter" : undefined} style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
+      {(() => {
+        const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
+        DEV && console.log('[HomeClient.render] DJPlayer props: videoId:', current?.videoId, 'title:', current?.title, 'playing:', playing, 'volume:', prefs.volume);
+        return null;
+      })()}
+      <DJPlayer
+        ref={playerRef}
+        videoId={current!.videoId!}
+        title={current!.title}
+        playing={playing}
+        volume={prefs.volume}
+        muted={prefs.muted}
+        onPlaybackChange={(s) => {
+          const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
+          DEV && console.log('[DJPlayer.onPlaybackChange] state:', s, 'current video:', current?.videoId);
+          if (s === "ended") {
+            DEV && console.log('[DJPlayer.onPlaybackChange] calling onEnded');
+            onEnded();
+          } else {
+            DEV && console.log('[DJPlayer.onPlaybackChange] setPlayerState:', s);
+            setPlayerState(s);
+          }
+        }}
+        onProgress={(t, d) => {
+          const isNearEnd = d > 0 && t >= d - 1;
+          if (isNearEnd || (Math.floor(t) % 10 === 0 && t !== lastProgressRef.current?.t)) {
+            console.log(`[onProgress] t:${t.toFixed(1)}s / d:${d.toFixed(1)}s - ${isNearEnd ? '*** NEAR END ***' : ''}`);
+          }
+          setProgress({ t, d });
+        }}
+        onAutoplayBlocked={() => setAutoplayBlocked(true)}
+        onUnavailable={onUnavailable}
+      />
+    </div>
+  );
 
   const deck = (
     <section
@@ -813,7 +880,7 @@ export default function TheDJCaresPage({
       {/* the giant hero vinyl above already reads as "Video of the Day ·
           Now Playing" while it's spinning — this row would just repeat it,
           so it only appears for picks the hero isn't showing. */}
-      {!isVideoOfTheDay && (
+      {!isHeroCurrent && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
           <p style={{ display: "inline-flex", alignItems: "center", gap: 10, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: 0 }}>
             <span className={`djc-mini-vinyl${playerState === "playing" ? " spinning" : ""}`} aria-hidden />
@@ -849,44 +916,9 @@ export default function TheDJCaresPage({
         </div>
       )}
 
-      {showVideo && !blocked && (
-        <div className={isVideoOfTheDay ? "djc-daily-video-enter" : undefined} style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
-          {(() => {
-            const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
-            DEV && console.log('[HomeClient.render] DJPlayer props: videoId:', current?.videoId, 'title:', current?.title, 'playing:', playing, 'volume:', prefs.volume);
-            return null;
-          })()}
-          <DJPlayer
-            ref={playerRef}
-            videoId={current!.videoId!}
-            title={current!.title}
-            playing={playing}
-            volume={prefs.volume}
-            muted={prefs.muted}
-            onPlaybackChange={(s) => {
-              const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
-              DEV && console.log('[DJPlayer.onPlaybackChange] state:', s, 'current video:', current?.videoId);
-              if (s === "ended") {
-                DEV && console.log('[DJPlayer.onPlaybackChange] calling onEnded');
-                onEnded();
-              } else {
-                DEV && console.log('[DJPlayer.onPlaybackChange] setPlayerState:', s);
-                setPlayerState(s);
-              }
-            }}
-            onProgress={(t, d) => {
-              // Log periodically to avoid log spam - every 10 seconds or at end
-              const isNearEnd = d > 0 && t >= d - 1;
-              if (isNearEnd || (Math.floor(t) % 10 === 0 && t !== lastProgressRef.current?.t)) {
-                console.log(`[onProgress] t:${t.toFixed(1)}s / d:${d.toFixed(1)}s - ${isNearEnd ? '*** NEAR END ***' : ''}`);
-              }
-              setProgress({ t, d });
-            }}
-            onAutoplayBlocked={() => setAutoplayBlocked(true)}
-            onUnavailable={onUnavailable}
-          />
-        </div>
-      )}
+      {/* the hero above already hosts this same item's player when it's the
+          one playing — don't mount a second copy of it down here too. */}
+      {!isHeroCurrent && videoPanelNode}
 
       {blocked && current && (
         <div role="status" style={{ border: `2px solid ${border}`, borderRadius: 14, padding: "18px 18px", textAlign: "center" }}>
@@ -913,7 +945,7 @@ export default function TheDJCaresPage({
 
       {/* what's on the platter — the hero vinyl already shows title/author
           for today's pick, so this only repeats them for other picks. */}
-      {current && !blocked && !isVideoOfTheDay && (
+      {current && !blocked && !isHeroCurrent && (
         <div style={{ textAlign: "center", margin: "14px 0 0" }}>
           <p style={{ fontSize: 18, fontWeight: 900, color: text, margin: 0 }}>{current.title}</p>
           <p style={{ fontSize: 14, fontWeight: 700, color: accent, margin: "2px 0 0" }}>
@@ -1067,8 +1099,11 @@ export default function TheDJCaresPage({
   // eligibility filter: type "music" + a real videoId), so — unlike Daily
   // Encouragement — it never needs a branded-fallback label or an
   // open-the-source escape hatch. It always has real artwork and always
-  // plays inline.
-  const isVideoOfTheDayPlaying = Boolean(videoOfTheDay && started && current?.id === videoOfTheDay.id && playerState === "playing");
+  // plays inline. isHeroStarted/isHeroPlaying are false whenever something
+  // else entirely is playing, so the hero shows its own idle record instead
+  // of borrowing another item's playback state.
+  const isHeroStarted = isHeroCurrent && started;
+  const isHeroPlaying = isHeroCurrent && playerState === "playing";
 
   return (
     <main style={{ background: bg, minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -1083,51 +1118,56 @@ export default function TheDJCaresPage({
           </p>
         </div>
 
-        {/* VIDEO OF THE DAY — the hero record. Always a real music video
-            (see app/lib/videoOfTheDay.ts's eligibility filter), so it
+        {/* MUSIC VIDEO OF THE DAY — the hero record. Always a real music
+            video (see app/lib/videoOfTheDay.ts's eligibility filter), so it
             always has real artwork for the label and always plays inline
             via the same startItem/DJPlayer pipeline every other video on
             the page uses — no second player, no fallback label, no
-            link-out. The turntable stays mounted through playback
-            (isVideoOfTheDay) instead of swapping out for the generic deck,
-            so the video opens directly beneath the still-spinning record. */}
-        {tab === "spin" && videoOfTheDay && (!started || isVideoOfTheDay) && (
+            link-out. Always visible (never hidden by what else is playing
+            elsewhere on the page — see isHeroCurrent), so Shuffle can swap
+            the cued video without it ever disappearing. Once its own item
+            is playing, the container toggles between the spinning record
+            and the inline player in place — no separate video section
+            farther down the page (see videoPanelNode / isHeroCurrent in the
+            deck above). */}
+        {tab === "spin" && heroVideo && (
           <section
             id="video-of-the-day"
             aria-label="Video of the Day"
             style={{ textAlign: "center", padding: "4px 0 20px", marginBottom: 6 }}
           >
             <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 20px" }}>
-              <span aria-hidden>📀</span> Video of the Day
+              <span aria-hidden>📀</span> Music Video of the Day
             </p>
 
-            <div className={`djc-turntable-wrap${started ? " engaged" : ""}`} style={{ width: "min(460px, 88vw)", margin: "0 auto 18px" }}>
-              <div className="djc-turntable">
+            <div className={`djc-turntable-wrap${isHeroStarted ? " engaged" : ""}`} style={{ width: "min(460px, 88vw)", margin: "0 auto 18px", position: "relative" }}>
+              <div className="djc-turntable" style={isHeroStarted && heroView === "player" ? { display: "none" } : undefined}>
                 <span className="djc-platter" aria-hidden />
                 <button
                   type="button"
                   onClick={() => {
-                    if (isVideoOfTheDay && started) {
+                    if (isHeroStarted) {
                       setPlaying(playerState !== "playing");
                     } else {
-                      startItem(videoOfTheDay);
+                      startItem(heroVideo);
+                      setHeroView("player");
                     }
                   }}
                   aria-label={
-                    started
+                    isHeroStarted
                       ? playerState === "playing"
                         ? "Pause the video of the day"
                         : "Resume the video of the day"
-                      : `Play the video of the day: ${videoOfTheDay.title}`
+                      : `Play the video of the day: ${heroVideo.title}`
                   }
-                  className={`djc-vinyl${isVideoOfTheDayPlaying ? " spinning" : ""}${started ? " engaged" : ""}`}
+                  className={`djc-vinyl${isHeroPlaying ? " spinning" : ""}${isHeroStarted ? " engaged" : ""}`}
                   style={{ WebkitAppearance: "none", appearance: "none", border: 0, padding: 0, margin: 0, font: "inherit", color: "inherit" }}
                 >
                   <span className="djc-vinyl-sheen" aria-hidden />
                   <span className="djc-vinyl-label">
-                    {artworkUrl(videoOfTheDay) ? (
+                    {artworkUrl(heroVideo) ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={artworkUrl(videoOfTheDay)!} alt="" />
+                      <img src={artworkUrl(heroVideo)!} alt="" />
                     ) : (
                       // Defensive only — every eligible video-of-the-day pick
                       // has a real YouTube thumbnail by construction, so this
@@ -1141,36 +1181,70 @@ export default function TheDJCaresPage({
                     <span className="djc-vinyl-playcue-txt">Play Today</span>
                   </span>
                 </button>
-                <span className={`djc-tonearm${started ? " lowered" : ""}`} aria-hidden>
+                <span className={`djc-tonearm${isHeroStarted ? " lowered" : ""}`} aria-hidden>
                   <span className="djc-tonearm-counterweight" />
                   <span className="djc-tonearm-pivot" />
                   <span className="djc-tonearm-shaft" />
                   <span className="djc-tonearm-head" />
                 </span>
-                <span className={`djc-power-light${started ? " on" : ""}`} aria-hidden />
+                <span className={`djc-power-light${isHeroStarted ? " on" : ""}`} aria-hidden />
               </div>
+
+              {/* Play → this same container becomes the video player;
+                  "Back to record" (below) just re-hides it — the player
+                  stays mounted and playing either way. */}
+              {isHeroStarted && videoPanelNode && (
+                <div style={heroView === "player" ? undefined : { display: "none" }}>{videoPanelNode}</div>
+              )}
             </div>
 
-            <p style={{ fontSize: started ? 19 : 24, fontWeight: 900, color: text, margin: 0, transition: "font-size 0.3s ease" }}>{videoOfTheDay.title}</p>
-            <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{videoOfTheDay.author}</p>
-            {!started && videoOfTheDay.summary && (
-              <p style={{ fontSize: 13, color: sub, margin: "6px auto 0", maxWidth: 420, lineHeight: 1.5 }}>{videoOfTheDay.summary}</p>
+            <p style={{ fontSize: isHeroStarted ? 19 : 24, fontWeight: 900, color: text, margin: 0, transition: "font-size 0.3s ease" }}>{heroVideo.title}</p>
+            <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{heroVideo.author}</p>
+            {!isHeroStarted && heroVideo.summary && (
+              <p style={{ fontSize: 13, color: sub, margin: "6px auto 0", maxWidth: 420, lineHeight: 1.5 }}>{heroVideo.summary}</p>
             )}
 
-            {!started && (
-              <div style={{ marginTop: 18 }}>
-                {share(mediaShareTarget(videoOfTheDay))}
+            {!isHeroStarted ? (
+              <div style={{ marginTop: 18, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                <button onClick={() => { startItem(heroVideo); setHeroView("player"); }} style={bigButton}>▶ Play</button>
+                <button onClick={shuffleHeroVideo} style={quietButton}>🔀 Shuffle</button>
+                {share(mediaShareTarget(heroVideo), "hero")}
               </div>
+            ) : (
+              <div style={{ marginTop: 14, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                <button onClick={() => setPlaying(playerState !== "playing")} aria-label={playerState === "playing" ? "Pause" : "Play"} style={quietButton}>
+                  {playerState === "playing" ? "⏸ Pause" : "▶ Play"}
+                </button>
+                {heroView === "player" ? (
+                  <button onClick={() => setHeroView("record")} style={quietButton}>⏺ Back to record</button>
+                ) : (
+                  <button onClick={() => setHeroView("player")} style={quietButton}>🎬 Watch video</button>
+                )}
+                {share(mediaShareTarget(heroVideo), "hero")}
+              </div>
+            )}
+
+            {/* Quiet platform row — only what the library actually has for
+                this pick (music items only carry a verified YouTube link;
+                no invented Spotify/Apple Music search links). */}
+            {isHeroStarted && heroVideo.url && (
+              <p style={{ margin: "10px 0 0" }}>
+                <a href={heroVideo.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
+                  Watch on YouTube ↗
+                </a>
+              </p>
             )}
           </section>
         )}
 
-        {/* Daily Encouragement — its own content block, completely separate
-            from the hero record above. It never seeds `current`, never
-            starts inline playback here, and never influences the vinyl —
-            it's DJ's daily podcast/sermon pick with its own source link
-            (EncouragementActions "default": source button, Share, Download
-            card, Browse). Stays visible regardless of what's playing. */}
+        {/* Daily Encouragement — its own content block, below the hero and
+            completely separate from it. It never seeds `current`, never
+            starts inline playback in the deck, and never influences the
+            vinyl — it's DJ's daily podcast/sermon pick. Compact variant:
+            stays on TheDJCares.com first (Share/Download/Browse), plays
+            inline when the source has a real embed, and only falls back to
+            an outbound source link — visible, not hidden — when it truly
+            can't be embedded. */}
         {tab === "spin" && daily && (
           <section
             id="daily-encouragement"
@@ -1190,12 +1264,13 @@ export default function TheDJCaresPage({
             )}
             <div style={{ marginTop: 16 }}>
               <EncouragementActions
-                variant="default"
+                variant="compact"
                 contentId={daily.item.id}
                 label={daily.label}
                 title={daily.item.title}
                 pageUrl={`${PRODUCTION_ORIGIN}/#daily-encouragement`}
                 sourceUrl={daily.sourceUrl}
+                embedUrl={daily.embedUrl}
                 cardPath={daily.post.imagePath}
                 cardFileName={daily.post.imageFileName}
               />

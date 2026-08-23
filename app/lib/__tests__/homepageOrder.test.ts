@@ -13,14 +13,16 @@ const homeClient = readFileSync(join(app, "HomeClient.tsx"), "utf8");
 const layout = readFileSync(join(app, "layout.tsx"), "utf8");
 const page = readFileSync(join(app, "page.tsx"), "utf8");
 const nextConfig = readFileSync(join(root, "next.config.ts"), "utf8");
+const encouragementActions = readFileSync(join(app, "components/EncouragementActions.tsx"), "utf8");
 
 const at = (haystack: string, needle: string) => haystack.indexOf(needle);
 
 describe("homepage section order", () => {
-  it("merged Daily Encouragement / Now Playing hero, then Videos/Music/Sermons/Podcasts, Digital DJ last", () => {
+  it("Music Video of the Day hero leads, then Daily Encouragement, then Videos/Music/Sermons/Podcasts, Digital DJ last", () => {
     // `deck` (id="now-playing") is a const defined well above the return
     // statement and referenced by name where it actually renders — so its
     // render POSITION is this insertion line, not its definition's id=.
+    const hero = at(homeClient, 'id="video-of-the-day"');
     const daily = at(homeClient, 'id="daily-encouragement"');
     const videos = at(homeClient, 'id="videos"');
     const music = at(homeClient, 'id="music"');
@@ -28,9 +30,10 @@ describe("homepage section order", () => {
     const podcasts = at(homeClient, 'id="podcasts"');
     const digitalDj = at(homeClient, 'aria-label="Digital DJ"');
 
-    for (const idx of [daily, videos, music, sermons, podcasts, digitalDj]) {
+    for (const idx of [hero, daily, videos, music, sermons, podcasts, digitalDj]) {
       expect(idx).toBeGreaterThan(-1);
     }
+    expect(hero).toBeLessThan(daily);
     expect(daily).toBeLessThan(videos);
     expect(videos).toBeLessThan(music);
     expect(music).toBeLessThan(sermons);
@@ -47,8 +50,29 @@ describe("homepage section order", () => {
     expect(homeClient).toContain('href="/digital-dj"');
   });
 
-  it("one click on the Video of the Day record starts playback via the shared startItem pipeline", () => {
-    expect(homeClient).toMatch(/startItem\(videoOfTheDay\)/);
+  it("the hero record's own pick (heroVideo) starts playback via the shared startItem pipeline", () => {
+    expect(homeClient).toMatch(/startItem\(heroVideo\)/);
+  });
+
+  it("the hero always renders regardless of playback state — Shuffle/other picks never make the record disappear", () => {
+    expect(homeClient).toMatch(/tab === "spin" && heroVideo && \(/);
+  });
+
+  it("Shuffle swaps the hero's cued pick via the shared pickNext helper, without starting playback", () => {
+    expect(homeClient).toContain("shuffleHeroVideo");
+    expect(homeClient).toMatch(/eligibleVideosOfTheDay\(\)/);
+    // the handler must only ever call setHeroVideo — never startItem/setCurrent
+    const fn = homeClient.slice(homeClient.indexOf("const shuffleHeroVideo"), homeClient.indexOf("const shuffleHeroVideo") + 400);
+    expect(fn).not.toMatch(/startItem\(/);
+  });
+
+  it("Play and Pause replace the record with the inline player in the same hero container — no second video panel is ever mounted", () => {
+    expect(homeClient).toContain("videoPanelNode");
+    expect(homeClient).toContain('setHeroView("player")');
+    expect(homeClient).toContain('setHeroView("record")');
+    // exactly one <DJPlayer ...> element in the whole file — reused, not
+    // duplicated (the type-only useRef<DJPlayerHandle> doesn't count).
+    expect(homeClient.match(/<DJPlayer[\s>]/g)?.length).toBe(1);
   });
 
   it("Daily Encouragement never seeds the hero record's playback (decoupled)", () => {
@@ -64,9 +88,21 @@ describe("homepage section order", () => {
     expect(homeClient).toContain("setMainRepeat");
   });
 
-  it("reuses EncouragementActions rather than re-implementing share/download/source-link", () => {
+  it("reuses EncouragementActions in its compact, stay-on-site-first variant rather than re-implementing share/download/source-link", () => {
     expect(homeClient).toContain("<EncouragementActions");
+    expect(homeClient).toMatch(/variant="compact"/);
     expect(homeClient).not.toContain("djc_today_viewed"); // that tracking lives inside the reused component, not duplicated here
+  });
+});
+
+describe("Daily Encouragement compact variant: inline-first, source link only as a fallback", () => {
+  it("plays the item's own embed inline when one exists", () => {
+    expect(encouragementActions).toContain("embedUrl && (");
+    expect(encouragementActions).toContain("<iframe");
+  });
+
+  it("shows the source link visibly only when there's truly nothing to embed, never as the primary CTA", () => {
+    expect(encouragementActions).toMatch(/embedUrl \? \(\s*<span className="djc-sr-only">/);
   });
 });
 
