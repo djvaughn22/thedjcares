@@ -6,8 +6,11 @@
 // playback at all. The hero vinyl needs the opposite guarantee: every pick
 // MUST have a real thumbnail (for the record label) and MUST play inline
 // on-site (for the record to actually spin). So this pulls only from the
-// same music-video catalog that already powers the Music Videos section
-// (itemsOfType("music")), not from the encouragement/podcast collection.
+// same music catalog that already powers the Music Videos section
+// (itemsOfType("music")), not from the encouragement/podcast collection —
+// preferring items flagged `musicVideo: true` (proper official music
+// videos) over plain audio-first uploads, with a safe fallback to the
+// full playable-song catalog if that preferred pool is ever empty.
 //
 // Selection mirrors dailyEncouragement.ts's own pattern: day N since launch
 // picks item (N mod pool size) from the stable-sorted eligible list, so no
@@ -23,14 +26,29 @@ export const VIDEO_OF_THE_DAY_START = "2026-07-12";
 // Eligible: a real music video — has a YouTube id (so artworkUrl() always
 // returns a real thumbnail and the existing DJPlayer can always play it
 // inline), plus the same real-attribution bar every eligible item meets.
-export function eligibleVideosOfTheDay(items: MediaItem[] = itemsOfType("music")): MediaItem[] {
+function isEligibleVideo(item: MediaItem): boolean {
+  return Boolean(item.type === "music" && item.videoId && item.id && item.title && item.author);
+}
+
+function dedupe(items: MediaItem[]): MediaItem[] {
   const seen = new Set<string>();
   return items.filter((item) => {
-    if (item.type !== "music" || !item.videoId) return false;
     if (seen.has(item.id)) return false;
     seen.add(item.id);
-    return Boolean(item.id && item.title && item.author);
+    return true;
   });
+}
+
+// "Video of the Day" means an actual music video, not just any audio-first
+// upload with a YouTube id — so this prefers items DJ has flagged
+// `musicVideo: true` in djCaresLibrary.ts (the same flag the Music Videos
+// section itself keys off). If that pool is ever empty, it falls back to
+// the broader "any playable song" catalog so the hero can never end up
+// with no eligible item.
+export function eligibleVideosOfTheDay(items: MediaItem[] = itemsOfType("music")): MediaItem[] {
+  const eligible = dedupe(items.filter(isEligibleVideo));
+  const officialVideos = eligible.filter((item) => item.musicVideo === true);
+  return officialVideos.length > 0 ? officialVideos : eligible;
 }
 
 // Deterministic full-catalog rotation — same math as selectItemForDate.
