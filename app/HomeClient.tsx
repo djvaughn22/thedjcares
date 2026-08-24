@@ -50,7 +50,6 @@ import {
   isAtQueueEnd,
   loadPrefs,
   loadSession,
-  MIX_MODES,
   nextPlayableIndex,
   QUEUE_MOODS,
   resolveQueue,
@@ -87,15 +86,6 @@ const TABS = [
 ] as const;
 
 type Tab = (typeof TABS)[number]["id"];
-
-const SPIN_CATEGORIES: { id: SpinCategory; label: string }[] = [
-  { id: "all", label: "Everything" },
-  { id: "music", label: "Music" },
-  { id: "videos", label: "Music Videos" },
-  { id: "playlist", label: "Playlists" },
-  { id: "podcast", label: "Podcasts" },
-  { id: "sermon", label: "Sermons" },
-];
 
 // Pre-filled request email — DJ reviews everything Gospel-first before adding.
 const REQUEST_MAILTO =
@@ -187,6 +177,22 @@ export default function TheDJCaresPage({
   const [dailyExpanded, setDailyExpanded] = useState(false);
   const [dailyPlaying, setDailyPlaying] = useState(false);
   const dailyPlayerRef = useRef<DJPlayerHandle>(null);
+  // The Music deck — same local, compact ⇄ expanded pattern as Daily
+  // Encouragement, built from the existing Apple Music playlist data
+  // (heroPlaylistId/playlists below). musicPick starts null (defaults to
+  // the DJ's lead playlist) so Choose a mix's selection has somewhere to
+  // live without duplicating heroPlaylistId's job.
+  const [musicExpanded, setMusicExpanded] = useState(false);
+  const [musicPlaying, setMusicPlaying] = useState(false);
+  const [tuneSpinOpen, setTuneSpinOpen] = useState(false);
+  const [chooseMixOpen, setChooseMixOpen] = useState(false);
+  // Only one of the three homepage decks (video/daily/music) may be
+  // actively playing at once. Each deck's own "I started playing" effect
+  // (below, near isHeroStarted) claims this; the other two decks' effects
+  // react by pausing + collapsing back to their compact state. Smallest
+  // possible coordinator — no new app-wide media framework, just three
+  // small effects reading one shared value.
+  const [activeDeck, setActiveDeck] = useState<"video" | "daily" | "music" | null>(null);
   const historyRef = useRef<string[]>([]);
   // This session's play order, for real Previous/Next.
   const sessionRef = useRef<MediaItem[]>([]);
@@ -390,6 +396,22 @@ export default function TheDJCaresPage({
     }
   }, []);
 
+  // "Tune the spin" → Vibe chip: picks and immediately plays another
+  // official music video matching that vibe — reuses the exact same
+  // spinPool/pickNext machinery as every other spin on the page, just
+  // scoped to category "videos" (music videos only, never a sermon,
+  // podcast, playlist, or audio-only upload).
+  const spinVideoByVibe = useCallback((v: Vibe) => {
+    const p = spinPool({ category: "videos", vibe: v }).filter((i) => !unavailable.has(i.id));
+    const next = pickNext(p, historyRef.current);
+    if (next) {
+      setHeroVideo(next);
+      startItem(next, true);
+      setHeroView("player");
+      track("hero_vibe_spin", { vibe: v, content_title: next.title });
+    }
+  }, [unavailable, startItem]);
+
   // Daily Encouragement's own "spin" — entirely local to this card. Picks
   // another sermon or podcast that's actually inline-playable (spinPool
   // already filters to isPlayable()), so Play here always works right
@@ -412,6 +434,23 @@ export default function TheDJCaresPage({
       track("daily_spin", { content_type: next.type, content_title: next.title });
     }
   }, [unavailable, dailyPick]);
+
+  // The Music deck's own "spin" — swaps to a different Apple Music
+  // playlist, excluding the one currently shown, and collapses back to
+  // the compact cover-art preview (no autoplay of the new pick). Entirely
+  // local, same as Daily Encouragement's spin — never touches
+  // current/started.
+  const spinMusicMix = useCallback(() => {
+    const others = itemsOfType("playlist").filter((p) => p.id !== heroPlaylistId);
+    if (others.length === 0) return;
+    const next = pickNext(others, historyRef.current);
+    if (next) {
+      setHeroPlaylistId(next.id);
+      setMusicExpanded(false);
+      setMusicPlaying(false);
+      track("music_spin", { content_title: next.title });
+    }
+  }, [heroPlaylistId]);
 
   // --- the mood mix -----------------------------------------------------------
 
@@ -864,12 +903,18 @@ export default function TheDJCaresPage({
   // just extended with one more source type.
   const showAudio = Boolean(started && current && !current.videoId && current.audioUrl);
   const showEmbed = Boolean(started && current && !current.videoId && !current.audioUrl && (current.spotifyEmbed || current.appleEmbed));
-  // True whenever the item actually playing right now is whatever the hero
-  // record currently has cued (today's Video of the Day, or a shuffled
-  // stand-in) — drives the hero's own record⇄player toggle, and keeps the
-  // deck below from rendering a second copy of that same video. False for
-  // every other queue/spin/browse pick.
-  const isHeroCurrent = Boolean(heroVideo && current?.id === heroVideo.id);
+  // True whenever a real music video is what's actually playing right now —
+  // the Video of the Day pick, a Shuffle stand-in, or any other music
+  // video started from elsewhere on the page (a Music Videos preview
+  // card, a mood mix in "videos" mode, a vibe spin). ALL of those are the
+  // same "Video Deck" experience, merged into the hero: the deck below
+  // never renders a second video player, and the hero always reflects
+  // whichever video is actually current instead of only ever showing its
+  // own originally-cued pick. False for anything that isn't a video.
+  const isHeroCurrent = Boolean(current && current.type === "music" && current.videoId);
+  // What the hero actually displays: the live video once one is playing,
+  // otherwise the cued (Shuffle-changeable) pick.
+  const heroDisplayItem = isHeroCurrent && current ? current : heroVideo;
 
   // The actual inline audio/embed element for whatever podcast/sermon is
   // playing via the shared deck (e.g. a podcast played from the Podcasts
@@ -936,6 +981,76 @@ export default function TheDJCaresPage({
     </div>
   );
 
+  // Blocked-video recovery, continuous-queue status, and the shared
+  // transport row (Prev/Next/Shuffle/Repeat/Spin Something Else/Mute) —
+  // rendered once, then placed either inside the hero (isHeroCurrent, a
+  // video is what's playing) or the generic deck below (anything else),
+  // never both. Play/Pause and Share are deliberately excluded here — the
+  // hero and the deck each already have their own, so including them here
+  // too would be a second, competing control for the same media.
+  const transportPanel = (
+    <>
+      {blocked && current && (
+        <div role="status" style={{ border: `2px solid ${border}`, borderRadius: 14, padding: "18px 18px", textAlign: "center", marginTop: isHeroCurrent ? 14 : 0 }}>
+          <p style={{ fontSize: 15, fontWeight: 800, color: text, margin: "0 0 4px" }}>That one won&apos;t play here.</p>
+          <p style={{ fontSize: 13.5, color: sub, margin: "0 0 12px" }}>Some videos only play on YouTube itself — the official link still works.</p>
+          <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+            <a href={current.url} target="_blank" rel="noopener noreferrer" style={{ ...quietButton, textDecoration: "none", display: "inline-block" }}>
+              Watch on YouTube ↗
+            </a>
+            <button onClick={spin} style={bigButton}>🎲 Spin Something Else</button>
+          </div>
+        </div>
+      )}
+
+      {mainQueue && !moodQueue && (
+        <p role="status" style={{ textAlign: "center", fontSize: 12.5, fontWeight: 700, color: sub, margin: "12px 0 0" }}>
+          {mainQueue.position + 1 < mainQueue.queue.length
+            ? `Video ${mainQueue.position + 1} of ${mainQueue.queue.length} — up next: ${mainQueue.queue[mainQueue.position + 1].title}`
+            : mainRepeat
+              ? `Video ${mainQueue.position + 1} of ${mainQueue.queue.length} — Repeat is on, back to the top after this`
+              : `Video ${mainQueue.position + 1} of ${mainQueue.queue.length} — last one queued`}
+        </p>
+      )}
+
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: isHeroCurrent ? 14 : 16 }}>
+        <button onClick={prev} disabled={posRef.current <= 0} aria-label="Previous" style={{ ...quietButton, opacity: posRef.current <= 0 ? 0.45 : 1, cursor: posRef.current <= 0 ? "default" : "pointer" }}>
+          ⏮
+        </button>
+        {/* the hero above already has its own Play/Pause for this exact
+            item — showing it again here would be a second, equally
+            prominent control for the same media. */}
+        {isHeroCurrent ? null : current?.videoId && started && !blocked ? (
+          <button onClick={() => setPlaying(playerState !== "playing")} aria-label={playerState === "playing" ? "Pause" : "Play"} style={quietButton}>
+            {playerState === "playing" ? "⏸ Pause" : "▶ Play"}
+          </button>
+        ) : !started && current ? (
+          <button onClick={() => startItem(current)} style={bigButton}>▶ Play</button>
+        ) : null}
+        <button onClick={next} aria-label="Next" style={quietButton}>⏭</button>
+        {!moodQueue && (
+          <>
+            <button onClick={toggleMainShuffle} aria-pressed={mainShuffle} aria-label={`Shuffle ${mainShuffle ? "on" : "off"}`} style={pill(mainShuffle)}>
+              🔀 Shuffle {mainShuffle ? "On" : "Off"}
+            </button>
+            <button onClick={() => setMainRepeat((r) => !r)} aria-pressed={mainRepeat} aria-label={`Repeat ${mainRepeat ? "on" : "off"}`} style={pill(mainRepeat)}>
+              🔁 Repeat {mainRepeat ? "On" : "Off"}
+            </button>
+          </>
+        )}
+        <button onClick={spin} disabled={deckPoolEmpty && !moodQueue} style={{ ...bigButton, opacity: deckPoolEmpty && !moodQueue ? 0.5 : 1 }}>
+          🎲 Spin Something Else
+        </button>
+        {/* same reasoning — the hero / Daily Encouragement card already has
+            its own Share for whichever item it's showing. */}
+        {current && !isHeroCurrent && share(mediaShareTarget(current), "deck")}
+        <button onClick={() => updatePrefs({ muted: !prefs.muted })} aria-label={prefs.muted ? "Unmute" : "Mute"} style={quietButton}>
+          {prefs.muted ? "🔇" : "🔊"}
+        </button>
+      </div>
+    </>
+  );
+
   const deck = (
     <section
       ref={deckRef}
@@ -990,19 +1105,6 @@ export default function TheDJCaresPage({
           a second copy of it down here too. */}
       {!isHeroCurrent && videoPanelNode}
 
-      {blocked && current && (
-        <div role="status" style={{ border: `2px solid ${border}`, borderRadius: 14, padding: "18px 18px", textAlign: "center" }}>
-          <p style={{ fontSize: 15, fontWeight: 800, color: text, margin: "0 0 4px" }}>That one won&apos;t play here.</p>
-          <p style={{ fontSize: 13.5, color: sub, margin: "0 0 12px" }}>Some videos only play on YouTube itself — the official link still works.</p>
-          <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-            <a href={current.url} target="_blank" rel="noopener noreferrer" style={{ ...quietButton, textDecoration: "none", display: "inline-block" }}>
-              Watch on YouTube ↗
-            </a>
-            <button onClick={spin} style={bigButton}>🎲 Spin Something Else</button>
-          </div>
-        </div>
-      )}
-
       {/* the Daily Encouragement card above already hosts this same item's
           player when it's the one playing (same reasoning as the hero's
           video panel above) — don't mount a second copy of it down here. */}
@@ -1024,129 +1126,10 @@ export default function TheDJCaresPage({
         </div>
       )}
 
-      {/* continuous-queue status — only meaningful outside a mood mix, which
-          has its own always-shuffled, always-looping behavior below. */}
-      {mainQueue && !moodQueue && (
-        <p role="status" style={{ textAlign: "center", fontSize: 12.5, fontWeight: 700, color: sub, margin: "12px 0 0" }}>
-          {mainQueue.position + 1 < mainQueue.queue.length
-            ? `Video ${mainQueue.position + 1} of ${mainQueue.queue.length} — up next: ${mainQueue.queue[mainQueue.position + 1].title}`
-            : mainRepeat
-              ? `Video ${mainQueue.position + 1} of ${mainQueue.queue.length} — Repeat is on, back to the top after this`
-              : `Video ${mainQueue.position + 1} of ${mainQueue.queue.length} — last one queued`}
-        </p>
-      )}
-
-      {/* controls */}
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 16 }}>
-        <button onClick={prev} disabled={posRef.current <= 0} aria-label="Previous" style={{ ...quietButton, opacity: posRef.current <= 0 ? 0.45 : 1, cursor: posRef.current <= 0 ? "default" : "pointer" }}>
-          ⏮
-        </button>
-        {/* the hero above already has its own Play/Pause for this exact
-            item — showing it again here would be a second, equally
-            prominent control for the same media. */}
-        {isHeroCurrent ? null : current?.videoId && started && !blocked ? (
-          <button onClick={() => setPlaying(playerState !== "playing")} aria-label={playerState === "playing" ? "Pause" : "Play"} style={quietButton}>
-            {playerState === "playing" ? "⏸ Pause" : "▶ Play"}
-          </button>
-        ) : !started && current ? (
-          <button onClick={() => startItem(current)} style={bigButton}>▶ Play</button>
-        ) : null}
-        <button onClick={next} aria-label="Next" style={quietButton}>⏭</button>
-        {!moodQueue && (
-          <>
-            <button onClick={toggleMainShuffle} aria-pressed={mainShuffle} aria-label={`Shuffle ${mainShuffle ? "on" : "off"}`} style={pill(mainShuffle)}>
-              🔀 Shuffle {mainShuffle ? "On" : "Off"}
-            </button>
-            <button onClick={() => setMainRepeat((r) => !r)} aria-pressed={mainRepeat} aria-label={`Repeat ${mainRepeat ? "on" : "off"}`} style={pill(mainRepeat)}>
-              🔁 Repeat {mainRepeat ? "On" : "Off"}
-            </button>
-          </>
-        )}
-        <button onClick={spin} disabled={deckPoolEmpty && !moodQueue} style={{ ...bigButton, opacity: deckPoolEmpty && !moodQueue ? 0.5 : 1 }}>
-          🎲 Spin Something Else
-        </button>
-        {/* same reasoning — the hero / Daily Encouragement card already has
-            its own Share for whichever item it's showing. */}
-        {current && !isHeroCurrent && share(mediaShareTarget(current), "deck")}
-        <button onClick={() => updatePrefs({ muted: !prefs.muted })} aria-label={prefs.muted ? "Unmute" : "Mute"} style={quietButton}>
-          {prefs.muted ? "🔇" : "🔊"}
-        </button>
-      </div>
-
-      {/* mood mixer UI */}
-      {tab === "spin" && (
-        <div style={{ marginTop: 20, borderTop: `1px solid ${border}`, paddingTop: 16 }}>
-          <p style={{ fontSize: 12, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", color: sub, margin: "0 0 10px" }}>
-            Mood mixes
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))", gap: 8, marginBottom: 12 }}>
-            {QUEUE_MOODS.map((mood) => (
-              <button
-                key={mood}
-                onClick={() => startMoodMix(mood, mixMode)}
-                aria-pressed={moodQueue?.mood === mood}
-                style={pill(moodQueue?.mood === mood)}
-              >
-                {mood === "surprise" ? "🎲" : mood[0].toUpperCase()}{mood.slice(1)}
-              </button>
-            ))}
-          </div>
-          <p style={{ fontSize: 12, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", color: sub, margin: "0 0 8px" }}>
-            Mix type
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-            {MIX_MODES.map((mode) => (
-              <button
-                key={mode.id}
-                onClick={() => {
-                  setMixMode(mode.id);
-                  if (moodQueue) startMoodMix(moodQueue.mood, mode.id);
-                }}
-                aria-pressed={mixMode === mode.id}
-                style={pill(mixMode === mode.id)}
-              >
-                <span aria-hidden>{mode.emoji}</span> {mode.label}
-              </button>
-            ))}
-          </div>
-          {moodQueue && (
-            <button onClick={endMoodMix} style={{ ...quietButton, width: "100%", marginTop: 12 }}>
-              End this mood mix
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* category + vibe — the DJ's request line (Spin tab only) */}
-      {tab === "spin" && (
-        <div style={{ marginTop: 20, borderTop: `1px solid ${border}`, paddingTop: 16 }}>
-          <p style={{ fontSize: 12, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", color: sub, margin: "0 0 10px" }}>
-            What should I spin?
-          </p>
-          <div style={{ ...optionGrid, marginBottom: 12 }}>
-            {SPIN_CATEGORIES.map((c) => (
-              <button key={c.id} onClick={() => setCategory(c.id)} aria-pressed={category === c.id} style={pill(category === c.id)}>
-                {c.label}
-              </button>
-            ))}
-          </div>
-          <p style={{ fontSize: 12, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", color: sub, margin: "0 0 10px" }}>
-            Choose a vibe <span style={{ fontWeight: 700, letterSpacing: 0, textTransform: "none" }}>(optional)</span>
-          </p>
-          <div style={optionGrid}>
-            {VIBES.map((v) => (
-              <button key={v} onClick={() => setVibe(vibe === v ? null : v)} aria-pressed={vibe === v} style={pill(vibe === v)}>
-                {v}
-              </button>
-            ))}
-          </div>
-          {deckPoolEmpty && (
-            <p role="status" style={{ fontSize: 13, color: sub, margin: "12px 0 0" }}>
-              Nothing matches that combo yet — try another vibe or category.
-            </p>
-          )}
-        </div>
-      )}
+      {/* Prev/Next/Play-Pause/Shuffle/Repeat/Spin-Something-Else/Share/Mute
+          — same shared node the hero renders when it's showing the video
+          that's actually playing (see isHeroCurrent above); never both. */}
+      {!isHeroCurrent && transportPanel}
     </section>
   );
 
@@ -1176,6 +1159,37 @@ export default function TheDJCaresPage({
   const isHeroStarted = isHeroCurrent && started;
   const isHeroPlaying = isHeroCurrent && playerState === "playing";
 
+  // --- cross-deck exclusivity: only one of video/daily/music plays at once ---
+  // Each deck claims activeDeck the moment it actually starts playing...
+  useEffect(() => {
+    if (isHeroStarted && playing) setActiveDeck("video");
+  }, [isHeroStarted, playing]);
+  useEffect(() => {
+    if (dailyPlaying) setActiveDeck("daily");
+  }, [dailyPlaying]);
+  useEffect(() => {
+    if (musicPlaying) setActiveDeck("music");
+  }, [musicPlaying]);
+  // ...and the other two react by pausing + collapsing back to compact.
+  useEffect(() => {
+    if (activeDeck !== "video" && isHeroStarted && playing) {
+      setPlaying(false);
+      setHeroView("record");
+    }
+  }, [activeDeck]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (activeDeck !== "daily" && dailyPlaying) {
+      setDailyPlaying(false);
+      setDailyExpanded(false);
+    }
+  }, [activeDeck]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (activeDeck !== "music" && musicPlaying) {
+      setMusicPlaying(false);
+      setMusicExpanded(false);
+    }
+  }, [activeDeck]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <main style={{ background: bg, minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "32px 20px 80px" }}>
@@ -1189,20 +1203,24 @@ export default function TheDJCaresPage({
           </p>
         </div>
 
-        {/* MUSIC VIDEO OF THE DAY — the hero record. Always a real music
-            video (see app/lib/videoOfTheDay.ts's eligibility filter), so it
-            always has real artwork for the label and always plays inline
-            via the same startItem/DJPlayer pipeline every other video on
-            the page uses — no second player, no fallback label, no
-            link-out. Always visible (never hidden by what else is playing
-            elsewhere on the page — see isHeroCurrent), so Shuffle can swap
-            the cued video without it ever disappearing. Once its own item
-            is playing, the container toggles between the spinning record
-            and the inline player in place — no separate video section
-            farther down the page (see videoPanelNode / isHeroCurrent in the
-            deck above). */}
-        {tab === "spin" && heroVideo && (
+        {/* MUSIC VIDEO DECK — the hero record, merged with what used to be
+            a separate "Now Spinning" video player and its transport
+            controls (see isHeroCurrent/heroDisplayItem/transportPanel
+            above). Always a real music video (see
+            app/lib/videoOfTheDay.ts's eligibility filter), so it always
+            has real artwork for the label and always plays inline via the
+            same startItem/DJPlayer pipeline every other video on the page
+            uses — no second player, no fallback label, no link-out.
+            Always visible (never hidden by what else is playing elsewhere
+            on the page), so Shuffle can swap the cued video without it
+            ever disappearing. Once ANY music video is playing — the
+            Video of the Day pick, a Shuffle stand-in, a Music Videos
+            preview card, a Mood/Vibe pick from "Tune the spin" — this
+            container reflects and plays THAT one; the deck below never
+            shows a second copy of it. */}
+        {tab === "spin" && heroDisplayItem && (
           <section
+            ref={isHeroCurrent ? deckRef : undefined}
             id="video-of-the-day"
             aria-label="Video of the Day"
             style={{ textAlign: "center", padding: "4px 0 20px", marginBottom: 6 }}
@@ -1229,16 +1247,16 @@ export default function TheDJCaresPage({
                       ? playerState === "playing"
                         ? "Pause the video of the day"
                         : "Resume the video of the day"
-                      : `Play the video of the day: ${heroVideo.title}`
+                      : `Play the video of the day: ${heroDisplayItem.title}`
                   }
                   className={`djc-vinyl${isHeroPlaying ? " spinning" : ""}${isHeroStarted ? " engaged" : ""}`}
                   style={{ WebkitAppearance: "none", appearance: "none", border: 0, padding: 0, margin: 0, font: "inherit", color: "inherit" }}
                 >
                   <span className="djc-vinyl-sheen" aria-hidden />
                   <span className="djc-vinyl-label">
-                    {artworkUrl(heroVideo) ? (
+                    {artworkUrl(heroDisplayItem) ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={artworkUrl(heroVideo)!} alt="" />
+                      <img src={artworkUrl(heroDisplayItem)!} alt="" />
                     ) : (
                       // Defensive only — every eligible video-of-the-day pick
                       // has a real YouTube thumbnail by construction, so this
@@ -1269,17 +1287,17 @@ export default function TheDJCaresPage({
               )}
             </div>
 
-            <p style={{ fontSize: isHeroStarted ? 19 : 24, fontWeight: 900, color: text, margin: 0, transition: "font-size 0.3s ease" }}>{heroVideo.title}</p>
-            <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{heroVideo.author}</p>
-            {!isHeroStarted && heroVideo.summary && (
-              <p style={{ fontSize: 13, color: sub, margin: "6px auto 0", maxWidth: 420, lineHeight: 1.5 }}>{heroVideo.summary}</p>
+            <p style={{ fontSize: isHeroStarted ? 19 : 24, fontWeight: 900, color: text, margin: 0, transition: "font-size 0.3s ease" }}>{heroDisplayItem.title}</p>
+            <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{heroDisplayItem.author}</p>
+            {!isHeroStarted && heroDisplayItem.summary && (
+              <p style={{ fontSize: 13, color: sub, margin: "6px auto 0", maxWidth: 420, lineHeight: 1.5 }}>{heroDisplayItem.summary}</p>
             )}
 
             {!isHeroStarted ? (
               <div style={{ marginTop: 18, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
                 <button onClick={() => { startItem(heroVideo); setHeroView("player"); }} style={bigButton}>▶ Play</button>
-                <button onClick={shuffleHeroVideo} style={quietButton}>🔀 Shuffle</button>
-                {share(mediaShareTarget(heroVideo), "hero")}
+                <button onClick={shuffleHeroVideo} style={quietButton}>🔀 Spin</button>
+                {share(mediaShareTarget(heroDisplayItem), "hero")}
               </div>
             ) : (
               <div style={{ marginTop: 14, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
@@ -1291,19 +1309,65 @@ export default function TheDJCaresPage({
                 ) : (
                   <button onClick={() => setHeroView("player")} style={quietButton}>🎬 Watch video</button>
                 )}
-                {share(mediaShareTarget(heroVideo), "hero")}
+                {share(mediaShareTarget(heroDisplayItem), "hero")}
               </div>
             )}
 
             {/* Quiet platform row — only what the library actually has for
                 this pick (music items only carry a verified YouTube link;
                 no invented Spotify/Apple Music search links). */}
-            {isHeroStarted && heroVideo.url && (
+            {isHeroStarted && heroDisplayItem.url && (
               <p style={{ margin: "10px 0 0" }}>
-                <a href={heroVideo.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
+                <a href={heroDisplayItem.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
                   Watch on YouTube ↗
                 </a>
               </p>
+            )}
+
+            {/* Prev/Next/Shuffle-queue/Repeat/Spin-Something-Else/Mute —
+                the same shared transportPanel node the classic deck below
+                renders for anything that isn't a video (see
+                isHeroCurrent). Absorbed here instead of a second "Now
+                Spinning" section farther down the page. */}
+            {isHeroStarted && transportPanel}
+
+            {/* "Tune the spin" — collapsed by default. Reuses the exact
+                same Mood (QUEUE_MOODS → startMoodMix in "videos" mode,
+                which already filters to real music videos only) and Vibe
+                (VIBES → spinVideoByVibe, spinPool scoped to category
+                "videos") machinery the rest of the page already has —
+                just closed behind a disclosure instead of a permanent
+                wall of buttons, and never surfacing music/podcast/sermon
+                filters here. */}
+            {!isHeroStarted && (
+              <div style={{ marginTop: 14 }}>
+                <button
+                  type="button"
+                  onClick={() => setTuneSpinOpen((v) => !v)}
+                  aria-expanded={tuneSpinOpen}
+                  style={{ background: "none", border: "none", padding: 0, fontSize: 12.5, fontWeight: 800, color: sub, cursor: "pointer" }}
+                >
+                  Tune the spin {tuneSpinOpen ? "▴" : "▾"}
+                </button>
+                {tuneSpinOpen && (
+                  <div style={{ marginTop: 12, maxWidth: 420, marginLeft: "auto", marginRight: "auto", textAlign: "left" }}>
+                    <p style={{ fontSize: 11, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: sub, margin: "0 0 8px" }}>Mood</p>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(76px, 1fr))", gap: 6, marginBottom: 14 }}>
+                      {QUEUE_MOODS.map((mood) => (
+                        <button key={mood} onClick={() => { startMoodMix(mood, "videos"); setHeroView("player"); }} style={pill(false)}>
+                          {mood === "surprise" ? "🎲" : mood[0].toUpperCase()}{mood.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                    <p style={{ fontSize: 11, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: sub, margin: "0 0 8px" }}>Vibe</p>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(76px, 1fr))", gap: 6 }}>
+                      {VIBES.map((v) => (
+                        <button key={v} onClick={() => spinVideoByVibe(v)} style={pill(false)}>{v}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </section>
         )}
@@ -1437,10 +1501,116 @@ export default function TheDJCaresPage({
           </section>
         )}
 
-        {/* the spin deck (Now Playing): Previous/Next, Play/Pause, Shuffle,
-            Repeat, Spin Something Else, Mood Mixes — the rest of the music
-            browsing experience, after the hero + Daily Encouragement pair. */}
-        {started && deck}
+        {/* THE MUSIC — the third deck, right after Daily Encouragement.
+            Same compact ⇄ expanded pattern as Daily Encouragement: cover
+            artwork + Play here in the collapsed state, the real Apple
+            Music embed only once actually pressed. "Choose a mix" (the
+            playlist picker that used to be a permanent row of buttons)
+            is now a closed-by-default disclosure. Apple/Spotify embeds
+            run their own playback and volume — this never pretends to
+            control either, it only tracks "the visitor pressed Play"
+            for cross-deck pause coordination (see activeDeck above). */}
+        {tab === "spin" && heroPlaylist && (
+          <section id="music" aria-label="The Music" style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20, textAlign: "center" }}>
+            <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 14px" }}>
+              <span aria-hidden>🎶</span> The Music
+            </p>
+            <p style={{ fontSize: 20, fontWeight: 900, color: text, margin: 0 }}>{heroPlaylist.title}</p>
+            {!musicExpanded && heroPlaylist.summary && (
+              <p style={{ fontSize: 13.5, color: sub, margin: "6px auto 0", maxWidth: 460, lineHeight: 1.55 }}>{heroPlaylist.summary}</p>
+            )}
+
+            <div style={{ marginTop: 16 }}>
+              {musicExpanded ? (
+                <iframe
+                  key={heroPlaylist.id}
+                  src={heroPlaylist.appleEmbed}
+                  title={heroPlaylist.title}
+                  allow="autoplay *; encrypted-media *;"
+                  sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+                  style={{ width: "100%", height: 430, border: 0, borderRadius: 14, background: "transparent" }}
+                />
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => { setMusicExpanded(true); setMusicPlaying(true); track("playlist_open", { content_title: heroPlaylist.title }); }}
+                    aria-label={`Play ${heroPlaylist.title}`}
+                    style={{ display: "block", width: "min(300px, 100%)", margin: "0 auto", background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                  >
+                    <span style={{ position: "relative", display: "block", width: "100%", aspectRatio: "1", borderRadius: 14, overflow: "hidden", background: active }}>
+                      {heroPlaylist.artworkUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={heroPlaylist.artworkUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <span style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", fontSize: 40 }}>🎶</span>
+                      )}
+                      <span aria-hidden style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(11,18,32,0.85)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>▶</span>
+                      </span>
+                    </span>
+                  </button>
+                  <div style={{ marginTop: 14 }}>
+                    <button onClick={() => { setMusicExpanded(true); setMusicPlaying(true); track("playlist_open", { content_title: heroPlaylist.title }); }} style={bigButton}>▶ Play</button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div style={{ marginTop: 14, display: "flex", gap: 16, justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
+              <a href={heroPlaylist.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
+                Open in Apple Music ↗
+              </a>
+              {heroPlaylist.spotifyAlt && (
+                <a href={heroPlaylist.spotifyAlt} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
+                  Prefer Spotify? ↗
+                </a>
+              )}
+              <button onClick={spinMusicMix} style={{ background: "none", border: "none", padding: 0, fontSize: 12.5, fontWeight: 800, color: sub, cursor: "pointer" }}>
+                🔀 Another mix
+              </button>
+              {share(mediaShareTarget(heroPlaylist), "hero")}
+            </div>
+
+            <div style={{ marginTop: 14 }}>
+              <button
+                type="button"
+                onClick={() => setChooseMixOpen((v) => !v)}
+                aria-expanded={chooseMixOpen}
+                style={{ background: "none", border: "none", padding: 0, fontSize: 12.5, fontWeight: 800, color: sub, cursor: "pointer" }}
+              >
+                Choose a mix {chooseMixOpen ? "▴" : "▾"}
+              </button>
+              {chooseMixOpen && (
+                <div style={{ ...optionGrid, marginTop: 12 }}>
+                  {playlists.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setHeroPlaylistId(p.id);
+                        setMusicExpanded(false);
+                        setMusicPlaying(false);
+                        setChooseMixOpen(false);
+                        track("playlist_open", { content_title: p.title });
+                      }}
+                      aria-pressed={heroPlaylistId === p.id}
+                      style={pill(heroPlaylistId === p.id)}
+                    >
+                      {p.shortTitle ?? p.title}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* the spin deck (Now Playing): the shared player for whatever's
+            playing that isn't the Video/Daily/Music decks above (e.g. a
+            sermon or podcast played from a preview lower on the page) —
+            never a second copy of the video experience (see
+            isHeroCurrent). */}
+        {started && !isHeroCurrent && deck}
 
         {/* Music Videos preview — hand-picked songs, same MediaCard grid the
             Videos tab uses, just a taste of it up front. Clicking one makes
@@ -1458,49 +1628,6 @@ export default function TheDJCaresPage({
             <button onClick={() => goTab("videos")} style={{ ...quietButton, width: "100%", marginTop: 14 }}>
               All videos →
             </button>
-          </section>
-        )}
-
-        {/* the DJ's music: Faith Playlist on Apple Music, with one-tap
-            filters for the other playlists */}
-        {tab === "spin" && heroPlaylist && (
-          <section id="music" aria-label="The Music" style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20 }}>
-            <p style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 12px" }}>
-              <span aria-hidden>🎶</span> The Music
-            </p>
-            <div style={{ ...optionGrid, marginBottom: 14 }}>
-              {playlists.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => { setHeroPlaylistId(p.id); track("playlist_open", { content_title: p.title }); }}
-                  aria-pressed={heroPlaylistId === p.id}
-                  style={pill(heroPlaylistId === p.id)}
-                >
-                  {p.shortTitle ?? p.title}
-                </button>
-              ))}
-            </div>
-            <p style={{ fontSize: 17, fontWeight: 900, color: text, margin: "0 0 2px" }}>{heroPlaylist.title}</p>
-            {heroPlaylist.summary && <p style={{ fontSize: 13.5, color: sub, margin: "0 0 12px", lineHeight: 1.55 }}>{heroPlaylist.summary}</p>}
-            <iframe
-              key={heroPlaylist.id}
-              src={heroPlaylist.appleEmbed}
-              title={heroPlaylist.title}
-              allow="autoplay *; encrypted-media *;"
-              sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
-              style={{ width: "100%", height: 430, border: 0, borderRadius: 14, background: "transparent" }}
-            />
-            <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", marginTop: 10 }}>
-              <a href={heroPlaylist.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
-                Open in Apple Music ↗
-              </a>
-              {heroPlaylist.spotifyAlt && (
-                <a href={heroPlaylist.spotifyAlt} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
-                  Prefer Spotify? ↗
-                </a>
-              )}
-              {share(mediaShareTarget(heroPlaylist), "hero")}
-            </div>
           </section>
         )}
 

@@ -18,36 +18,37 @@ const encouragementActions = readFileSync(join(app, "components/EncouragementAct
 const at = (haystack: string, needle: string) => haystack.indexOf(needle);
 
 describe("homepage section order (locked: hero, then Daily Encouragement, then everything else)", () => {
-  it("Music Video of the Day hero leads, Daily Encouragement directly beneath it, then the rest of the music deck, then Videos/Music/Sermons/Podcasts, Digital DJ last", () => {
+  it("Music Video Deck leads, Daily Encouragement directly beneath it, THE MUSIC deck beneath that, then the shared deck (for anything else), then Videos/Sermons/Podcasts previews, Digital DJ last — exactly three curated decks up top, browse content after", () => {
     // `deck` (id="now-playing") is a const defined well above the return
     // statement and referenced by name where it actually renders — so its
     // render POSITION is where it's actually inserted into the tree, not
     // its definition's id=.
     const hero = at(homeClient, 'id="video-of-the-day"');
     const daily = at(homeClient, 'id="daily-encouragement"');
-    const deckInsertion = at(homeClient, "{started && deck}");
-    const videos = at(homeClient, 'id="videos"');
     const music = at(homeClient, 'id="music"');
+    const deckInsertion = at(homeClient, "{started && !isHeroCurrent && deck}");
+    const videos = at(homeClient, 'id="videos"');
     const sermons = at(homeClient, 'id="sermons"');
     const podcasts = at(homeClient, 'id="podcasts"');
     const digitalDj = at(homeClient, 'aria-label="Digital DJ"');
 
-    for (const idx of [hero, daily, deckInsertion, videos, music, sermons, podcasts, digitalDj]) {
+    for (const idx of [hero, daily, music, deckInsertion, videos, sermons, podcasts, digitalDj]) {
       expect(idx).toBeGreaterThan(-1);
     }
-    // Owner-locked hierarchy: hero, then Daily Encouragement immediately
-    // beneath it, then everything else unchanged. Nothing may be wedged
-    // between the hero and Daily Encouragement.
+    // Owner-locked hierarchy: Video Deck, Daily Encouragement, Music Deck
+    // — exactly three decks, nothing wedged between them — then whatever
+    // else is playing (a sermon/podcast picked from browse content), then
+    // browse/discovery.
     expect(hero).toBeLessThan(daily);
-    expect(daily).toBeLessThan(deckInsertion);
+    expect(daily).toBeLessThan(music);
+    expect(music).toBeLessThan(deckInsertion);
     expect(deckInsertion).toBeLessThan(videos);
-    expect(videos).toBeLessThan(music);
-    expect(music).toBeLessThan(sermons);
+    expect(videos).toBeLessThan(sermons);
     expect(sermons).toBeLessThan(podcasts);
     expect(podcasts).toBeLessThan(digitalDj);
   });
 
-  it('the Now Playing player carries the id="now-playing" anchor', () => {
+  it('the shared deck still carries the id="now-playing" anchor for non-video playback (e.g. a sermon/podcast started from browse content)', () => {
     expect(homeClient).toContain('id="now-playing"');
   });
 
@@ -56,12 +57,12 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     expect(homeClient).toContain('href="/digital-dj"');
   });
 
-  it("the hero record's own pick (heroVideo) starts playback via the shared startItem pipeline", () => {
+  it("the hero's idle Play button starts the cued heroVideo via the shared startItem pipeline", () => {
     expect(homeClient).toMatch(/startItem\(heroVideo\)/);
   });
 
   it("the hero always renders regardless of playback state — Shuffle/other picks never make the record disappear", () => {
-    expect(homeClient).toMatch(/tab === "spin" && heroVideo && \(/);
+    expect(homeClient).toMatch(/tab === "spin" && heroDisplayItem && \(/);
   });
 
   it("Shuffle swaps the hero's cued pick via the shared pickNext helper, without starting playback", () => {
@@ -85,10 +86,19 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     expect(homeClient.match(/<DJPlayer[\s>]/g)?.length).toBe(2);
   });
 
-  it("Daily Encouragement's pick can never become the hero record — independent pools, and Daily Encouragement no longer touches `current` at all", () => {
-    expect(homeClient).toContain("const isHeroCurrent = Boolean(heroVideo && current?.id === heroVideo.id)");
+  it("REGRESSION: isHeroCurrent covers ANY currently-playing music video (not just the exact cued heroVideo pick) — a Music Videos preview card, a mood mix, or a vibe spin all merge into the SAME video deck instead of opening a second Now Spinning video player", () => {
+    expect(homeClient).toContain(
+      "const isHeroCurrent = Boolean(current && current.type === \"music\" && current.videoId);",
+    );
+    expect(homeClient).toContain("const heroDisplayItem = isHeroCurrent && current ? current : heroVideo;");
     expect(homeClient).not.toContain("isDailyCurrent"); // removed entirely — no longer meaningful
     expect(homeClient).toContain("const [dailyPick, setDailyPick] = useState<MediaItem | null>(initialDailyPick)");
+  });
+
+  it("REGRESSION: the shared deck (Prev/Next/Shuffle/Repeat/Spin Something Else/blocked-recovery/queue-status) is a single transportPanel node placed in the hero when a video is current, or the deck otherwise — never rendered twice", () => {
+    expect(homeClient).toContain("const transportPanel = (");
+    expect(homeClient).toContain("{isHeroStarted && transportPanel}");
+    expect(homeClient).toContain("{!isHeroCurrent && transportPanel}");
   });
 
   it("prefers a direct verified audioUrl (native <audio controls>) over a provider embed, for whichever item is playing in the shared deck (e.g. a podcast played from the Podcasts tab)", () => {
@@ -216,6 +226,108 @@ describe("Daily Encouragement player is entirely local — never the shared deck
     expect(fn).not.toMatch(/spinPool\(\{ category: "playlist"/);
     expect(fn).not.toMatch(/spinPool\(\{ category: "all"/);
     expect(fn).not.toMatch(/spinPool\(\{ category: "videos"/);
+  });
+});
+
+describe("Video Deck: filters collapsed by default, Spin scoped to music videos only", () => {
+  it("REGRESSION 4: video Spin/Mood/Vibe only ever draws from music videos — never sermons, podcasts, or playlists", () => {
+    // shuffleHeroVideo → eligibleVideosOfTheDay() (type "music" + videoId
+    // only, see videoOfTheDay.test.ts). "Tune the spin" Mood chips →
+    // startMoodMix(mood, "videos") (moodQueue.ts's mode "videos" filters
+    // to isMusicVideo() only, see moodQueue.ts). Vibe chips →
+    // spinVideoByVibe, scoped to spinPool's "videos" category.
+    const fn = homeClient.slice(homeClient.indexOf("const spinVideoByVibe"), homeClient.indexOf("const spinVideoByVibe") + 500);
+    expect(fn).toContain('spinPool({ category: "videos", vibe: v })');
+    expect(homeClient).toContain('startMoodMix(mood, "videos")');
+  });
+
+  it("REGRESSION 8/9/11: Mood Mixes / Mix Type / What should I spin? / Choose a vibe no longer exist as a permanent button wall — replaced by one closed-by-default \"Tune the spin\" disclosure inside the Video Deck", () => {
+    expect(homeClient).not.toContain("Mood mixes");
+    expect(homeClient).not.toContain("Mix type");
+    expect(homeClient).not.toContain("What should I spin?");
+    expect(homeClient).not.toContain("Choose a vibe");
+    expect(homeClient).toContain("Tune the spin");
+    expect(homeClient).toContain("const [tuneSpinOpen, setTuneSpinOpen] = useState(false)");
+    expect(homeClient).toMatch(/setTuneSpinOpen\(\(v\) => !v\)/);
+  });
+
+  it("the Tune the spin disclosure reuses the real QUEUE_MOODS/VIBES lists, not an invented taxonomy", () => {
+    expect(homeClient).toContain("{QUEUE_MOODS.map((mood) =>");
+    expect(homeClient).toContain("{VIBES.map((v) =>");
+  });
+});
+
+describe("Music Deck: THE MUSIC, compact ⇄ expanded, own local player", () => {
+  it("REGRESSION 7: the Music deck never touches current/started/the video or Daily Encouragement pools — it's local state built on the existing Apple Music playlist data", () => {
+    expect(homeClient).toContain("const [musicExpanded, setMusicExpanded] = useState(false)");
+    expect(homeClient).toContain("const [musicPlaying, setMusicPlaying] = useState(false)");
+    const section = homeClient.slice(homeClient.indexOf('id="music" aria-label="The Music"'), homeClient.indexOf('id="videos" aria-label="Music Videos preview"'));
+    expect(section).not.toMatch(/startItem\(/);
+    expect(section).not.toContain("setCurrent(");
+  });
+
+  it("compact cover-artwork preview exists before the real Apple Music embed mounts", () => {
+    const section = homeClient.slice(homeClient.indexOf('id="music" aria-label="The Music"'), homeClient.indexOf('id="videos" aria-label="Music Videos preview"'));
+    expect(section).toContain("musicExpanded ? (");
+    expect(section).toContain('aspectRatio: "1"'); // square cover-art preview, not a 16:9 video box
+    expect(section.match(/<iframe/g)?.length).toBe(1); // only mounted once expanded
+  });
+
+  it("REGRESSION 9: Choose a mix is a closed-by-default disclosure, not a permanent row of playlist buttons", () => {
+    expect(homeClient).toContain("const [chooseMixOpen, setChooseMixOpen] = useState(false)");
+    expect(homeClient).toContain("Choose a mix");
+    expect(homeClient).toMatch(/setChooseMixOpen\(\(v\) => !v\)/);
+  });
+
+  it("Another mix excludes the currently shown playlist before picking, and never fakes control over the embed's own volume", () => {
+    const fn = homeClient.slice(homeClient.indexOf("const spinMusicMix"), homeClient.indexOf("const spinMusicMix") + 500);
+    expect(fn).toMatch(/\.filter\(\(p\) => p\.id !== heroPlaylistId\)/);
+    expect(homeClient).not.toMatch(/heroPlaylist\.(volume|setVolume)/);
+  });
+});
+
+describe("cross-deck exclusivity: only one of Video/Daily/Music plays at once", () => {
+  it("REGRESSION 1: a single activeDeck value coordinates all three decks — smallest possible architecture, not a new app-wide media framework", () => {
+    expect(homeClient).toContain(
+      'const [activeDeck, setActiveDeck] = useState<"video" | "daily" | "music" | null>(null);',
+    );
+  });
+
+  it("REGRESSION 2: starting Daily Encouragement (or Music) pauses/collapses the video deck", () => {
+    const fn = homeClient.slice(homeClient.indexOf('if (activeDeck !== "video"'), homeClient.indexOf('if (activeDeck !== "video"') + 200);
+    expect(fn).toContain("setPlaying(false)");
+    expect(fn).toContain('setHeroView("record")');
+  });
+
+  it("REGRESSION 3: starting the video deck (or Music) pauses/collapses Daily Encouragement", () => {
+    const fn = homeClient.slice(homeClient.indexOf('if (activeDeck !== "daily"'), homeClient.indexOf('if (activeDeck !== "daily"') + 200);
+    expect(fn).toContain("setDailyPlaying(false)");
+    expect(fn).toContain("setDailyExpanded(false)");
+  });
+
+  it("starting the video deck (or Daily Encouragement) pauses/collapses the Music deck", () => {
+    const fn = homeClient.slice(homeClient.indexOf('if (activeDeck !== "music"'), homeClient.indexOf('if (activeDeck !== "music"') + 200);
+    expect(fn).toContain("setMusicPlaying(false)");
+    expect(fn).toContain("setMusicExpanded(false)");
+  });
+
+  it("each deck claims activeDeck the moment it actually starts playing (not merely when cued/idle)", () => {
+    expect(homeClient).toMatch(/if \(isHeroStarted && playing\) setActiveDeck\("video"\);/);
+    expect(homeClient).toMatch(/if \(dailyPlaying\) setActiveDeck\("daily"\);/);
+    expect(homeClient).toMatch(/if \(musicPlaying\) setActiveDeck\("music"\);/);
+  });
+});
+
+describe("REGRESSION 12/13: Daily Encouragement's YouTube player starts at ~25% volume and is never forced back", () => {
+  it("DJPlayer gets initialVolume={25}, not the continuously-synced volume prop, inside Daily Encouragement's card", () => {
+    const section = homeClient.slice(homeClient.indexOf('id="daily-encouragement"'), homeClient.indexOf("Original source ↗"));
+    expect(section).toContain("initialVolume={25}");
+  });
+
+  it("DJPlayer only applies initialVolume once (on ready) and skips the continuous volume-sync effect entirely when volume is omitted, so a user's own adjustment is never reset", () => {
+    const djPlayer = readFileSync(join(app, "components/DJPlayer.tsx"), "utf8");
+    expect(djPlayer).toContain("const v = cbRef.current.initialVolume ?? cbRef.current.volume;");
+    expect(djPlayer).toMatch(/if \(!p \|\| !readyRef\.current \|\| volume === undefined\) return;/);
   });
 });
 
