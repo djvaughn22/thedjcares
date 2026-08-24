@@ -17,31 +17,30 @@ const encouragementActions = readFileSync(join(app, "components/EncouragementAct
 
 const at = (haystack: string, needle: string) => haystack.indexOf(needle);
 
-describe("homepage section order", () => {
-  it("Music Video of the Day hero leads, then Daily Encouragement, then Videos/Music/Sermons/Podcasts, Digital DJ last", () => {
+describe("homepage section order (locked: hero, then Daily Encouragement, then everything else)", () => {
+  it("Music Video of the Day hero leads, Daily Encouragement directly beneath it, then the rest of the music deck, then Videos/Music/Sermons/Podcasts, Digital DJ last", () => {
     // `deck` (id="now-playing") is a const defined well above the return
     // statement and referenced by name where it actually renders — so its
-    // render POSITION is this insertion line, not its definition's id=.
+    // render POSITION is where it's actually inserted into the tree, not
+    // its definition's id=.
     const hero = at(homeClient, 'id="video-of-the-day"');
-    // `deck` is a const defined well above the return statement — its
-    // render POSITION is where it's actually inserted into the tree.
-    const deckInsertion = at(homeClient, "{started && deck}");
     const daily = at(homeClient, 'id="daily-encouragement"');
+    const deckInsertion = at(homeClient, "{started && deck}");
     const videos = at(homeClient, 'id="videos"');
     const music = at(homeClient, 'id="music"');
     const sermons = at(homeClient, 'id="sermons"');
     const podcasts = at(homeClient, 'id="podcasts"');
     const digitalDj = at(homeClient, 'aria-label="Digital DJ"');
 
-    for (const idx of [hero, deckInsertion, daily, videos, music, sermons, podcasts, digitalDj]) {
+    for (const idx of [hero, daily, deckInsertion, videos, music, sermons, podcasts, digitalDj]) {
       expect(idx).toBeGreaterThan(-1);
     }
-    // The whole music experience (hero + its Previous/Next/Shuffle/Repeat/
-    // Spin Something Else/Mood Mixes controls) stays grouped together —
-    // Daily Encouragement never sits between them.
-    expect(hero).toBeLessThan(deckInsertion);
-    expect(deckInsertion).toBeLessThan(daily);
-    expect(daily).toBeLessThan(videos);
+    // Owner-locked hierarchy: hero, then Daily Encouragement immediately
+    // beneath it, then everything else unchanged. Nothing may be wedged
+    // between the hero and Daily Encouragement.
+    expect(hero).toBeLessThan(daily);
+    expect(daily).toBeLessThan(deckInsertion);
+    expect(deckInsertion).toBeLessThan(videos);
     expect(videos).toBeLessThan(music);
     expect(music).toBeLessThan(sermons);
     expect(sermons).toBeLessThan(podcasts);

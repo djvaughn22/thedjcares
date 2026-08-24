@@ -1149,7 +1149,7 @@ export default function TheDJCaresPage({
             </p>
 
             <div className={`djc-turntable-wrap${isHeroStarted ? " engaged" : ""}`} style={{ width: "min(460px, 88vw)", margin: "0 auto 18px", position: "relative" }}>
-              <div className="djc-turntable" style={isHeroStarted && heroView === "player" ? { display: "none" } : undefined}>
+              <div className={`djc-turntable${isHeroStarted && heroView === "record" ? " djc-record-enter" : ""}`} style={isHeroStarted && heroView === "player" ? { display: "none" } : undefined}>
                 <span className="djc-platter" aria-hidden />
                 <button
                   type="button"
@@ -1245,21 +1245,15 @@ export default function TheDJCaresPage({
           </section>
         )}
 
-        {/* the spin deck (Now Playing): Previous/Next, Play/Pause, Shuffle,
-            Repeat, Spin Something Else, Mood Mixes. Opens directly beneath
-            the hero — every control that operates the music player stays
-            grouped with it, with nothing (Daily Encouragement included)
-            wedged in between. */}
-        {started && deck}
-
-        {/* Daily Encouragement — its own content block, after the whole
-            music experience and completely separate from it. It never
-            seeds `current`, never starts inline playback in the deck, and
-            never influences the vinyl — it's DJ's daily podcast/sermon
-            pick. Compact variant: Listen expands the card into an inline
-            player (native <audio> or a real provider embed) in place, and
-            only falls back to a visible (never hidden) source link when
-            there's truly nothing to play inline. */}
+        {/* Daily Encouragement — directly beneath the hero (locked homepage
+            order: hero, then Daily Encouragement, then everything else).
+            Its own content block, completely separate from the hero: it
+            never seeds `current`, never starts inline playback in the
+            deck, and never influences the vinyl — it's DJ's daily
+            podcast/sermon pick. Compact variant: Listen expands the card
+            into an inline player (native <audio> or a real provider embed)
+            in place, and only falls back to a visible (never hidden)
+            source link when there's truly nothing to play inline. */}
         {tab === "spin" && daily && (
           <section
             id="daily-encouragement"
@@ -1294,6 +1288,11 @@ export default function TheDJCaresPage({
             </div>
           </section>
         )}
+
+        {/* the spin deck (Now Playing): Previous/Next, Play/Pause, Shuffle,
+            Repeat, Spin Something Else, Mood Mixes — the rest of the music
+            browsing experience, after the hero + Daily Encouragement pair. */}
+        {started && deck}
 
         {/* Music Videos preview — hand-picked songs, same MediaCard grid the
             Videos tab uses, just a taste of it up front. Clicking one makes
