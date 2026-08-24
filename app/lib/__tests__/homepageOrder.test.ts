@@ -101,7 +101,12 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     expect(homeClient).toMatch(/onClick=\{\(\) => startItem\(daily\.item\)\} style=\{bigButton\}>▶ Play here</);
     expect(homeClient).toMatch(/onClick=\{\(\) => startItem\(p\)\} style=\{bigButton\}>▶ Play here</);
     expect(homeClient).toContain("const podcastPanelNode = (showAudio || showEmbed) && (");
-    expect(homeClient).toContain("isDailyCurrent && started ? (\n                  podcastPanelNode");
+    expect(homeClient).toMatch(/isDailyCurrent && started \?[\s\S]{0,200}podcastPanelNode/);
+  });
+
+  it("a sermon picked as today's Daily Encouragement (a real YouTube video, not just a podcast) also plays inline, reusing videoPanelNode", () => {
+    expect(homeClient).toContain("daily.item.videoId || daily.embedUrl || daily.audioUrl");
+    expect(homeClient).toMatch(/isHeroCurrent && daily\.item\.videoId \? videoPanelNode : podcastPanelNode/);
   });
 
   it("prefers a direct verified audioUrl (native <audio controls>) over a provider embed, for whichever item is playing", () => {

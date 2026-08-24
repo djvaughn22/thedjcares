@@ -949,9 +949,11 @@ export default function TheDJCaresPage({
         </div>
       )}
 
-      {/* the hero above already hosts this same item's player when it's the
-          one playing — don't mount a second copy of it down here too. */}
-      {!isHeroCurrent && videoPanelNode}
+      {/* the hero (or, for a video-id sermon picked as today's Daily
+          Encouragement, the Daily Encouragement card) above already hosts
+          this same item's player when it's the one playing — don't mount
+          a second copy of it down here too. */}
+      {!isHeroCurrent && !isDailyCurrent && videoPanelNode}
 
       {blocked && current && (
         <div role="status" style={{ border: `2px solid ${border}`, borderRadius: 14, padding: "18px 18px", textAlign: "center" }}>
@@ -1300,9 +1302,15 @@ export default function TheDJCaresPage({
             )}
 
             <div style={{ marginTop: 16 }}>
-              {daily.embedUrl || daily.audioUrl ? (
+              {/* A sermon picked as today's encouragement can carry a real
+                  YouTube video, same as a Music Video of the Day pick —
+                  reuse videoPanelNode for that case, podcastPanelNode for
+                  a Spotify/Apple podcast embed or a direct audioUrl. Hero
+                  wins the rare coincidence where the same item is both
+                  today's Video of the Day and today's Daily Encouragement. */}
+              {daily.item.videoId || daily.embedUrl || daily.audioUrl ? (
                 isDailyCurrent && started ? (
-                  podcastPanelNode
+                  !isHeroCurrent && daily.item.videoId ? videoPanelNode : podcastPanelNode
                 ) : (
                   <button onClick={() => startItem(daily.item)} style={bigButton}>▶ Play here</button>
                 )
