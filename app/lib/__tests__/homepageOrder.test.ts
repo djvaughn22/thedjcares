@@ -91,7 +91,7 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     expect(homeClient).toMatch(/startItem\(dailyPick\)/);
     expect(homeClient).toContain("const isHeroCurrent = Boolean(heroVideo && current?.id === heroVideo.id)");
     expect(homeClient).toContain("const isDailyCurrent = Boolean(dailyPick && current?.id === dailyPick.id)");
-    expect(homeClient).toContain("const [dailyPick, setDailyPick] = useState<MediaItem | null>(daily?.item ?? null)");
+    expect(homeClient).toContain("const [dailyPick, setDailyPick] = useState<MediaItem | null>(initialDailyPick)");
   });
 
   it("Daily Encouragement's inline player reuses the exact same startItem → shared player-state pipeline as the Podcasts tab's \"Play here\" — no second audio system", () => {
@@ -138,6 +138,32 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     expect(homeClient).not.toContain("import EncouragementActions");
   });
 
+  it("REGRESSION: the homepage's starting Daily Encouragement pick always comes from the playable-only selector, so Play here is guaranteed on initial load", () => {
+    expect(homeClient).toContain("dailyPick: initialDailyPick = null");
+    expect(homeClient).toContain("dailyPick?: MediaItem | null");
+    // isPlayable(dailyPick) gates the button, and the selection itself
+    // (homeDailyPick.test.ts) guarantees dailyPick is always isPlayable —
+    // together these mean "Play here" is never absent on load.
+    expect(homeClient).toContain("isPlayable(dailyPick) && (");
+    expect(homeClient).toContain("▶ Play here");
+  });
+
+  it("REGRESSION: Spin another always draws from the isPlayable-filtered spin pool — same guarantee the initial selection makes", () => {
+    // spinPool (app/lib/spin.ts) filters every category through isPlayable()
+    // already — see spin.test.ts / homeDailyPick.test.ts for the guarantee
+    // that isPlayable() itself never passes a link-out-only item.
+    const fn = homeClient.slice(homeClient.indexOf("const spinDailyPick"), homeClient.indexOf("const spinDailyPick") + 500);
+    expect(fn).toContain("spinPool({ category: \"sermon\" })");
+    expect(fn).toContain("spinPool({ category: \"podcast\" })");
+    expect(fn).toContain("pickNext(pool, historyRef.current)");
+  });
+
+  it("REGRESSION: Play here on the homepage card is the identical pattern used by the Podcasts tab's Play here and the Sermons tab's MediaCard — same startItem pipeline, no separate component", () => {
+    expect(homeClient).toMatch(/onClick=\{\(\) => startItem\(dailyPick\)\} style=\{bigButton\}>▶ Play here</); // homepage card
+    expect(homeClient).toMatch(/onClick=\{\(\) => startItem\(p\)\} style=\{bigButton\}>▶ Play here</); // Podcasts tab
+    expect(homeClient).toContain("onClick={() => startItem(item)}"); // Sermons/Music Videos MediaCard
+  });
+
   it("isPlayable() covers a direct audioUrl too, so the spin pool (which filters on it) never lands on a link-out-only item", () => {
     const lib = readFileSync(join(app, "lib/djCaresLibrary.ts"), "utf8");
     expect(lib).toContain("Boolean(item.videoId || item.spotifyEmbed || item.appleEmbed || item.audioUrl)");
@@ -168,11 +194,12 @@ describe("EncouragementActions: no second audio system", () => {
 });
 
 describe("Daily Encouragement selection", () => {
-  it("the homepage fetches the same canonical daily pick /today used to show, and never crashes the page if it fails", () => {
-    expect(page).toContain("buildDailyEncouragement");
+  it("the homepage uses the playable-only selector (never the full /today rotation, which can land on a link-out-only item), and never crashes the page if it fails", () => {
+    expect(page).toContain("selectHomeDailyPick");
+    expect(page).not.toMatch(/import.*buildDailyEncouragement/);
     expect(page).toContain("chicagoDateKey");
     expect(page).toMatch(/catch\s*\{?\s*return null/);
-    expect(page).toContain("daily={daily}");
+    expect(page).toContain("dailyPick={dailyPick}");
   });
 });
 

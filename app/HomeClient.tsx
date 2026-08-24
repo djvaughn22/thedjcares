@@ -72,7 +72,6 @@ import {
 } from "./lib/sessionHistory";
 import type { DjNeed } from "./lib/digitalDjSelector";
 import { track } from "./lib/analytics";
-import type { DailyEncouragement } from "./lib/dailyEncouragement";
 import { buildVideoQueueFrom, reorderUpcoming, shouldStopAtQueueEnd } from "./lib/mainQueue";
 import { eligibleVideosOfTheDay } from "./lib/videoOfTheDay";
 
@@ -109,11 +108,14 @@ const REQUEST_MAILTO =
 
 export default function TheDJCaresPage({
   digitalDjEnabled = true,
-  daily = null,
+  dailyPick: initialDailyPick = null,
   videoOfTheDay = null,
 }: {
   digitalDjEnabled?: boolean;
-  daily?: DailyEncouragement | null;
+  // The Daily Encouragement card's starting pick — always isPlayable()
+  // (see app/lib/homeDailyPick.ts), so "Play here" is guaranteed on load.
+  // Independent from /today's full-library rotation.
+  dailyPick?: MediaItem | null;
   // The hero record's own pick — always a real music video, completely
   // independent from Daily Encouragement (see app/lib/videoOfTheDay.ts).
   videoOfTheDay?: MediaItem | null;
@@ -175,7 +177,7 @@ export default function TheDJCaresPage({
   // actually inline-playable (today's official pick can land on a
   // link-out-only item; this is the escape hatch, mirroring heroVideo/
   // shuffleHeroVideo above).
-  const [dailyPick, setDailyPick] = useState<MediaItem | null>(daily?.item ?? null);
+  const [dailyPick, setDailyPick] = useState<MediaItem | null>(initialDailyPick);
   const historyRef = useRef<string[]>([]);
   // This session's play order, for real Previous/Next.
   const sessionRef = useRef<MediaItem[]>([]);

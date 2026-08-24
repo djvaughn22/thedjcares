@@ -9,9 +9,9 @@
 import type { Metadata } from "next";
 import HomeClient from "./HomeClient";
 import { getCurrentAccessMode } from "./lib/featureAccess";
-import { buildDailyEncouragement, type DailyEncouragement } from "./lib/dailyEncouragement";
 import { chicagoDateKey } from "./lib/dailySocialCore";
 import { selectVideoOfTheDay } from "./lib/videoOfTheDay";
+import { selectHomeDailyPick } from "./lib/homeDailyPick";
 import type { MediaItem } from "./lib/djCaresLibrary";
 import {
   findShareChurch,
@@ -21,12 +21,16 @@ import {
   PRODUCTION_ORIGIN,
 } from "./lib/shareLinks";
 
-// Daily Encouragement — its own content block, not the hero record. If the
-// library ever yields no eligible item, that block just doesn't render —
-// homepage never 500s on account of the daily pick.
-async function getHomepageDaily(): Promise<DailyEncouragement | null> {
+// Daily Encouragement — its own content block, not the hero record.
+// Unlike /today (buildDailyEncouragement, the full curated-library
+// rotation — still used there and by the social posts), the homepage
+// card promises "Play here" every day, so this only ever selects a
+// sermon/podcast that's actually isPlayable() (see homeDailyPick.ts).
+// Same never-500 guarantee: no eligible pick, that block just doesn't
+// render.
+function getHomepageDailyPick(): MediaItem | null {
   try {
-    return await buildDailyEncouragement(chicagoDateKey());
+    return selectHomeDailyPick(chicagoDateKey());
   } catch {
     return null;
   }
@@ -95,7 +99,7 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
 
 export default async function Page({ searchParams }: { searchParams: SearchParams }) {
   const link = resolveDeepLink(await searchParams);
-  const daily = await getHomepageDaily();
+  const dailyPick = getHomepageDailyPick();
   const videoOfTheDay = getHomepageVideoOfTheDay();
   return (
     <>
@@ -104,7 +108,7 @@ export default async function Page({ searchParams }: { searchParams: SearchParam
       {/* Server decides whether the Digital DJ card exists at all. */}
       <HomeClient
         digitalDjEnabled={getCurrentAccessMode("digital_dj") !== "off"}
-        daily={daily}
+        dailyPick={dailyPick}
         videoOfTheDay={videoOfTheDay}
       />
     </>
