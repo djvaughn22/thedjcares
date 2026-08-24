@@ -86,8 +86,17 @@ export type DJPlayerProps = {
   videoId: string;
   title: string;
   playing: boolean; // desired state from the deck's Play/Pause button
-  volume: number; // 0–100, site-level control
-  muted: boolean;
+  // Continuously-synced site-level control (Podcasts/Sermons/hero share
+  // this via prefs.volume) — every change re-applies. Omit for a
+  // standalone player (see initialVolume below).
+  volume?: number; // 0–100
+  muted?: boolean;
+  // Applied once via setVolume() when the player becomes ready, then left
+  // alone — the visitor's own adjustments (via the player's native volume
+  // control) are never overwritten afterward. Use this instead of
+  // `volume` for a standalone player that isn't wired to the site-level
+  // volume control (e.g. Daily Encouragement's own inline player).
+  initialVolume?: number; // 0–100
   onPlaybackChange: (state: "playing" | "paused" | "ended") => void;
   onProgress?: (currentSeconds: number, durationSeconds: number) => void;
   onAutoplayBlocked?: () => void; // asked to play, browser said no
@@ -95,7 +104,7 @@ export type DJPlayerProps = {
 };
 
 const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
-  { videoId, title, playing, volume, muted, onPlaybackChange, onProgress, onAutoplayBlocked, onUnavailable },
+  { videoId, title, playing, volume, muted = false, initialVolume, onPlaybackChange, onProgress, onAutoplayBlocked, onUnavailable },
   ref,
 ) {
   const boxRef = useRef<HTMLDivElement>(null);
@@ -104,8 +113,8 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
   const [apiFailed, setApiFailed] = useState(false);
   const [ready, setReady] = useState(false);
   // Latest callbacks/values without re-creating the player.
-  const cbRef = useRef({ onPlaybackChange, onProgress, onAutoplayBlocked, onUnavailable, videoId, volume, muted });
-  cbRef.current = { onPlaybackChange, onProgress, onAutoplayBlocked, onUnavailable, videoId, volume, muted };
+  const cbRef = useRef({ onPlaybackChange, onProgress, onAutoplayBlocked, onUnavailable, videoId, volume, muted, initialVolume });
+  cbRef.current = { onPlaybackChange, onProgress, onAutoplayBlocked, onUnavailable, videoId, volume, muted, initialVolume };
   const blockedTimerRef = useRef<number | null>(null);
 
   const clearBlockedWatchdog = () => {
@@ -177,7 +186,10 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
               readyRef.current = true;
               setReady(true);
               try {
-                playerRef.current?.setVolume(cbRef.current.volume);
+                // initialVolume wins if set (applied once, never again);
+                // otherwise fall back to the continuously-synced `volume`.
+                const v = cbRef.current.initialVolume ?? cbRef.current.volume;
+                if (v !== undefined) playerRef.current?.setVolume(v);
                 if (cbRef.current.muted) playerRef.current?.mute();
                 else playerRef.current?.unMute();
               } catch {
@@ -274,10 +286,12 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
   }, [videoId, playing, ready]);
 
   // Site-level volume + mute — visitors never have to find the tiny
-  // in-iframe controls.
+  // in-iframe controls. Skipped entirely when `volume` is omitted (a
+  // standalone player using initialVolume instead) so the visitor's own
+  // in-player volume adjustment is never forced back afterward.
   useEffect(() => {
     const p = playerRef.current;
-    if (!p || !readyRef.current) return;
+    if (!p || !readyRef.current || volume === undefined) return;
     try {
       p.setVolume(volume);
       if (muted) p.mute();

@@ -178,6 +178,15 @@ export default function TheDJCaresPage({
   // link-out-only item; this is the escape hatch, mirroring heroVideo/
   // shuffleHeroVideo above).
   const [dailyPick, setDailyPick] = useState<MediaItem | null>(initialDailyPick);
+  // Daily Encouragement's player is entirely local — it never touches
+  // `current`/`started`/the shared deck, so it can never trigger the
+  // site-wide Now Spinning / Mood Mixes / Spin Something Else UI.
+  // dailyExpanded: compact 16:9 preview (false) vs. the actual player
+  // mounted in its place (true) — the hero's record ⇄ player pattern,
+  // scoped to this one card.
+  const [dailyExpanded, setDailyExpanded] = useState(false);
+  const [dailyPlaying, setDailyPlaying] = useState(false);
+  const dailyPlayerRef = useRef<DJPlayerHandle>(null);
   const historyRef = useRef<string[]>([]);
   // This session's play order, for real Previous/Next.
   const sessionRef = useRef<MediaItem[]>([]);
@@ -381,22 +390,28 @@ export default function TheDJCaresPage({
     }
   }, []);
 
-  // Daily Encouragement's own "spin" — picks another sermon or podcast
-  // that's actually inline-playable (spinPool already filters to
-  // isPlayable()), so this always lands on something Play here can play
-  // right away, unlike the official daily rotation which can land on a
-  // link-out-only item. Never starts playback itself — same cue-don't-play
-  // convention as every other spin/shuffle on this page.
+  // Daily Encouragement's own "spin" — entirely local to this card. Picks
+  // another sermon or podcast that's actually inline-playable (spinPool
+  // already filters to isPlayable()), so Play here always works right
+  // away, unlike the official daily rotation which can land on a
+  // link-out-only item. The current pick is filtered OUT of the pool
+  // before picking — a deterministic exclusion, not a hope that
+  // pickNext's randomness happens to avoid it — so with more than one
+  // eligible item, the pick always changes. Stops/resets this card's own
+  // player (never the shared deck) and never autoplays the new pick.
   const spinDailyPick = useCallback(() => {
     const pool = [...spinPool({ category: "sermon" }), ...spinPool({ category: "podcast" })].filter(
-      (i) => !unavailable.has(i.id),
+      (i) => !unavailable.has(i.id) && i.id !== dailyPick?.id,
     );
+    if (pool.length === 0) return; // nothing else eligible to spin to
     const next = pickNext(pool, historyRef.current);
     if (next) {
       setDailyPick(next);
+      setDailyExpanded(false);
+      setDailyPlaying(false);
       track("daily_spin", { content_type: next.type, content_title: next.title });
     }
-  }, [unavailable]);
+  }, [unavailable, dailyPick]);
 
   // --- the mood mix -----------------------------------------------------------
 
@@ -855,16 +870,12 @@ export default function TheDJCaresPage({
   // deck below from rendering a second copy of that same video. False for
   // every other queue/spin/browse pick.
   const isHeroCurrent = Boolean(heroVideo && current?.id === heroVideo.id);
-  // Same idea for Daily Encouragement's own pick — true only once its
-  // "Play here" has actually been pressed, so its inline player renders
-  // inside the Daily Encouragement card instead of a second copy below.
-  const isDailyCurrent = Boolean(dailyPick && current?.id === dailyPick.id);
 
   // The actual inline audio/embed element for whatever podcast/sermon is
-  // playing — rendered once, then placed either inside the Daily
-  // Encouragement card (isDailyCurrent) or the generic deck below
-  // (anything else, e.g. a podcast played from the Podcasts tab), never
-  // both.
+  // playing via the shared deck (e.g. a podcast played from the Podcasts
+  // tab). Daily Encouragement's own card has a fully separate, local
+  // player — see the Daily Encouragement section below — so it never
+  // touches this shared current/started pipeline at all.
   const podcastPanelNode = (showAudio || showEmbed) && (
     <div style={{ marginTop: 12 }}>
       {showAudio ? (
@@ -937,7 +948,7 @@ export default function TheDJCaresPage({
       {/* the giant hero vinyl (or the Daily Encouragement card) above
           already reads as "Now Playing" while its own item spins — this
           row would just repeat it, so it only appears for other picks. */}
-      {!isHeroCurrent && !isDailyCurrent && (
+      {!isHeroCurrent && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
           <p style={{ display: "inline-flex", alignItems: "center", gap: 10, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: 0 }}>
             <span className={`djc-mini-vinyl${playerState === "playing" ? " spinning" : ""}`} aria-hidden />
@@ -977,7 +988,7 @@ export default function TheDJCaresPage({
           Encouragement, the Daily Encouragement card) above already hosts
           this same item's player when it's the one playing — don't mount
           a second copy of it down here too. */}
-      {!isHeroCurrent && !isDailyCurrent && videoPanelNode}
+      {!isHeroCurrent && videoPanelNode}
 
       {blocked && current && (
         <div role="status" style={{ border: `2px solid ${border}`, borderRadius: 14, padding: "18px 18px", textAlign: "center" }}>
@@ -995,12 +1006,12 @@ export default function TheDJCaresPage({
       {/* the Daily Encouragement card above already hosts this same item's
           player when it's the one playing (same reasoning as the hero's
           video panel above) — don't mount a second copy of it down here. */}
-      {!isDailyCurrent && podcastPanelNode}
+      {podcastPanelNode}
 
       {/* what's on the platter — the hero vinyl / Daily Encouragement card
           already shows title/author for their own pick, so this only
           repeats them for other picks. */}
-      {current && !blocked && !isHeroCurrent && !isDailyCurrent && (
+      {current && !blocked && !isHeroCurrent && (
         <div style={{ textAlign: "center", margin: "14px 0 0" }}>
           <p style={{ fontSize: 18, fontWeight: 900, color: text, margin: 0 }}>{current.title}</p>
           <p style={{ fontSize: 14, fontWeight: 700, color: accent, margin: "2px 0 0" }}>
@@ -1056,7 +1067,7 @@ export default function TheDJCaresPage({
         </button>
         {/* same reasoning — the hero / Daily Encouragement card already has
             its own Share for whichever item it's showing. */}
-        {current && !isHeroCurrent && !isDailyCurrent && share(mediaShareTarget(current), "deck")}
+        {current && !isHeroCurrent && share(mediaShareTarget(current), "deck")}
         <button onClick={() => updatePrefs({ muted: !prefs.muted })} aria-label={prefs.muted ? "Unmute" : "Mute"} style={quietButton}>
           {prefs.muted ? "🔇" : "🔊"}
         </button>
@@ -1301,17 +1312,22 @@ export default function TheDJCaresPage({
             order: hero, then Daily Encouragement, then everything else).
             ONE card, ONE player, ONE current selection — Spin replaces
             this same card's contents in place, no "today's pick vs spun
-            pick" concept, no second card, no back button. "Play here"
-            reuses the exact same startItem → shared player-state →
-            inline-panel path the Podcasts tab already uses (see
-            videoPanelNode/podcastPanelNode above) — no second audio
-            system. Never fabricates a source: Original source always
-            points at whatever's actually displayed, honestly. */}
+            pick" concept, no second card, no back button. Its player is
+            entirely LOCAL (dailyExpanded/dailyPlaying, defined above) —
+            it never calls startItem() and never touches the shared
+            current/started state, so it can never trigger the site-wide
+            Now Spinning / Mood Mixes / Spin Something Else UI. It still
+            reuses the exact same components those other players use
+            (DJPlayer for a real video, native <audio> for a direct
+            audioUrl, the provider iframe for a Spotify/Apple embed) — no
+            second player implementation, just no shared state. Never
+            fabricates a source: Original source always points at
+            whatever's actually displayed, honestly. */}
         {tab === "spin" && dailyPick && (
           <section
             id="daily-encouragement"
             aria-label="Daily Encouragement"
-            style={{ background: card, border: `2px solid ${isDailyCurrent && started ? activeBorder : border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20, textAlign: "center" }}
+            style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20, textAlign: "center" }}
           >
             <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 2px" }}>
               <span aria-hidden>🌅</span> Daily Encouragement
@@ -1322,21 +1338,83 @@ export default function TheDJCaresPage({
               {dailyPick.author}
               {dailyPick.ministry ? ` · ${ministryByKey(dailyPick.ministry)?.name}` : ""}
             </p>
-            {!(isDailyCurrent && started) && dailyPick.summary && (
+            {!dailyExpanded && dailyPick.summary && (
               <p style={{ fontSize: 13.5, color: sub, margin: "6px auto 0", maxWidth: 460, lineHeight: 1.55 }}>{dailyPick.summary}</p>
             )}
 
-            {/* A sermon can carry a real YouTube video, same as a Music
-                Video of the Day pick — reuse videoPanelNode for that case,
-                podcastPanelNode for a Spotify/Apple embed or a direct
-                audioUrl. Hero wins the rare coincidence where the same
-                item is both today's Video of the Day and this pick. */}
             {isPlayable(dailyPick) && (
               <div style={{ marginTop: 16 }}>
-                {isDailyCurrent && started ? (
-                  !isHeroCurrent && dailyPick.videoId ? videoPanelNode : podcastPanelNode
+                {dailyExpanded ? (
+                  <div
+                    style={{
+                      position: "relative",
+                      width: "100%",
+                      maxWidth: dailyPick.videoId ? undefined : 420,
+                      margin: "0 auto",
+                      aspectRatio: dailyPick.videoId ? "16 / 9" : undefined,
+                      background: dailyPick.videoId ? "#000" : undefined,
+                      borderRadius: 14,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {dailyPick.videoId ? (
+                      <DJPlayer
+                        ref={dailyPlayerRef}
+                        videoId={dailyPick.videoId}
+                        title={dailyPick.title}
+                        playing={dailyPlaying}
+                        initialVolume={25}
+                        onPlaybackChange={(s) => {
+                          if (s === "ended") setDailyPlaying(false);
+                        }}
+                        onAutoplayBlocked={() => setDailyPlaying(false)}
+                        onUnavailable={() => {
+                          setDailyExpanded(false);
+                          setDailyPlaying(false);
+                        }}
+                      />
+                    ) : dailyPick.audioUrl ? (
+                      <audio controls autoPlay preload="none" src={dailyPick.audioUrl} style={{ width: "100%" }}>
+                        Your browser doesn&apos;t support inline audio —{" "}
+                        <a href={getWatchUrl(dailyPick)} target="_blank" rel="noopener noreferrer">listen at the source</a>.
+                      </audio>
+                    ) : (
+                      <iframe
+                        src={getEmbedUrl(dailyPick)!}
+                        title={dailyPick.title}
+                        allow="autoplay *; encrypted-media *; clipboard-write"
+                        sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+                        style={{ width: "100%", height: dailyPick.spotifyEmbed ? 352 : 450, border: 0, borderRadius: 14, overflow: "hidden", background: "transparent" }}
+                      />
+                    )}
+                  </div>
                 ) : (
-                  <button onClick={() => startItem(dailyPick)} style={bigButton}>▶ Play here</button>
+                  <>
+                    {/* compact 16:9 preview — belongs to the card, not a
+                        giant embed dropped into it. Clicking either this
+                        or the button below expands the same box in place. */}
+                    <button
+                      type="button"
+                      onClick={() => { setDailyExpanded(true); setDailyPlaying(true); }}
+                      aria-label={`Play ${dailyPick.title}`}
+                      style={{ display: "block", width: "min(420px, 100%)", margin: "0 auto", background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                    >
+                      <span style={{ position: "relative", display: "block", width: "100%", aspectRatio: "16 / 9", borderRadius: 14, overflow: "hidden", background: active }}>
+                        {artworkUrl(dailyPick) ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={artworkUrl(dailyPick)!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          <span style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", fontSize: 40 }}>🎧</span>
+                        )}
+                        <span aria-hidden style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <span style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(11,18,32,0.85)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>▶</span>
+                        </span>
+                      </span>
+                    </button>
+                    <div style={{ marginTop: 14 }}>
+                      <button onClick={() => { setDailyExpanded(true); setDailyPlaying(true); }} style={bigButton}>▶ Play here</button>
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -1354,7 +1432,7 @@ export default function TheDJCaresPage({
               <button onClick={spinDailyPick} style={{ background: "none", border: "none", padding: 0, fontSize: 12.5, fontWeight: 800, color: sub, cursor: "pointer" }}>
                 🔀 Spin another
               </button>
-              {!(isDailyCurrent && started) && share(mediaShareTarget(dailyPick), "daily")}
+              {share(mediaShareTarget(dailyPick), "daily")}
             </div>
           </section>
         )}

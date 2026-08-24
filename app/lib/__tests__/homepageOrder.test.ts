@@ -72,45 +72,26 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     expect(fn).not.toMatch(/startItem\(/);
   });
 
-  it("Play and Pause replace the record with the inline player in the same hero container — no second video panel is ever mounted", () => {
+  it("Play and Pause replace the record with the inline player in the same hero container — the shared deck never mounts a second copy of it", () => {
     expect(homeClient).toContain("videoPanelNode");
     expect(homeClient).toContain('setHeroView("player")');
     expect(homeClient).toContain('setHeroView("record")');
-    // exactly one <DJPlayer ...> element in the whole file — reused, not
-    // duplicated (the type-only useRef<DJPlayerHandle> doesn't count).
-    expect(homeClient.match(/<DJPlayer[\s>]/g)?.length).toBe(1);
+    // exactly two <DJPlayer ...> elements in the whole file: the shared
+    // hero/deck instance, and Daily Encouragement's own fully-local one
+    // (see the "entirely local player" describe block below) — neither
+    // is a duplicate of the other, they're two intentionally separate
+    // player instances (the type-only useRef<DJPlayerHandle> doesn't
+    // count towards this).
+    expect(homeClient.match(/<DJPlayer[\s>]/g)?.length).toBe(2);
   });
 
-  it("Daily Encouragement's displayed pick never becomes the hero record (decoupled) even though both can now call startItem", () => {
-    // Owner-directed reversal: Daily Encouragement DOES call startItem now
-    // (reusing the Podcasts tab's proven play-here path) — but it must
-    // still never be able to claim the hero's vinyl. isHeroCurrent/
-    // isDailyCurrent are independent checks against different pools
-    // (heroVideo is always music; dailyPick is sermon/podcast, seeded from
-    // daily.item), so the two can never both be true for the same `current`.
-    expect(homeClient).toMatch(/startItem\(dailyPick\)/);
+  it("Daily Encouragement's pick can never become the hero record — independent pools, and Daily Encouragement no longer touches `current` at all", () => {
     expect(homeClient).toContain("const isHeroCurrent = Boolean(heroVideo && current?.id === heroVideo.id)");
-    expect(homeClient).toContain("const isDailyCurrent = Boolean(dailyPick && current?.id === dailyPick.id)");
+    expect(homeClient).not.toContain("isDailyCurrent"); // removed entirely — no longer meaningful
     expect(homeClient).toContain("const [dailyPick, setDailyPick] = useState<MediaItem | null>(initialDailyPick)");
   });
 
-  it("Daily Encouragement's inline player reuses the exact same startItem → shared player-state pipeline as the Podcasts tab's \"Play here\" — no second audio system", () => {
-    // Same button label/pattern as the Podcasts tab (app/HomeClient.tsx
-    // Podcasts section), and the same podcastPanelNode (showAudio/showEmbed
-    // off shared `current`/`started`) is reused for both, just placed in
-    // whichever section owns the item that's actually playing.
-    expect(homeClient).toMatch(/onClick=\{\(\) => startItem\(dailyPick\)\} style=\{bigButton\}>▶ Play here</);
-    expect(homeClient).toMatch(/onClick=\{\(\) => startItem\(p\)\} style=\{bigButton\}>▶ Play here</);
-    expect(homeClient).toContain("const podcastPanelNode = (showAudio || showEmbed) && (");
-    expect(homeClient).toMatch(/isDailyCurrent && started \?[\s\S]{0,200}podcastPanelNode/);
-  });
-
-  it("a sermon picked/spun for Daily Encouragement (a real YouTube video, not just a podcast) also plays inline, reusing videoPanelNode", () => {
-    expect(homeClient).toContain("isPlayable(dailyPick) && (");
-    expect(homeClient).toMatch(/isHeroCurrent && dailyPick\.videoId \? videoPanelNode : podcastPanelNode/);
-  });
-
-  it("prefers a direct verified audioUrl (native <audio controls>) over a provider embed, for whichever item is playing", () => {
+  it("prefers a direct verified audioUrl (native <audio controls>) over a provider embed, for whichever item is playing in the shared deck (e.g. a podcast played from the Podcasts tab)", () => {
     expect(homeClient).toContain("const showAudio = Boolean(started && current && !current.videoId && current.audioUrl);");
     expect(homeClient).toContain("<audio controls");
   });
@@ -158,12 +139,6 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     expect(fn).toContain("pickNext(pool, historyRef.current)");
   });
 
-  it("REGRESSION: Play here on the homepage card is the identical pattern used by the Podcasts tab's Play here and the Sermons tab's MediaCard — same startItem pipeline, no separate component", () => {
-    expect(homeClient).toMatch(/onClick=\{\(\) => startItem\(dailyPick\)\} style=\{bigButton\}>▶ Play here</); // homepage card
-    expect(homeClient).toMatch(/onClick=\{\(\) => startItem\(p\)\} style=\{bigButton\}>▶ Play here</); // Podcasts tab
-    expect(homeClient).toContain("onClick={() => startItem(item)}"); // Sermons/Music Videos MediaCard
-  });
-
   it("isPlayable() covers a direct audioUrl too, so the spin pool (which filters on it) never lands on a link-out-only item", () => {
     const lib = readFileSync(join(app, "lib/djCaresLibrary.ts"), "utf8");
     expect(lib).toContain("Boolean(item.videoId || item.spotifyEmbed || item.appleEmbed || item.audioUrl)");
@@ -178,9 +153,69 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     expect(homeClient).toContain("setMainRepeat");
   });
 
-  it("the deck never shows a second Play/Pause or Share for the item the hero or Daily Encouragement is already showing", () => {
+  it("the deck never shows a second Play/Pause or Share for the item the hero is already showing", () => {
     expect(homeClient).toMatch(/isHeroCurrent \? null : current\?\.videoId/);
-    expect(homeClient).toContain("current && !isHeroCurrent && !isDailyCurrent && share(mediaShareTarget(current)");
+    expect(homeClient).toContain("current && !isHeroCurrent && share(mediaShareTarget(current)");
+  });
+});
+
+describe("Daily Encouragement player is entirely local — never the shared deck/Now Spinning", () => {
+  it("REGRESSION 1: Play here never calls startItem() — the card has its own local play state, so it can never trigger the shared deck", () => {
+    const section = homeClient.slice(homeClient.indexOf('id="daily-encouragement"') - 200, homeClient.indexOf("Original source ↗") + 400);
+    expect(section).not.toMatch(/startItem\(/);
+    expect(section).toContain("setDailyExpanded(true)");
+    expect(section).toContain("setDailyPlaying(true)");
+  });
+
+  it("REGRESSION 11: no Music Videos / Mood Mixes / Spin Something Else UI is reachable from Daily Encouragement's own handlers", () => {
+    // The card's handlers (spinDailyPick, the Play here onClick) never
+    // reference `started`, `setStarted`, `setMoodQueue`, or `spin` (the
+    // global "Spin Something Else" handler) — those only exist in the
+    // shared deck, which Daily Encouragement's local state can't reach.
+    const spinFn = homeClient.slice(homeClient.indexOf("const spinDailyPick"), homeClient.indexOf("const spinDailyPick") + 700);
+    expect(spinFn).not.toMatch(/\bsetStarted\b|\bsetMoodQueue\b|\bsetMainQueue\b/);
+  });
+
+  it("REGRESSION 8/9: compact 16:9 preview exists before expanded playback, and Play here expands that SAME box in place — not a second player", () => {
+    const section = homeClient.slice(homeClient.indexOf('id="daily-encouragement"'), homeClient.indexOf("Original source ↗"));
+    expect(section).toContain("dailyExpanded ? (");
+    expect(section).toContain('aspectRatio: "16 / 9"'); // compact preview box
+    expect(section).toContain("🎧"); // fallback preview icon for a podcast with no video thumbnail
+    // Exactly one DJPlayer / one audio / one iframe branch inside this one
+    // conditional — never two rendered at once.
+    expect(section.match(/<DJPlayer/g)?.length).toBe(1);
+  });
+
+  it("REGRESSION 10: Daily Encouragement's video player gets initialVolume 25, not the shared site-level volume control", () => {
+    const section = homeClient.slice(homeClient.indexOf('id="daily-encouragement"'), homeClient.indexOf("Original source ↗"));
+    expect(section).toContain("initialVolume={25}");
+  });
+
+  it("REGRESSION 6/7: spinning resets this card's player (stops playback) and never autoplays the new pick", () => {
+    const fn = homeClient.slice(homeClient.indexOf("const spinDailyPick"), homeClient.indexOf("const spinDailyPick") + 700);
+    expect(fn).toContain("setDailyExpanded(false)");
+    expect(fn).toContain("setDailyPlaying(false)");
+    expect(fn).not.toMatch(/setDailyPlaying\(true\)/); // never autoplays
+  });
+
+  it("REGRESSION 4/5: the current item's id is filtered out of the spin pool BEFORE picking — a deterministic exclusion, not left to chance", () => {
+    const fn = homeClient.slice(homeClient.indexOf("const spinDailyPick"), homeClient.indexOf("const spinDailyPick") + 700);
+    expect(fn).toMatch(/\.filter\(\s*\(i\) => !unavailable\.has\(i\.id\) && i\.id !== dailyPick\?\.id,?\s*\)/);
+    // pickNext is only ever called on the already-current-excluded pool —
+    // it has no way to reintroduce the current item.
+    const filterIdx = fn.indexOf(".filter(");
+    const pickIdx = fn.indexOf("pickNext(pool");
+    expect(pickIdx).toBeGreaterThan(filterIdx);
+  });
+
+  it("REGRESSION 2/3: the spin pool is sermon + podcast only, and every candidate passes the canonical isPlayable() check (spinPool's own guarantee — see spin.test.ts)", () => {
+    const fn = homeClient.slice(homeClient.indexOf("const spinDailyPick"), homeClient.indexOf("const spinDailyPick") + 700);
+    expect(fn).toContain('spinPool({ category: "sermon" })');
+    expect(fn).toContain('spinPool({ category: "podcast" })');
+    expect(fn).not.toMatch(/spinPool\(\{ category: "music"/);
+    expect(fn).not.toMatch(/spinPool\(\{ category: "playlist"/);
+    expect(fn).not.toMatch(/spinPool\(\{ category: "all"/);
+    expect(fn).not.toMatch(/spinPool\(\{ category: "videos"/);
   });
 });
 
