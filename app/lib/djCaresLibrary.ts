@@ -999,7 +999,7 @@ export function itemsOfType(type: MediaType, items: MediaItem[] = LIBRARY): Medi
 
 // Can the Now Spinning player play it directly (vs. link out)?
 export function isPlayable(item: MediaItem): boolean {
-  return Boolean(item.videoId || item.spotifyEmbed || item.appleEmbed);
+  return Boolean(item.videoId || item.spotifyEmbed || item.appleEmbed || item.audioUrl);
 }
 
 export function artworkUrl(item: MediaItem): string | null {

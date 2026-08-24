@@ -81,16 +81,17 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     expect(homeClient.match(/<DJPlayer[\s>]/g)?.length).toBe(1);
   });
 
-  it("Daily Encouragement's own pick never becomes the hero record (decoupled) even though both can now call startItem", () => {
+  it("Daily Encouragement's displayed pick never becomes the hero record (decoupled) even though both can now call startItem", () => {
     // Owner-directed reversal: Daily Encouragement DOES call startItem now
     // (reusing the Podcasts tab's proven play-here path) — but it must
     // still never be able to claim the hero's vinyl. isHeroCurrent/
     // isDailyCurrent are independent checks against different pools
-    // (heroVideo is always music; daily.item is podcast/sermon), so the
-    // two can never both be true for the same `current`.
-    expect(homeClient).toMatch(/startItem\(daily\.item\)/);
+    // (heroVideo is always music; dailyPick is sermon/podcast, seeded from
+    // daily.item), so the two can never both be true for the same `current`.
+    expect(homeClient).toMatch(/startItem\(dailyPick\)/);
     expect(homeClient).toContain("const isHeroCurrent = Boolean(heroVideo && current?.id === heroVideo.id)");
-    expect(homeClient).toContain("const isDailyCurrent = Boolean(daily && current?.id === daily.item.id)");
+    expect(homeClient).toContain("const isDailyCurrent = Boolean(dailyPick && current?.id === dailyPick.id)");
+    expect(homeClient).toContain("const [dailyPick, setDailyPick] = useState<MediaItem | null>(daily?.item ?? null)");
   });
 
   it("Daily Encouragement's inline player reuses the exact same startItem → shared player-state pipeline as the Podcasts tab's \"Play here\" — no second audio system", () => {
@@ -98,15 +99,15 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     // Podcasts section), and the same podcastPanelNode (showAudio/showEmbed
     // off shared `current`/`started`) is reused for both, just placed in
     // whichever section owns the item that's actually playing.
-    expect(homeClient).toMatch(/onClick=\{\(\) => startItem\(daily\.item\)\} style=\{bigButton\}>▶ Play here</);
+    expect(homeClient).toMatch(/onClick=\{\(\) => startItem\(dailyPick\)\} style=\{bigButton\}>▶ Play here</);
     expect(homeClient).toMatch(/onClick=\{\(\) => startItem\(p\)\} style=\{bigButton\}>▶ Play here</);
     expect(homeClient).toContain("const podcastPanelNode = (showAudio || showEmbed) && (");
     expect(homeClient).toMatch(/isDailyCurrent && started \?[\s\S]{0,200}podcastPanelNode/);
   });
 
-  it("a sermon picked as today's Daily Encouragement (a real YouTube video, not just a podcast) also plays inline, reusing videoPanelNode", () => {
-    expect(homeClient).toContain("daily.item.videoId || daily.embedUrl || daily.audioUrl");
-    expect(homeClient).toMatch(/isHeroCurrent && daily\.item\.videoId \? videoPanelNode : podcastPanelNode/);
+  it("a sermon picked/spun for Daily Encouragement (a real YouTube video, not just a podcast) also plays inline, reusing videoPanelNode", () => {
+    expect(homeClient).toContain("isPlayable(dailyPick) ?");
+    expect(homeClient).toMatch(/isHeroCurrent && dailyPick\.videoId \? videoPanelNode : podcastPanelNode/);
   });
 
   it("prefers a direct verified audioUrl (native <audio controls>) over a provider embed, for whichever item is playing", () => {
@@ -115,8 +116,22 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
   });
 
   it("falls back to the honest official-source link — never a fabricated MP3 — when the picked item has no verified playable audio/embed", () => {
-    expect(homeClient).toContain("daily.embedUrl || daily.audioUrl ?");
+    expect(homeClient).toContain("isPlayable(dailyPick) ?");
     expect(homeClient).toContain("Listen at the official source ↗");
+  });
+
+  it("Spin swaps Daily Encouragement's pick to another sermon/podcast that's guaranteed inline-playable (isPlayable), never starting playback itself", () => {
+    expect(homeClient).toContain("🔀 Spin a sermon or podcast");
+    expect(homeClient).toContain("spinPool({ category: \"sermon\" })");
+    expect(homeClient).toContain("spinPool({ category: \"podcast\" })");
+    const fn = homeClient.slice(homeClient.indexOf("const spinDailyPick"), homeClient.indexOf("const spinDailyPick") + 500);
+    expect(fn).not.toMatch(/startItem\(/);
+    expect(fn).toContain("setDailyPick");
+  });
+
+  it("isPlayable() covers a direct audioUrl too, so the spin pool (which filters on it) never lands on a link-out-only item", () => {
+    const lib = readFileSync(join(app, "lib/djCaresLibrary.ts"), "utf8");
+    expect(lib).toContain("Boolean(item.videoId || item.spotifyEmbed || item.appleEmbed || item.audioUrl)");
   });
 
   it("clicking a video card seeds the continuous queue (not a one-off play)", () => {

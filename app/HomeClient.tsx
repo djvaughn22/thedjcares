@@ -15,6 +15,7 @@ import {
   APPROVED_CHURCHES,
   artworkUrl,
   getEmbedUrl,
+  getWatchUrl,
   isPlayable,
   itemsOfType,
   LIBRARY,
@@ -171,6 +172,12 @@ export default function TheDJCaresPage({
   // both live in the same hero container; switching back never restarts or
   // reshuffles the song.
   const [heroView, setHeroView] = useState<"record" | "player">("record");
+  // The Daily Encouragement card's own pick — starts as today's official
+  // rotation, but Spin can swap it for another sermon/podcast that's
+  // actually inline-playable (today's official pick can land on a
+  // link-out-only item; this is the escape hatch, mirroring heroVideo/
+  // shuffleHeroVideo above).
+  const [dailyPick, setDailyPick] = useState<MediaItem | null>(daily?.item ?? null);
   const historyRef = useRef<string[]>([]);
   // This session's play order, for real Previous/Next.
   const sessionRef = useRef<MediaItem[]>([]);
@@ -373,6 +380,23 @@ export default function TheDJCaresPage({
       track("hero_shuffle", { content_title: next.title });
     }
   }, []);
+
+  // Daily Encouragement's own "spin" — picks another sermon or podcast
+  // that's actually inline-playable (spinPool already filters to
+  // isPlayable()), so this always lands on something Play here can play
+  // right away, unlike the official daily rotation which can land on a
+  // link-out-only item. Never starts playback itself — same cue-don't-play
+  // convention as every other spin/shuffle on this page.
+  const spinDailyPick = useCallback(() => {
+    const pool = [...spinPool({ category: "sermon" }), ...spinPool({ category: "podcast" })].filter(
+      (i) => !unavailable.has(i.id),
+    );
+    const next = pickNext(pool, historyRef.current);
+    if (next) {
+      setDailyPick(next);
+      track("daily_spin", { content_type: next.type, content_title: next.title });
+    }
+  }, [unavailable]);
 
   // --- the mood mix -----------------------------------------------------------
 
@@ -834,7 +858,7 @@ export default function TheDJCaresPage({
   // Same idea for Daily Encouragement's own pick — true only once its
   // "Play here" has actually been pressed, so its inline player renders
   // inside the Daily Encouragement card instead of a second copy below.
-  const isDailyCurrent = Boolean(daily && current?.id === daily.item.id);
+  const isDailyCurrent = Boolean(dailyPick && current?.id === dailyPick.id);
 
   // The actual inline audio/embed element for whatever podcast/sermon is
   // playing — rendered once, then placed either inside the Daily
@@ -1278,12 +1302,15 @@ export default function TheDJCaresPage({
             Its own content block, completely separate from the hero — it
             never influences the vinyl, and the hero and this card can
             never both claim `current` since they draw from different
-            pools (music vs. podcast/sermon). "Play here" reuses the exact
+            pools (music vs. sermon/podcast). "Play here" reuses the exact
             same startItem → shared player-state → inline-panel path the
-            Podcasts tab already uses (see podcastPanelNode above) — no
-            second audio system. Falls back to a visible (never hidden)
-            source link only when there's truly nothing to play inline. */}
-        {tab === "spin" && daily && (
+            Podcasts tab already uses (see videoPanelNode/podcastPanelNode
+            above) — no second audio system. Today's official rotation can
+            land on a link-out-only item; Spin swaps the card to another
+            sermon/podcast that's guaranteed inline-playable (spinPool
+            already filters to isPlayable()) instead of making the visitor
+            wait for tomorrow. Never fabricates a source either way. */}
+        {tab === "spin" && daily && dailyPick && (
           <section
             id="daily-encouragement"
             aria-label="Daily Encouragement"
@@ -1293,52 +1320,67 @@ export default function TheDJCaresPage({
               <span aria-hidden>🌅</span> Daily Encouragement
             </p>
             <p style={{ fontSize: 12, fontWeight: 700, color: sub, margin: "0 0 14px" }}>
-              {daily.label} · {daily.post.fullDate}
+              {dailyPick.id === daily.item.id ? `${daily.label} · ${daily.post.fullDate}` : `🔀 ${typeLabel(dailyPick)} — spun for you`}
             </p>
-            <p style={{ fontSize: 20, fontWeight: 900, color: text, margin: 0 }}>{daily.item.title}</p>
-            <p style={{ fontSize: 13.5, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{daily.item.author}</p>
-            {!(isDailyCurrent && started) && daily.item.summary && (
-              <p style={{ fontSize: 13.5, color: sub, margin: "6px auto 0", maxWidth: 460, lineHeight: 1.55 }}>{daily.item.summary}</p>
+            <p style={{ fontSize: 20, fontWeight: 900, color: text, margin: 0 }}>{dailyPick.title}</p>
+            <p style={{ fontSize: 13.5, fontWeight: 700, color: accent, margin: "2px 0 0" }}>
+              {dailyPick.author}
+              {dailyPick.ministry ? ` · ${ministryByKey(dailyPick.ministry)?.name}` : ""}
+            </p>
+            {!(isDailyCurrent && started) && dailyPick.summary && (
+              <p style={{ fontSize: 13.5, color: sub, margin: "6px auto 0", maxWidth: 460, lineHeight: 1.55 }}>{dailyPick.summary}</p>
             )}
 
-            <div style={{ marginTop: 16 }}>
-              {/* A sermon picked as today's encouragement can carry a real
-                  YouTube video, same as a Music Video of the Day pick —
-                  reuse videoPanelNode for that case, podcastPanelNode for
-                  a Spotify/Apple podcast embed or a direct audioUrl. Hero
-                  wins the rare coincidence where the same item is both
-                  today's Video of the Day and today's Daily Encouragement. */}
-              {daily.item.videoId || daily.embedUrl || daily.audioUrl ? (
+            <div style={{ marginTop: 16, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+              {/* A sermon can carry a real YouTube video, same as a Music
+                  Video of the Day pick — reuse videoPanelNode for that
+                  case, podcastPanelNode for a Spotify/Apple embed or a
+                  direct audioUrl. Hero wins the rare coincidence where the
+                  same item is both today's Video of the Day and this pick. */}
+              {isPlayable(dailyPick) ? (
                 isDailyCurrent && started ? (
-                  !isHeroCurrent && daily.item.videoId ? videoPanelNode : podcastPanelNode
+                  !isHeroCurrent && dailyPick.videoId ? videoPanelNode : podcastPanelNode
                 ) : (
-                  <button onClick={() => startItem(daily.item)} style={bigButton}>▶ Play here</button>
+                  <button onClick={() => startItem(dailyPick)} style={bigButton}>▶ Play here</button>
                 )
               ) : (
                 <a
-                  href={daily.sourceUrl}
+                  href={dailyPick.id === daily.item.id ? daily.sourceUrl : getWatchUrl(dailyPick)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => track("djc_source_opened", { content_id: daily.item.id })}
+                  onClick={() => track("djc_source_opened", { content_id: dailyPick.id })}
                   style={{ ...quietButton, textDecoration: "none", display: "inline-block" }}
                 >
                   Listen at the official source ↗
                 </a>
               )}
+              {dailyPick.id !== daily.item.id && !(isDailyCurrent && started) && share(mediaShareTarget(dailyPick), "daily-spin")}
             </div>
 
-            <div style={{ marginTop: 12 }}>
-              <EncouragementActions
-                variant="compact"
-                contentId={daily.item.id}
-                label={daily.label}
-                title={daily.item.title}
-                pageUrl={`${PRODUCTION_ORIGIN}/#daily-encouragement`}
-                sourceUrl={daily.sourceUrl}
-                cardPath={daily.post.imagePath}
-                cardFileName={daily.post.imageFileName}
-              />
-            </div>
+            {dailyPick.id !== daily.item.id && (
+              <button onClick={() => setDailyPick(daily.item)} style={{ ...quietButton, marginTop: 10 }}>
+                ↩ Back to today&apos;s pick
+              </button>
+            )}
+
+            {dailyPick.id === daily.item.id && (
+              <div style={{ marginTop: 12 }}>
+                <EncouragementActions
+                  variant="compact"
+                  contentId={daily.item.id}
+                  label={daily.label}
+                  title={daily.item.title}
+                  pageUrl={`${PRODUCTION_ORIGIN}/#daily-encouragement`}
+                  sourceUrl={daily.sourceUrl}
+                  cardPath={daily.post.imagePath}
+                  cardFileName={daily.post.imageFileName}
+                />
+              </div>
+            )}
+
+            <button onClick={spinDailyPick} style={{ ...quietButton, marginTop: 12 }}>
+              🔀 Spin a sermon or podcast
+            </button>
           </section>
         )}
 
