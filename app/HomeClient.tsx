@@ -9,7 +9,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DJPlayer, { type DJPlayerHandle } from "./components/DJPlayer";
 import ChurchSubmitForm from "./components/ChurchSubmitForm";
-import EncouragementActions from "./components/EncouragementActions";
 import ShareSheet, { ShareTrigger } from "./components/ShareMenu";
 import {
   APPROVED_CHURCHES,
@@ -35,7 +34,6 @@ import {
   mediaShareTarget,
   mediaTypeLabel as typeLabel,
   ministryShareTarget,
-  PRODUCTION_ORIGIN,
   type ShareTarget,
 } from "./lib/shareLinks";
 import {
@@ -1299,18 +1297,15 @@ export default function TheDJCaresPage({
 
         {/* Daily Encouragement — directly beneath the hero (locked homepage
             order: hero, then Daily Encouragement, then everything else).
-            Its own content block, completely separate from the hero — it
-            never influences the vinyl, and the hero and this card can
-            never both claim `current` since they draw from different
-            pools (music vs. sermon/podcast). "Play here" reuses the exact
-            same startItem → shared player-state → inline-panel path the
-            Podcasts tab already uses (see videoPanelNode/podcastPanelNode
-            above) — no second audio system. Today's official rotation can
-            land on a link-out-only item; Spin swaps the card to another
-            sermon/podcast that's guaranteed inline-playable (spinPool
-            already filters to isPlayable()) instead of making the visitor
-            wait for tomorrow. Never fabricates a source either way. */}
-        {tab === "spin" && daily && dailyPick && (
+            ONE card, ONE player, ONE current selection — Spin replaces
+            this same card's contents in place, no "today's pick vs spun
+            pick" concept, no second card, no back button. "Play here"
+            reuses the exact same startItem → shared player-state →
+            inline-panel path the Podcasts tab already uses (see
+            videoPanelNode/podcastPanelNode above) — no second audio
+            system. Never fabricates a source: Original source always
+            points at whatever's actually displayed, honestly. */}
+        {tab === "spin" && dailyPick && (
           <section
             id="daily-encouragement"
             aria-label="Daily Encouragement"
@@ -1319,9 +1314,7 @@ export default function TheDJCaresPage({
             <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 2px" }}>
               <span aria-hidden>🌅</span> Daily Encouragement
             </p>
-            <p style={{ fontSize: 12, fontWeight: 700, color: sub, margin: "0 0 14px" }}>
-              {dailyPick.id === daily.item.id ? `${daily.label} · ${daily.post.fullDate}` : `🔀 ${typeLabel(dailyPick)} — spun for you`}
-            </p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: sub, margin: "0 0 14px" }}>{typeLabel(dailyPick)}</p>
             <p style={{ fontSize: 20, fontWeight: 900, color: text, margin: 0 }}>{dailyPick.title}</p>
             <p style={{ fontSize: 13.5, fontWeight: 700, color: accent, margin: "2px 0 0" }}>
               {dailyPick.author}
@@ -1331,56 +1324,36 @@ export default function TheDJCaresPage({
               <p style={{ fontSize: 13.5, color: sub, margin: "6px auto 0", maxWidth: 460, lineHeight: 1.55 }}>{dailyPick.summary}</p>
             )}
 
-            <div style={{ marginTop: 16, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-              {/* A sermon can carry a real YouTube video, same as a Music
-                  Video of the Day pick — reuse videoPanelNode for that
-                  case, podcastPanelNode for a Spotify/Apple embed or a
-                  direct audioUrl. Hero wins the rare coincidence where the
-                  same item is both today's Video of the Day and this pick. */}
-              {isPlayable(dailyPick) ? (
-                isDailyCurrent && started ? (
+            {/* A sermon can carry a real YouTube video, same as a Music
+                Video of the Day pick — reuse videoPanelNode for that case,
+                podcastPanelNode for a Spotify/Apple embed or a direct
+                audioUrl. Hero wins the rare coincidence where the same
+                item is both today's Video of the Day and this pick. */}
+            {isPlayable(dailyPick) && (
+              <div style={{ marginTop: 16 }}>
+                {isDailyCurrent && started ? (
                   !isHeroCurrent && dailyPick.videoId ? videoPanelNode : podcastPanelNode
                 ) : (
                   <button onClick={() => startItem(dailyPick)} style={bigButton}>▶ Play here</button>
-                )
-              ) : (
-                <a
-                  href={dailyPick.id === daily.item.id ? daily.sourceUrl : getWatchUrl(dailyPick)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => track("djc_source_opened", { content_id: dailyPick.id })}
-                  style={{ ...quietButton, textDecoration: "none", display: "inline-block" }}
-                >
-                  Listen at the official source ↗
-                </a>
-              )}
-              {dailyPick.id !== daily.item.id && !(isDailyCurrent && started) && share(mediaShareTarget(dailyPick), "daily-spin")}
-            </div>
-
-            {dailyPick.id !== daily.item.id && (
-              <button onClick={() => setDailyPick(daily.item)} style={{ ...quietButton, marginTop: 10 }}>
-                ↩ Back to today&apos;s pick
-              </button>
-            )}
-
-            {dailyPick.id === daily.item.id && (
-              <div style={{ marginTop: 12 }}>
-                <EncouragementActions
-                  variant="compact"
-                  contentId={daily.item.id}
-                  label={daily.label}
-                  title={daily.item.title}
-                  pageUrl={`${PRODUCTION_ORIGIN}/#daily-encouragement`}
-                  sourceUrl={daily.sourceUrl}
-                  cardPath={daily.post.imagePath}
-                  cardFileName={daily.post.imageFileName}
-                />
+                )}
               </div>
             )}
 
-            <button onClick={spinDailyPick} style={{ ...quietButton, marginTop: 12 }}>
-              🔀 Spin a sermon or podcast
-            </button>
+            <div style={{ marginTop: 14, display: "flex", gap: 16, justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
+              <a
+                href={getWatchUrl(dailyPick)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => track("djc_source_opened", { content_id: dailyPick.id })}
+                style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}
+              >
+                Original source ↗
+              </a>
+              <button onClick={spinDailyPick} style={{ background: "none", border: "none", padding: 0, fontSize: 12.5, fontWeight: 800, color: sub, cursor: "pointer" }}>
+                🔀 Spin another
+              </button>
+              {!(isDailyCurrent && started) && share(mediaShareTarget(dailyPick), "daily")}
+            </div>
           </section>
         )}
 

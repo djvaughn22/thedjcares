@@ -106,7 +106,7 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
   });
 
   it("a sermon picked/spun for Daily Encouragement (a real YouTube video, not just a podcast) also plays inline, reusing videoPanelNode", () => {
-    expect(homeClient).toContain("isPlayable(dailyPick) ?");
+    expect(homeClient).toContain("isPlayable(dailyPick) && (");
     expect(homeClient).toMatch(/isHeroCurrent && dailyPick\.videoId \? videoPanelNode : podcastPanelNode/);
   });
 
@@ -115,18 +115,27 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     expect(homeClient).toContain("<audio controls");
   });
 
-  it("falls back to the honest official-source link — never a fabricated MP3 — when the picked item has no verified playable audio/embed", () => {
-    expect(homeClient).toContain("isPlayable(dailyPick) ?");
-    expect(homeClient).toContain("Listen at the official source ↗");
+  it("shows only the small honest \"Original source ↗\" link — never a giant CTA, never a fabricated MP3 — and it always points at whatever's currently displayed", () => {
+    expect(homeClient).not.toContain("Listen at the official source ↗");
+    expect(homeClient).toContain("Original source ↗");
+    expect(homeClient).toContain("href={getWatchUrl(dailyPick)}");
   });
 
-  it("Spin swaps Daily Encouragement's pick to another sermon/podcast that's guaranteed inline-playable (isPlayable), never starting playback itself", () => {
-    expect(homeClient).toContain("🔀 Spin a sermon or podcast");
+  it("ONE card, no \"today's pick vs spun pick\" concept — Spin replaces this same card's contents in place, no second card, no Back button, never starts playback itself", () => {
+    expect(homeClient).toContain("🔀 Spin another");
+    expect(homeClient).not.toContain("Spin a sermon or podcast"); // stale multi-card copy
+    expect(homeClient).not.toContain("Back to today"); // no "Back to today's pick" control
+    expect(homeClient).not.toContain("spun for you"); // no "spun pick" language
     expect(homeClient).toContain("spinPool({ category: \"sermon\" })");
     expect(homeClient).toContain("spinPool({ category: \"podcast\" })");
     const fn = homeClient.slice(homeClient.indexOf("const spinDailyPick"), homeClient.indexOf("const spinDailyPick") + 500);
     expect(fn).not.toMatch(/startItem\(/);
     expect(fn).toContain("setDailyPick");
+  });
+
+  it("Daily Encouragement no longer renders EncouragementActions — one lean card (title, Play here, Original source, Spin another, quiet Share) replaces it", () => {
+    expect(homeClient).not.toContain("<EncouragementActions");
+    expect(homeClient).not.toContain("import EncouragementActions");
   });
 
   it("isPlayable() covers a direct audioUrl too, so the spin pool (which filters on it) never lands on a link-out-only item", () => {
@@ -141,12 +150,6 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
   it("provides Shuffle and Repeat controls", () => {
     expect(homeClient).toContain("toggleMainShuffle");
     expect(homeClient).toContain("setMainRepeat");
-  });
-
-  it("reuses EncouragementActions in its compact variant for Share/Download/Browse only — no duplicate playback logic", () => {
-    expect(homeClient).toContain("<EncouragementActions");
-    expect(homeClient).toMatch(/variant="compact"/);
-    expect(homeClient).not.toContain("djc_today_viewed"); // that tracking lives inside the reused component, not duplicated here
   });
 
   it("the deck never shows a second Play/Pause or Share for the item the hero or Daily Encouragement is already showing", () => {
