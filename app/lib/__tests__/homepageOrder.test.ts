@@ -81,8 +81,37 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     expect(homeClient.match(/<DJPlayer[\s>]/g)?.length).toBe(1);
   });
 
-  it("Daily Encouragement never seeds the hero record's playback (decoupled)", () => {
-    expect(homeClient).not.toMatch(/startItem\(daily\.item\)/);
+  it("Daily Encouragement's own pick never becomes the hero record (decoupled) even though both can now call startItem", () => {
+    // Owner-directed reversal: Daily Encouragement DOES call startItem now
+    // (reusing the Podcasts tab's proven play-here path) — but it must
+    // still never be able to claim the hero's vinyl. isHeroCurrent/
+    // isDailyCurrent are independent checks against different pools
+    // (heroVideo is always music; daily.item is podcast/sermon), so the
+    // two can never both be true for the same `current`.
+    expect(homeClient).toMatch(/startItem\(daily\.item\)/);
+    expect(homeClient).toContain("const isHeroCurrent = Boolean(heroVideo && current?.id === heroVideo.id)");
+    expect(homeClient).toContain("const isDailyCurrent = Boolean(daily && current?.id === daily.item.id)");
+  });
+
+  it("Daily Encouragement's inline player reuses the exact same startItem → shared player-state pipeline as the Podcasts tab's \"Play here\" — no second audio system", () => {
+    // Same button label/pattern as the Podcasts tab (app/HomeClient.tsx
+    // Podcasts section), and the same podcastPanelNode (showAudio/showEmbed
+    // off shared `current`/`started`) is reused for both, just placed in
+    // whichever section owns the item that's actually playing.
+    expect(homeClient).toMatch(/onClick=\{\(\) => startItem\(daily\.item\)\} style=\{bigButton\}>▶ Play here</);
+    expect(homeClient).toMatch(/onClick=\{\(\) => startItem\(p\)\} style=\{bigButton\}>▶ Play here</);
+    expect(homeClient).toContain("const podcastPanelNode = (showAudio || showEmbed) && (");
+    expect(homeClient).toContain("isDailyCurrent && started ? (\n                  podcastPanelNode");
+  });
+
+  it("prefers a direct verified audioUrl (native <audio controls>) over a provider embed, for whichever item is playing", () => {
+    expect(homeClient).toContain("const showAudio = Boolean(started && current && !current.videoId && current.audioUrl);");
+    expect(homeClient).toContain("<audio controls");
+  });
+
+  it("falls back to the honest official-source link — never a fabricated MP3 — when the picked item has no verified playable audio/embed", () => {
+    expect(homeClient).toContain("daily.embedUrl || daily.audioUrl ?");
+    expect(homeClient).toContain("Listen at the official source ↗");
   });
 
   it("clicking a video card seeds the continuous queue (not a one-off play)", () => {
@@ -94,37 +123,24 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     expect(homeClient).toContain("setMainRepeat");
   });
 
-  it("reuses EncouragementActions in its compact, stay-on-site-first variant rather than re-implementing share/download/source-link", () => {
+  it("reuses EncouragementActions in its compact variant for Share/Download/Browse only — no duplicate playback logic", () => {
     expect(homeClient).toContain("<EncouragementActions");
     expect(homeClient).toMatch(/variant="compact"/);
-    expect(homeClient).toContain("audioUrl={daily.audioUrl}");
     expect(homeClient).not.toContain("djc_today_viewed"); // that tracking lives inside the reused component, not duplicated here
   });
 
-  it("the deck never shows a second Play/Pause or Share for the item the hero is already showing", () => {
+  it("the deck never shows a second Play/Pause or Share for the item the hero or Daily Encouragement is already showing", () => {
     expect(homeClient).toMatch(/isHeroCurrent \? null : current\?\.videoId/);
-    expect(homeClient).toContain("current && !isHeroCurrent && share(mediaShareTarget(current)");
+    expect(homeClient).toContain("current && !isHeroCurrent && !isDailyCurrent && share(mediaShareTarget(current)");
   });
 });
 
-describe("Daily Encouragement compact variant: Listen expands into an inline player, source link always visible as fallback", () => {
-  it("prefers a direct audio URL (native <audio controls>) over an embed", () => {
-    expect(encouragementActions).toContain("audioUrl ? (");
-    expect(encouragementActions).toContain("<audio controls");
-  });
-
-  it("falls back to the provider embed only when there's no direct audio URL", () => {
-    expect(encouragementActions).toContain("<iframe");
-  });
-
-  it("Listen is the primary action only when something is actually playable", () => {
-    expect(encouragementActions).toContain("const playable = Boolean(audioUrl || embedUrl);");
-    expect(encouragementActions).toMatch(/playable && \(\s*<button[^]*?▶ Listen/);
-  });
-
-  it("the source link is always visible — never sr-only", () => {
-    expect(encouragementActions).not.toContain("djc-sr-only");
-    expect(encouragementActions).toContain("Original source ↗");
+describe("EncouragementActions: no second audio system", () => {
+  it("the compact variant has no player/audio/embed logic of its own — playback lives only in HomeClient's shared pipeline", () => {
+    expect(encouragementActions).not.toContain("<audio");
+    expect(encouragementActions).not.toContain("<iframe");
+    expect(encouragementActions).not.toContain("audioUrl");
+    expect(encouragementActions).not.toContain("embedUrl");
   });
 });
 
