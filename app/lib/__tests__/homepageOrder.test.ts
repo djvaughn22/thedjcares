@@ -17,32 +17,34 @@ const encouragementActions = readFileSync(join(app, "components/EncouragementAct
 
 const at = (haystack: string, needle: string) => haystack.indexOf(needle);
 
-describe("homepage section order (locked: hero, then Daily Encouragement, then everything else)", () => {
-  it("Music Video Deck leads, Daily Encouragement directly beneath it, THE MUSIC deck beneath that, then the shared deck (for anything else), then Videos/Sermons/Podcasts previews, Digital DJ last — exactly three curated decks up top, browse content after", () => {
-    // `deck` (id="now-playing") is a const defined well above the return
-    // statement and referenced by name where it actually renders — so its
-    // render POSITION is where it's actually inserted into the tree, not
-    // its definition's id=.
+describe("homepage section order (locked: category tabs, then the persistent player, then Home's own content)", () => {
+  it("Category tabs lead, then the one persistent player shell, then Home's own decks (hero, Daily Encouragement, Music) in their original order, then Videos/Sermons/Podcasts previews, Digital DJ last", () => {
+    // activePlayerNode (id="now-playing") is a const defined well above the
+    // return statement and referenced by name where it actually renders —
+    // so its render POSITION is where it's actually inserted into the
+    // tree, not its definition's id=.
+    const nav = at(homeClient, 'aria-label="Category tabs"');
+    const playerInsertion = at(homeClient, "{started && activePlayerNode}");
     const hero = at(homeClient, 'id="video-of-the-day"');
     const daily = at(homeClient, 'id="daily-encouragement"');
     const music = at(homeClient, 'id="music"');
-    const deckInsertion = at(homeClient, "{started && !isHeroCurrent && deck}");
     const videos = at(homeClient, 'id="videos"');
     const sermons = at(homeClient, 'id="sermons"');
     const podcasts = at(homeClient, 'id="podcasts"');
     const digitalDj = at(homeClient, 'aria-label="Digital DJ"');
 
-    for (const idx of [hero, daily, music, deckInsertion, videos, sermons, podcasts, digitalDj]) {
+    for (const idx of [nav, playerInsertion, hero, daily, music, videos, sermons, podcasts, digitalDj]) {
       expect(idx).toBeGreaterThan(-1);
     }
-    // Owner-locked hierarchy: Video Deck, Daily Encouragement, Music Deck
-    // — exactly three decks, nothing wedged between them — then whatever
-    // else is playing (a sermon/podcast picked from browse content), then
-    // browse/discovery.
+    // Requirement 1's literal order: category tabs, then the persistent
+    // player shell, then the selected category's own content — applied on
+    // every tab, Home included, so the player is never nested inside a
+    // tab==="..." conditional and never unmounts on a tab click.
+    expect(nav).toBeLessThan(playerInsertion);
+    expect(playerInsertion).toBeLessThan(hero);
     expect(hero).toBeLessThan(daily);
     expect(daily).toBeLessThan(music);
-    expect(music).toBeLessThan(deckInsertion);
-    expect(deckInsertion).toBeLessThan(videos);
+    expect(music).toBeLessThan(videos);
     expect(videos).toBeLessThan(sermons);
     expect(sermons).toBeLessThan(podcasts);
     expect(podcasts).toBeLessThan(digitalDj);
@@ -73,16 +75,16 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     expect(fn).not.toMatch(/startItem\(/);
   });
 
-  it("Play and Pause replace the record with the inline player in the same hero container — the shared deck never mounts a second copy of it", () => {
+  it("the hero is a pure cue/discovery widget — it never embeds its own video, so there's exactly one place any video actually mounts (the persistent player), not a second copy that would need to survive a tab-to-tab move", () => {
     expect(homeClient).toContain("videoPanelNode");
-    expect(homeClient).toContain('setHeroView("player")');
-    expect(homeClient).toContain('setHeroView("record")');
-    // exactly two <DJPlayer ...> elements in the whole file: the shared
-    // hero/deck instance, and Daily Encouragement's own fully-local one
-    // (see the "entirely local player" describe block below) — neither
-    // is a duplicate of the other, they're two intentionally separate
-    // player instances (the type-only useRef<DJPlayerHandle> doesn't
-    // count towards this).
+    expect(homeClient).not.toContain("heroView"); // retired — no more record⇄player swap inside the hero
+    expect(homeClient).not.toContain('setHeroView("player")');
+    expect(homeClient).not.toContain('setHeroView("record")');
+    // exactly two <DJPlayer ...> elements in the whole file: the one
+    // persistent player's instance, and Daily Encouragement's own
+    // fully-local one (see the "entirely local player" describe block
+    // below) — neither is a duplicate of the other (the type-only
+    // useRef<DJPlayerHandle> doesn't count towards this).
     expect(homeClient.match(/<DJPlayer[\s>]/g)?.length).toBe(2);
   });
 
@@ -95,10 +97,11 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     expect(homeClient).toContain("const [dailyPick, setDailyPick] = useState<MediaItem | null>(initialDailyPick)");
   });
 
-  it("REGRESSION: the shared deck (Prev/Next/Shuffle/Repeat/Spin Something Else/blocked-recovery/queue-status) is a single transportPanel node placed in the hero when a video is current, or the deck otherwise — never rendered twice", () => {
+  it("REGRESSION (superseded): the shared transport (Prev/Next/Play-Pause/Shuffle/Repeat/Spin Something Else/Share/Volume/blocked-recovery/queue-status) is a single transportPanel node, rendered exactly once inside the one persistent player — never duplicated into the hero", () => {
     expect(homeClient).toContain("const transportPanel = (");
-    expect(homeClient).toContain("{isHeroStarted && transportPanel}");
-    expect(homeClient).toContain("{!isHeroCurrent && transportPanel}");
+    // referenced exactly once: inside activePlayerNode's own JSX (`{transportPanel}`).
+    expect(homeClient.match(/\{transportPanel\}/g)?.length).toBe(1);
+    expect(homeClient).not.toContain("{isHeroStarted && transportPanel}");
   });
 
   it("prefers a direct verified audioUrl (native <audio controls>, wrapped in SyncedAudio for shared-volume sync) over a provider embed, for whichever item is playing in the shared deck (e.g. a podcast played from the Podcasts tab)", () => {
@@ -163,9 +166,10 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     expect(homeClient).toContain("setMainRepeat");
   });
 
-  it("the deck never shows a second Play/Pause or Share for the item the hero is already showing", () => {
-    expect(homeClient).toMatch(/isHeroCurrent \? null : current\?\.videoId/);
-    expect(homeClient).toContain("current && !isHeroCurrent && share(mediaShareTarget(current)");
+  it("REGRESSION (superseded): the hero no longer has its own Play/Pause/Share for the playing item — the persistent player's transportPanel is the only transport control, so there's nothing left for a hero copy to duplicate", () => {
+    expect(homeClient).not.toMatch(/isHeroCurrent \? null : current\?\.videoId/);
+    expect(homeClient).toContain("current?.videoId && started && !blocked ? (");
+    expect(homeClient).toContain("{current && share(mediaShareTarget(current), \"deck\")}");
   });
 });
 
@@ -295,10 +299,9 @@ describe("cross-deck exclusivity: only one of Video/Daily/Music plays at once", 
     );
   });
 
-  it("REGRESSION 2: starting Daily Encouragement (or Music) pauses/collapses the video deck", () => {
+  it("REGRESSION 2: starting Daily Encouragement (or Music) pauses the video deck", () => {
     const fn = homeClient.slice(homeClient.indexOf('if (activeDeck !== "video"'), homeClient.indexOf('if (activeDeck !== "video"') + 200);
     expect(fn).toContain("setPlaying(false)");
-    expect(fn).toContain('setHeroView("record")');
   });
 
   it("REGRESSION 3: starting the video deck (or Music) pauses/collapses Daily Encouragement", () => {
@@ -317,6 +320,85 @@ describe("cross-deck exclusivity: only one of Video/Daily/Music plays at once", 
     expect(homeClient).toMatch(/if \(isHeroStarted && playing\) setActiveDeck\("video"\);/);
     expect(homeClient).toMatch(/if \(dailyPlaying\) setActiveDeck\("daily"\);/);
     expect(homeClient).toMatch(/if \(musicPlaying\) setActiveDeck\("music"\);/);
+  });
+});
+
+describe("Persistent player: one continuous listening experience across Music, Videos, Sermons, and Podcasts", () => {
+  it("REGRESSION: the persistent player's insertion point (`{started && activePlayerNode}`) is not wrapped in any tab==='...' conditional — it renders on every tab, not just one", () => {
+    const idx = homeClient.indexOf("{started && activePlayerNode}");
+    expect(idx).toBeGreaterThan(-1);
+    const before = homeClient.slice(Math.max(0, idx - 60), idx);
+    expect(before).not.toMatch(/tab === "/);
+  });
+
+  it("REGRESSION: switching category tabs can never stop or reset playback — goTab (the only tab-switch path) only ever touches `tab`, browser history, and scroll position", () => {
+    const fn = homeClient.slice(homeClient.indexOf("const goTab = "), homeClient.indexOf("const goTab = ") + 400);
+    expect(fn).toContain("setTab(t)");
+    // Never clears the current item, the queue, playback state, progress,
+    // or preferences — a tab click is purely a view change.
+    expect(fn).not.toMatch(/setCurrent\(|setStarted\(|setPlaying\(|setProgress\(|setMainQueue\(|setMoodQueue\(|setPrefs\(|updatePrefs\(/);
+  });
+
+  it("REGRESSION: goTab never does a full page navigation — it's a client-side history update (pushState), not a location assignment or reload", () => {
+    const fn = homeClient.slice(homeClient.indexOf("const goTab = "), homeClient.indexOf("const goTab = ") + 400);
+    expect(fn).toContain("window.history.pushState(");
+    expect(fn).not.toMatch(/window\.location(\.href)?\s*=|location\.assign\(|location\.reload\(/);
+  });
+
+  it("REGRESSION: Back/Forward can change the selected category without destroying playback — goTab pushes a real, traversable history entry (not replaceState), and the hashchange listener re-derives `tab` from the URL on every Back/Forward, falling back to Home on an empty hash", () => {
+    expect(homeClient).not.toMatch(/window\.history\.replaceState\(null, "", t === "spin"/);
+    expect(homeClient).toContain('window.history.pushState(null, "", t === "spin"');
+    expect(homeClient).toContain('if (h === "") setTab("spin");');
+  });
+
+  it("REGRESSION: exactly one videoPanelNode and one podcastPanelNode call site in the whole file — the same DJPlayer/SyncedAudio/iframe instance is what's current, on whichever tab you're on, never a second copy per tab", () => {
+    expect(homeClient.match(/\{videoPanelNode\}/g)?.length).toBe(1);
+    expect(homeClient.match(/\{podcastPanelNode\}/g)?.length).toBe(1);
+  });
+
+  it("REGRESSION: a Spotify/Apple embed's <iframe>, and native <audio> via SyncedAudio, are both defined once inside podcastPanelNode, outside every tab==='...' conditional — neither is torn down or re-created by a category change", () => {
+    const start = homeClient.indexOf("const podcastPanelNode = ");
+    const end = homeClient.indexOf("\n  );", start);
+    const src = homeClient.slice(start, end);
+    expect(src).toContain("<SyncedAudio");
+    expect(src).toContain("<iframe");
+    expect(src).not.toMatch(/tab === "/);
+  });
+
+  it("selecting a new item always replaces `current` via the authoritative startItem pipeline — the previous source stops because the one persistent player is driven by that single value, never a second concurrent one", () => {
+    const fn = homeClient.slice(homeClient.indexOf("const startItem = "), homeClient.indexOf("const startItem = ") + 2000);
+    expect(fn).toContain("setCurrent(item)");
+    expect(fn).toContain("setStarted(true)");
+    expect(fn).toContain("setPlaying(true)");
+  });
+
+  it("REGRESSION: volume/mute preferences survive every category transition — the persistent player reads them straight from the shared `prefs` state, which goTab never touches (see the goTab test above)", () => {
+    expect(homeClient).toContain("volume={prefs.volume}");
+    expect(homeClient).toContain("muted={prefs.muted}");
+  });
+
+  it("the category tabs are the one client-side navigation path — every button calls goTab, none of them is a plain <a href> to a different route", () => {
+    const navIdx = homeClient.indexOf('aria-label="Category tabs"');
+    const navEnd = homeClient.indexOf("</nav>", navIdx);
+    const navSrc = homeClient.slice(navIdx, navEnd);
+    expect(navSrc).toContain("onClick={() => goTab(t.id)}");
+    expect(navSrc).not.toContain("<a ");
+  });
+
+  it("category tabs use standard <button> elements with aria-current marking the active one — natively keyboard-operable (Tab to focus, Enter/Space to activate), no custom key handling needed", () => {
+    const navIdx = homeClient.indexOf('aria-label="Category tabs"');
+    const navEnd = homeClient.indexOf("</nav>", navIdx);
+    const navSrc = homeClient.slice(navIdx, navEnd);
+    expect(navSrc).toContain("<button");
+    expect(navSrc).toContain('aria-current={tab === t.id ? "page" : undefined}');
+  });
+
+  it("a direct entry to a category initializes normally but never autoplays without a user action — `started` (which gates the persistent player and any DJPlayer/SyncedAudio mount) only ever becomes true inside startItem, which itself is only ever invoked from onClick handlers, not from a mount effect", () => {
+    expect(homeClient).toContain("const [started, setStarted] = useState(false)");
+    // The only place `started` is ever set true is inside startItem.
+    expect(homeClient.match(/setStarted\(true\)/g)?.length).toBe(1);
+    const startItemIdx = homeClient.indexOf("const startItem = ");
+    expect(homeClient.indexOf("setStarted(true)")).toBeGreaterThan(startItemIdx);
   });
 });
 

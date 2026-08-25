@@ -162,10 +162,6 @@ export default function TheDJCaresPage({
   // playback at all (see shuffleHeroVideo below). Independent of `current`
   // until the hero item is actually played.
   const [heroVideo, setHeroVideo] = useState<MediaItem | null>(videoOfTheDay);
-  // Whether the hero shows the spinning record or the inline video player —
-  // both live in the same hero container; switching back never restarts or
-  // reshuffles the song.
-  const [heroView, setHeroView] = useState<"record" | "player">("record");
   // The Daily Encouragement card's own pick — starts as today's official
   // rotation, but Spin can swap it for another sermon/podcast that's
   // actually inline-playable (today's official pick can land on a
@@ -257,7 +253,13 @@ export default function TheDJCaresPage({
         if (TABS.some((t) => t.id === tabId)) setTab(tabId as Tab);
         return;
       }
-      if (TABS.some((t) => t.id === h)) setTab(h as Tab);
+      if (TABS.some((t) => t.id === h)) {
+        setTab(h as Tab);
+        return;
+      }
+      // Empty hash — either the initial load, or Back/Forward has traversed
+      // past every #tab-* entry this session pushed. Either way that's Home.
+      if (h === "") setTab("spin");
     };
     fromHash();
     window.addEventListener("hashchange", fromHash);
@@ -265,9 +267,14 @@ export default function TheDJCaresPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // pushState (not replaceState) so category selection is a real, traversable
+  // history entry — Back/Forward changes the selected category (via the
+  // hashchange listener above re-deriving `tab` from the URL) without a full
+  // reload, and without ever unmounting the persistent player, which lives
+  // outside this tab switch entirely.
   const goTab = (t: Tab) => {
     setTab(t);
-    window.history.replaceState(null, "", t === "spin" ? window.location.pathname : `#tab-${t}`);
+    window.history.pushState(null, "", t === "spin" ? window.location.pathname : `#tab-${t}`);
     window.scrollTo({ top: 0 });
     track("tab_view", { tab: t });
   };
@@ -411,7 +418,6 @@ export default function TheDJCaresPage({
     if (next) {
       setHeroVideo(next);
       startItem(next, true);
-      setHeroView("player");
       track("hero_vibe_spin", { vibe: v, content_title: next.title });
     }
   }, [unavailable, startItem]);
@@ -990,11 +996,14 @@ export default function TheDJCaresPage({
     </div>
   );
 
-  // The actual inline video element — rendered once, then placed either
-  // inside the hero container (isHeroCurrent) or the generic deck below
-  // (anything else), never both, so there's only ever one player mounted.
+  // The actual inline video element — the one persistent instance for
+  // whatever's current, whether it's a music video (the old hero-only
+  // case) or any other video (a sermon with a videoId, etc). Rendered once,
+  // at a single stable position in activePlayerNode below (never nested
+  // inside a tab-conditional section), so switching category tabs never
+  // unmounts it.
   const videoPanelNode = showVideo && !blocked && (
-    <div className={isHeroCurrent ? "djc-daily-video-enter" : undefined} style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
+    <div className="djc-daily-video-enter" style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
       {(() => {
         const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
         DEV && console.log('[HomeClient.render] DJPlayer props: videoId:', current?.videoId, 'title:', current?.title, 'playing:', playing, 'volume:', prefs.volume);
@@ -1032,16 +1041,16 @@ export default function TheDJCaresPage({
   );
 
   // Blocked-video recovery, continuous-queue status, and the shared
-  // transport row (Prev/Next/Shuffle/Repeat/Spin Something Else/Mute) —
-  // rendered once, then placed either inside the hero (isHeroCurrent, a
-  // video is what's playing) or the generic deck below (anything else),
-  // never both. Play/Pause and Share are deliberately excluded here — the
-  // hero and the deck each already have their own, so including them here
-  // too would be a second, competing control for the same media.
+  // transport row (Prev/Next/Play-Pause/Shuffle/Repeat/Spin Something
+  // Else/Share/Volume) — the one authoritative transport for whatever
+  // `current` is, video included. This used to be excluded from the hero's
+  // own video (which had its own duplicate Play/Pause/Share) — now that the
+  // hero never embeds a player of its own (see the Video of the Day
+  // section), this is the only transport control for any media, anywhere.
   const transportPanel = (
     <>
       {blocked && current && (
-        <div role="status" style={{ border: `2px solid ${border}`, borderRadius: 14, padding: "18px 18px", textAlign: "center", marginTop: isHeroCurrent ? 14 : 0 }}>
+        <div role="status" style={{ border: `2px solid ${border}`, borderRadius: 14, padding: "18px 18px", textAlign: "center" }}>
           <p style={{ fontSize: 15, fontWeight: 800, color: text, margin: "0 0 4px" }}>That one won&apos;t play here.</p>
           <p style={{ fontSize: 13.5, color: sub, margin: "0 0 12px" }}>Some videos only play on YouTube itself — the official link still works.</p>
           <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
@@ -1063,14 +1072,11 @@ export default function TheDJCaresPage({
         </p>
       )}
 
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: isHeroCurrent ? 14 : 16 }}>
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 16 }}>
         <button onClick={prev} disabled={posRef.current <= 0} aria-label="Previous" style={{ ...quietButton, opacity: posRef.current <= 0 ? 0.45 : 1, cursor: posRef.current <= 0 ? "default" : "pointer" }}>
           ⏮
         </button>
-        {/* the hero above already has its own Play/Pause for this exact
-            item — showing it again here would be a second, equally
-            prominent control for the same media. */}
-        {isHeroCurrent ? null : current?.videoId && started && !blocked ? (
+        {current?.videoId && started && !blocked ? (
           <button onClick={() => setPlaying(playerState !== "playing")} aria-label={playerState === "playing" ? "Pause" : "Play"} style={quietButton}>
             {playerState === "playing" ? "⏸ Pause" : "▶ Play"}
           </button>
@@ -1091,9 +1097,7 @@ export default function TheDJCaresPage({
         <button onClick={spin} disabled={deckPoolEmpty && !moodQueue} style={{ ...bigButton, opacity: deckPoolEmpty && !moodQueue ? 0.5 : 1 }}>
           🎲 Spin Something Else
         </button>
-        {/* same reasoning — the hero / Daily Encouragement card already has
-            its own Share for whichever item it's showing. */}
-        {current && !isHeroCurrent && share(mediaShareTarget(current), "deck")}
+        {current && share(mediaShareTarget(current), "deck")}
       </div>
       {(showVideo || showAudio) && (
         <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
@@ -1103,7 +1107,16 @@ export default function TheDJCaresPage({
     </>
   );
 
-  const deck = (
+  // The one persistent player shell — the SAME mounted instance for
+  // whatever `current` is (a music video, any other video, a podcast/
+  // sermon's native audio, or a provider embed). Rendered at a single
+  // stable position in the tree (right after the category tabs, before the
+  // per-tab content switch — see the return below), never nested inside a
+  // tab==="..." conditional, so selecting Music/Videos/Sermons/Podcasts
+  // never unmounts or recreates it. The old hero-only "Video of the Day"
+  // embed and the old isHeroCurrent split are gone — this is the only
+  // place any media actually plays.
+  const activePlayerNode = (
     <section
       ref={deckRef}
       id="now-playing"
@@ -1112,21 +1125,16 @@ export default function TheDJCaresPage({
     >
       <div aria-live="polite" className="djc-sr-only">{announce}</div>
 
-      {/* the giant hero vinyl (or the Daily Encouragement card) above
-          already reads as "Now Playing" while its own item spins — this
-          row would just repeat it, so it only appears for other picks. */}
-      {!isHeroCurrent && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
-          <p style={{ display: "inline-flex", alignItems: "center", gap: 10, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: 0 }}>
-            <span className={`djc-mini-vinyl${playerState === "playing" ? " spinning" : ""}`} aria-hidden />
-            {playerState === "playing" && (
-              <span className="djc-eq" aria-hidden><span /><span /><span /><span /></span>
-            )}
-            Now Spinning
-          </p>
-          {current && <span style={{ fontSize: 12, fontWeight: 800, color: sub, textTransform: "uppercase", letterSpacing: "0.08em" }}>{typeLabel(current)}</span>}
-        </div>
-      )}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
+        <p style={{ display: "inline-flex", alignItems: "center", gap: 10, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: 0 }}>
+          <span className={`djc-mini-vinyl${playerState === "playing" ? " spinning" : ""}`} aria-hidden />
+          {playerState === "playing" && (
+            <span className="djc-eq" aria-hidden><span /><span /><span /><span /></span>
+          )}
+          Now Spinning
+        </p>
+        {current && <span style={{ fontSize: 12, fontWeight: 800, color: sub, textTransform: "uppercase", letterSpacing: "0.08em" }}>{typeLabel(current)}</span>}
+      </div>
 
       {/* the record / player */}
       {!started && current && (
@@ -1151,21 +1159,10 @@ export default function TheDJCaresPage({
         </div>
       )}
 
-      {/* the hero (or, for a video-id sermon picked as today's Daily
-          Encouragement, the Daily Encouragement card) above already hosts
-          this same item's player when it's the one playing — don't mount
-          a second copy of it down here too. */}
-      {!isHeroCurrent && videoPanelNode}
-
-      {/* the Daily Encouragement card above already hosts this same item's
-          player when it's the one playing (same reasoning as the hero's
-          video panel above) — don't mount a second copy of it down here. */}
+      {videoPanelNode}
       {podcastPanelNode}
 
-      {/* what's on the platter — the hero vinyl / Daily Encouragement card
-          already shows title/author for their own pick, so this only
-          repeats them for other picks. */}
-      {current && !blocked && !isHeroCurrent && (
+      {current && !blocked && (
         <div style={{ textAlign: "center", margin: "14px 0 0" }}>
           <p style={{ fontSize: 18, fontWeight: 900, color: text, margin: 0 }}>{current.title}</p>
           <p style={{ fontSize: 14, fontWeight: 700, color: accent, margin: "2px 0 0" }}>
@@ -1178,10 +1175,7 @@ export default function TheDJCaresPage({
         </div>
       )}
 
-      {/* Prev/Next/Play-Pause/Shuffle/Repeat/Spin-Something-Else/Share/Mute
-          — same shared node the hero renders when it's showing the video
-          that's actually playing (see isHeroCurrent above); never both. */}
-      {!isHeroCurrent && transportPanel}
+      {transportPanel}
     </section>
   );
 
@@ -1226,7 +1220,6 @@ export default function TheDJCaresPage({
   useEffect(() => {
     if (activeDeck !== "video" && isHeroStarted && playing) {
       setPlaying(false);
-      setHeroView("record");
     }
   }, [activeDeck]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -1255,24 +1248,49 @@ export default function TheDJCaresPage({
           </p>
         </div>
 
-        {/* MUSIC VIDEO DECK — the hero record, merged with what used to be
-            a separate "Now Spinning" video player and its transport
-            controls (see isHeroCurrent/heroDisplayItem/transportPanel
-            above). Always a real music video (see
-            app/lib/videoOfTheDay.ts's eligibility filter), so it always
-            has real artwork for the label and always plays inline via the
-            same startItem/DJPlayer pipeline every other video on the page
-            uses — no second player, no fallback label, no link-out.
-            Always visible (never hidden by what else is playing elsewhere
-            on the page), so Shuffle can swap the cued video without it
-            ever disappearing. Once ANY music video is playing — the
-            Video of the Day pick, a Shuffle stand-in, a Music Videos
-            preview card, a Mood/Vibe pick from "Tune the spin" — this
-            container reflects and plays THAT one; the deck below never
-            shows a second copy of it. */}
+        {/* CATEGORY TABS, then the ONE persistent player shell, then the
+            selected category's own content — that order, always, on every
+            tab. Continuous in-site listening: selecting Music, Videos,
+            Sermons, or Podcasts only ever changes `tab`; it never touches
+            current/started/playing, so activePlayerNode (below) — the
+            single mounted DJPlayer/SyncedAudio/embed instance for whatever
+            `current` is — is never unmounted or recreated by a tab click.
+            It lives here, outside every {tab === "..."} block, so it's the
+            same instance no matter which tab is selected. */}
+        <nav aria-label="Category tabs" style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 8, maxWidth: 560, margin: "0 auto 20px" }}>
+          {TABS.map((t, idx) => (
+            <button
+              key={t.id}
+              onClick={() => goTab(t.id)}
+              aria-current={tab === t.id ? "page" : undefined}
+              style={{
+                gridColumn: idx < 6 ? "span 2" : "span 3",
+                background: tab === t.id ? accent : card,
+                border: `2px solid ${tab === t.id ? accent : border}`,
+                borderRadius: 14,
+                padding: "12px 6px",
+                fontSize: 13.5,
+                fontWeight: 800,
+                cursor: "pointer",
+                color: tab === t.id ? ink : sub,
+                textAlign: "center",
+              }}
+            >
+              <span aria-hidden>{t.emoji}</span> {t.label}
+            </button>
+          ))}
+        </nav>
+
+        {started && activePlayerNode}
+
+        {/* MUSIC VIDEO DECK — a cue/discovery widget for today's featured
+            video, Home-only. Never embeds its own player (see
+            activePlayerNode above) — pressing Play here just starts
+            playback through the same authoritative startItem pipeline
+            every other pick on the page uses, so the persistent player
+            above shows it, on every tab, without a second copy anywhere. */}
         {tab === "spin" && heroDisplayItem && (
           <section
-            ref={isHeroCurrent ? deckRef : undefined}
             id="video-of-the-day"
             aria-label="Video of the Day"
             style={{ textAlign: "center", padding: "4px 0 20px", marginBottom: 6 }}
@@ -1281,18 +1299,20 @@ export default function TheDJCaresPage({
               <span aria-hidden>📀</span> Music Video of the Day
             </p>
 
+            {/* Purely a discovery/cue widget now — a decorative record, never
+                its own embedded video. The one persistent player (above
+                every tab, including this one) is the only place any video
+                actually plays, so it survives navigating to Music, Videos,
+                Sermons, or Podcasts instead of being torn down with this
+                tab==="spin"-only section. */}
             <div className={`djc-turntable-wrap${isHeroStarted ? " engaged" : ""}`} style={{ width: "min(460px, 88vw)", margin: "0 auto 18px", position: "relative" }}>
-              <div className={`djc-turntable${isHeroStarted && heroView === "record" ? " djc-record-enter" : ""}`} style={isHeroStarted && heroView === "player" ? { display: "none" } : undefined}>
+              <div className="djc-turntable">
                 <span className="djc-platter" aria-hidden />
                 <button
                   type="button"
                   onClick={() => {
-                    if (isHeroStarted) {
-                      setPlaying(playerState !== "playing");
-                    } else {
-                      startItem(heroVideo);
-                      setHeroView("player");
-                    }
+                    if (isHeroStarted) setPlaying(playerState !== "playing");
+                    else startItem(heroVideo);
                   }}
                   aria-label={
                     isHeroStarted
@@ -1330,13 +1350,6 @@ export default function TheDJCaresPage({
                 </span>
                 <span className={`djc-power-light${isHeroStarted ? " on" : ""}`} aria-hidden />
               </div>
-
-              {/* Play → this same container becomes the video player;
-                  "Back to record" (below) just re-hides it — the player
-                  stays mounted and playing either way. */}
-              {isHeroStarted && videoPanelNode && (
-                <div style={heroView === "player" ? undefined : { display: "none" }}>{videoPanelNode}</div>
-              )}
             </div>
 
             <p style={{ fontSize: isHeroStarted ? 19 : 24, fontWeight: 900, color: text, margin: 0, transition: "font-size 0.3s ease" }}>{heroDisplayItem.title}</p>
@@ -1347,41 +1360,19 @@ export default function TheDJCaresPage({
 
             {!isHeroStarted ? (
               <div style={{ marginTop: 18, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-                <button onClick={() => { startItem(heroVideo); setHeroView("player"); }} style={bigButton}>▶ Play</button>
+                <button onClick={() => startItem(heroVideo)} style={bigButton}>▶ Play</button>
                 <button onClick={shuffleHeroVideo} style={quietButton}>🔀 Spin</button>
                 {share(mediaShareTarget(heroDisplayItem), "hero")}
               </div>
             ) : (
-              <div style={{ marginTop: 14, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-                <button onClick={() => setPlaying(playerState !== "playing")} aria-label={playerState === "playing" ? "Pause" : "Play"} style={quietButton}>
-                  {playerState === "playing" ? "⏸ Pause" : "▶ Play"}
-                </button>
-                {heroView === "player" ? (
-                  <button onClick={() => setHeroView("record")} style={quietButton}>⏺ Back to record</button>
-                ) : (
-                  <button onClick={() => setHeroView("player")} style={quietButton}>🎬 Watch video</button>
-                )}
-                {share(mediaShareTarget(heroDisplayItem), "hero")}
-              </div>
-            )}
-
-            {/* Quiet platform row — only what the library actually has for
-                this pick (music items only carry a verified YouTube link;
-                no invented Spotify/Apple Music search links). */}
-            {isHeroStarted && heroDisplayItem.url && (
-              <p style={{ margin: "10px 0 0" }}>
-                <a href={heroDisplayItem.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
-                  Watch on YouTube ↗
-                </a>
+              // The persistent player (right below the category tabs, on
+              // every tab) already has the real Play/Pause, Share, and full
+              // transport for this exact item — a second copy here would be
+              // a competing control for the same media, not a convenience.
+              <p style={{ fontSize: 12.5, fontWeight: 800, color: sub, margin: "14px 0 0" }}>
+                ▶ Now playing in the player above ↑
               </p>
             )}
-
-            {/* Prev/Next/Shuffle-queue/Repeat/Spin-Something-Else/Mute —
-                the same shared transportPanel node the classic deck below
-                renders for anything that isn't a video (see
-                isHeroCurrent). Absorbed here instead of a second "Now
-                Spinning" section farther down the page. */}
-            {isHeroStarted && transportPanel}
 
             {/* "Tune the spin" — collapsed by default. Reuses the exact
                 same Mood (QUEUE_MOODS → startMoodMix in "videos" mode,
@@ -1406,7 +1397,7 @@ export default function TheDJCaresPage({
                     <p style={{ fontSize: 11, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: sub, margin: "0 0 8px" }}>Mood</p>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(76px, 1fr))", gap: 6, marginBottom: 14 }}>
                       {QUEUE_MOODS.map((mood) => (
-                        <button key={mood} onClick={() => { startMoodMix(mood, "videos"); setHeroView("player"); }} style={pill(false)}>
+                        <button key={mood} onClick={() => startMoodMix(mood, "videos")} style={pill(false)}>
                           {mood === "surprise" ? "🎲" : mood[0].toUpperCase()}{mood.slice(1)}
                         </button>
                       ))}
@@ -1675,13 +1666,6 @@ export default function TheDJCaresPage({
           </section>
         )}
 
-        {/* the spin deck (Now Playing): the shared player for whatever's
-            playing that isn't the Video/Daily/Music decks above (e.g. a
-            sermon or podcast played from a preview lower on the page) —
-            never a second copy of the video experience (see
-            isHeroCurrent). */}
-        {started && !isHeroCurrent && deck}
-
         {/* Music Videos preview — hand-picked songs, same MediaCard grid the
             Videos tab uses, just a taste of it up front. Clicking one makes
             it the new Now Playing anchor (see startItem's queue seeding). */}
@@ -1700,32 +1684,6 @@ export default function TheDJCaresPage({
             </button>
           </section>
         )}
-
-        {/* navigation — a symmetric grid: three rows, every row full
-            (8 tabs on 6 columns: 2-spans, then two 3-spans on the last row) */}
-        <nav aria-label="Sections" style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 8, maxWidth: 560, margin: "0 auto 26px" }}>
-          {TABS.map((t, idx) => (
-            <button
-              key={t.id}
-              onClick={() => goTab(t.id)}
-              aria-current={tab === t.id ? "page" : undefined}
-              style={{
-                gridColumn: idx < 6 ? "span 2" : "span 3",
-                background: tab === t.id ? accent : card,
-                border: `2px solid ${tab === t.id ? accent : border}`,
-                borderRadius: 14,
-                padding: "12px 6px",
-                fontSize: 13.5,
-                fontWeight: 800,
-                cursor: "pointer",
-                color: tab === t.id ? ink : sub,
-                textAlign: "center",
-              }}
-            >
-              <span aria-hidden>{t.emoji}</span> {t.label}
-            </button>
-          ))}
-        </nav>
 
         {tab === "spin" && (
           <>
