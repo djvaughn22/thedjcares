@@ -168,31 +168,13 @@ export default function TheDJCaresPage({
   // link-out-only item; this is the escape hatch, mirroring heroVideo/
   // shuffleHeroVideo above).
   const [dailyPick, setDailyPick] = useState<MediaItem | null>(initialDailyPick);
-  // Daily Encouragement's player is entirely local — it never touches
-  // `current`/`started`/the shared deck, so it can never trigger the
-  // site-wide Now Spinning / Mood Mixes / Spin Something Else UI.
-  // dailyExpanded: compact 16:9 preview (false) vs. the actual player
-  // mounted in its place (true) — the hero's record ⇄ player pattern,
-  // scoped to this one card.
-  const [dailyExpanded, setDailyExpanded] = useState(false);
-  const [dailyPlaying, setDailyPlaying] = useState(false);
-  const dailyPlayerRef = useRef<DJPlayerHandle>(null);
-  // The Music deck — same local, compact ⇄ expanded pattern as Daily
-  // Encouragement, built from the existing Apple Music playlist data
-  // (heroPlaylistId/playlists below). musicPick starts null (defaults to
-  // the DJ's lead playlist) so Choose a mix's selection has somewhere to
-  // live without duplicating heroPlaylistId's job.
-  const [musicExpanded, setMusicExpanded] = useState(false);
-  const [musicPlaying, setMusicPlaying] = useState(false);
+  // The Music deck's own featured/cued pick — which of the DJ's Apple Music
+  // playlists is shown on the Home widget. Independent of `current` until
+  // the widget's own Play button is pressed (same heroVideo/heroDisplayItem
+  // pattern the hero uses) — Choose a mix / Another mix just re-cue this,
+  // they never touch playback.
   const [tuneSpinOpen, setTuneSpinOpen] = useState(false);
   const [chooseMixOpen, setChooseMixOpen] = useState(false);
-  // Only one of the three homepage decks (video/daily/music) may be
-  // actively playing at once. Each deck's own "I started playing" effect
-  // (below, near isHeroStarted) claims this; the other two decks' effects
-  // react by pausing + collapsing back to their compact state. Smallest
-  // possible coordinator — no new app-wide media framework, just three
-  // small effects reading one shared value.
-  const [activeDeck, setActiveDeck] = useState<"video" | "daily" | "music" | null>(null);
   const historyRef = useRef<string[]>([]);
   // This session's play order, for real Previous/Next.
   const sessionRef = useRef<MediaItem[]>([]);
@@ -439,8 +421,6 @@ export default function TheDJCaresPage({
     const next = pickNext(pool, historyRef.current);
     if (next) {
       setDailyPick(next);
-      setDailyExpanded(false);
-      setDailyPlaying(false);
       track("daily_spin", { content_type: next.type, content_title: next.title });
     }
   }, [unavailable, dailyPick]);
@@ -456,8 +436,6 @@ export default function TheDJCaresPage({
     const next = pickNext(others, historyRef.current);
     if (next) {
       setHeroPlaylistId(next.id);
-      setMusicExpanded(false);
-      setMusicPlaying(false);
       track("music_spin", { content_title: next.title });
     }
   }, [heroPlaylistId]);
@@ -907,35 +885,44 @@ export default function TheDJCaresPage({
     </div>
   );
 
-  // One playlist card, artwork and all — the Apple player is always mounted
-  // (lazily loaded), so pressing play is a single tap like the old site.
-  const PlaylistCard = ({ p }: { p: MediaItem }) => (
-    <div key={p.id} className="pop" style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, padding: "16px 18px" }}>
-      <p style={{ fontSize: 16, fontWeight: 900, color: text, margin: 0 }}>{p.title}</p>
-      {p.summary && <p style={{ fontSize: 13, color: sub, margin: "3px 0 0" }}>{p.summary}</p>}
-      {p.appleEmbed && (
-        <iframe
-          src={p.appleEmbed}
-          title={p.title}
-          loading="lazy"
-          allow="autoplay *; encrypted-media *;"
-          sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
-          style={{ width: "100%", height: 430, border: 0, borderRadius: 12, marginTop: 12, background: "transparent" }}
-        />
-      )}
-      <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", marginTop: 10 }}>
-        <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
-          Open in Apple Music ↗
-        </a>
-        {p.spotifyAlt && (
-          <a href={p.spotifyAlt} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
-            Prefer Spotify? ↗
-          </a>
+  // One playlist card, artwork and all — a selector, not its own player:
+  // pressing Play routes through the same startItem pipeline every other
+  // pick on the page uses, which renders the real Apple embed in the one
+  // persistent player (podcastPanelNode). No iframe mounted here — a
+  // browse grid of several of these never means several playing at once.
+  const PlaylistCard = ({ p }: { p: MediaItem }) => {
+    const isCurrent = current?.id === p.id && started;
+    return (
+      <div key={p.id} className="pop" style={{ background: card, border: `2px solid ${isCurrent ? activeBorder : border}`, borderRadius: 16, padding: "16px 18px" }}>
+        {isCurrent && (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 900, letterSpacing: "0.1em", color: accent, textTransform: "uppercase", marginBottom: 6 }}>
+            {playerState === "playing" && (
+              <span className="djc-eq" aria-hidden><span /><span /><span /><span /></span>
+            )}
+            Now Spinning
+          </span>
         )}
-        {share(mediaShareTarget(p))}
+        <p style={{ fontSize: 16, fontWeight: 900, color: text, margin: 0 }}>{p.title}</p>
+        {p.summary && <p style={{ fontSize: 13, color: sub, margin: "3px 0 0" }}>{p.summary}</p>}
+        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", marginTop: 12 }}>
+          {isCurrent ? (
+            <span style={{ fontSize: 12.5, fontWeight: 800, color: sub }}>▶ Playing in the player above ↑</span>
+          ) : (
+            <button onClick={() => startItem(p)} style={bigButton}>▶ Play here</button>
+          )}
+          <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
+            Open in Apple Music ↗
+          </a>
+          {p.spotifyAlt && (
+            <a href={p.spotifyAlt} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
+              Prefer Spotify? ↗
+            </a>
+          )}
+          {share(mediaShareTarget(p))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // --- the deck (Now Spinning) ---
 
@@ -960,17 +947,24 @@ export default function TheDJCaresPage({
   // What the hero actually displays: the live video once one is playing,
   // otherwise the cued (Shuffle-changeable) pick.
   const heroDisplayItem = isHeroCurrent && current ? current : heroVideo;
+  // Whether Daily Encouragement's own cued pick is what's actually playing
+  // in the one persistent player right now — same isHeroCurrent pattern,
+  // just keyed on id instead of type, since dailyPick spans every media
+  // type (video, audio, embed).
+  const dailyIsCurrent = Boolean(started && current && dailyPick && current.id === dailyPick.id);
 
   // The actual inline audio/embed element for whatever podcast/sermon is
-  // playing via the shared deck (e.g. a podcast played from the Podcasts
-  // tab). Daily Encouragement's own card has a fully separate, local
-  // player — see the Daily Encouragement section below — so it never
-  // touches this shared current/started pipeline at all.
+  // current — including a Daily Encouragement pick, now that its Play
+  // action routes through the same startItem pipeline as everything else
+  // (see the Daily Encouragement section below). autoPlay so pressing
+  // "Play here" anywhere (Podcasts tab, Daily Encouragement) starts sound
+  // immediately, same as DJPlayer's `playing` prop does for video.
   const podcastPanelNode = (showAudio || showEmbed) && (
     <div style={{ marginTop: 12 }}>
       {showAudio ? (
         <SyncedAudio
           controls
+          autoPlay
           preload="none"
           src={current!.audioUrl}
           volume={prefs.volume}
@@ -1195,6 +1189,9 @@ export default function TheDJCaresPage({
   const [sermonMinistry, setSermonMinistry] = useState<MinistryKey | null>(null);
   const [expandedSermons, setExpandedSermons] = useState<Record<string, boolean>>({});
   const heroPlaylist = playlists.find((p) => p.id === heroPlaylistId) ?? playlists[0];
+  // Whether the Music widget's featured playlist is what's actually
+  // current — same dailyIsCurrent pattern (see above).
+  const musicIsCurrent = Boolean(started && current && heroPlaylist && current.id === heroPlaylist.id);
   // Video of the Day is always a real music video (see videoOfTheDay.ts's
   // eligibility filter: type "music" + a real videoId), so — unlike Daily
   // Encouragement — it never needs a branded-fallback label or an
@@ -1205,35 +1202,15 @@ export default function TheDJCaresPage({
   const isHeroStarted = isHeroCurrent && started;
   const isHeroPlaying = isHeroCurrent && playerState === "playing";
 
-  // --- cross-deck exclusivity: only one of video/daily/music plays at once ---
-  // Each deck claims activeDeck the moment it actually starts playing...
-  useEffect(() => {
-    if (isHeroStarted && playing) setActiveDeck("video");
-  }, [isHeroStarted, playing]);
-  useEffect(() => {
-    if (dailyPlaying) setActiveDeck("daily");
-  }, [dailyPlaying]);
-  useEffect(() => {
-    if (musicPlaying) setActiveDeck("music");
-  }, [musicPlaying]);
-  // ...and the other two react by pausing + collapsing back to compact.
-  useEffect(() => {
-    if (activeDeck !== "video" && isHeroStarted && playing) {
-      setPlaying(false);
-    }
-  }, [activeDeck]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (activeDeck !== "daily" && dailyPlaying) {
-      setDailyPlaying(false);
-      setDailyExpanded(false);
-    }
-  }, [activeDeck]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (activeDeck !== "music" && musicPlaying) {
-      setMusicPlaying(false);
-      setMusicExpanded(false);
-    }
-  }, [activeDeck]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Cross-card exclusivity used to need a separate activeDeck coordinator
+  // because Daily Encouragement and the Music widget each kept their own
+  // local "am I playing" state, entirely apart from `current`. Now that
+  // both route every Play action through the same startItem pipeline as
+  // everything else (see the Daily Encouragement and Music sections
+  // below), `current`/`started`/`playing` already ARE the one source of
+  // truth — starting anything new simply replaces `current`, which is by
+  // construction never more than one item at a time. Nothing left to
+  // coordinate.
 
   return (
     <main style={{ background: bg, minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -1417,19 +1394,17 @@ export default function TheDJCaresPage({
 
         {/* Daily Encouragement — directly beneath the hero (locked homepage
             order: hero, then Daily Encouragement, then everything else).
-            ONE card, ONE player, ONE current selection — Spin replaces
-            this same card's contents in place, no "today's pick vs spun
-            pick" concept, no second card, no back button. Its player is
-            entirely LOCAL (dailyExpanded/dailyPlaying, defined above) —
-            it never calls startItem() and never touches the shared
-            current/started state, so it can never trigger the site-wide
-            Now Spinning / Mood Mixes / Spin Something Else UI. It still
-            reuses the exact same components those other players use
-            (DJPlayer for a real video, native <audio> for a direct
-            audioUrl, the provider iframe for a Spotify/Apple embed) — no
-            second player implementation, just no shared state. Never
-            fabricates a source: Original source always points at
-            whatever's actually displayed, honestly. */}
+            ONE card, ONE current selection — Spin replaces this same
+            card's contents in place, no "today's pick vs spun pick"
+            concept, no second card, no back button. A pure selector now:
+            Play here routes through the same authoritative startItem
+            pipeline every other pick on the page uses (see
+            activePlayerNode above) — it never mounts its own
+            DJPlayer/SyncedAudio/iframe, so there's exactly one place any
+            of this actually plays, and it survives navigating to Music,
+            Videos, Sermons, or Podcasts. Never fabricates a source:
+            Original source always points at whatever's actually
+            displayed, honestly. */}
         {tab === "spin" && dailyPick && (
           <section
             id="daily-encouragement"
@@ -1445,74 +1420,29 @@ export default function TheDJCaresPage({
               {dailyPick.author}
               {dailyPick.ministry ? ` · ${ministryByKey(dailyPick.ministry)?.name}` : ""}
             </p>
-            {!dailyExpanded && dailyPick.summary && (
+            {!dailyIsCurrent && dailyPick.summary && (
               <p style={{ fontSize: 13.5, color: sub, margin: "6px auto 0", maxWidth: 460, lineHeight: 1.55 }}>{dailyPick.summary}</p>
             )}
 
             {isPlayable(dailyPick) && (
               <div style={{ marginTop: 16 }}>
-                {dailyExpanded ? (
-                  <div
-                    style={{
-                      position: "relative",
-                      width: "100%",
-                      maxWidth: dailyPick.videoId ? undefined : 420,
-                      margin: "0 auto",
-                      aspectRatio: dailyPick.videoId ? "16 / 9" : undefined,
-                      background: dailyPick.videoId ? "#000" : undefined,
-                      borderRadius: 14,
-                      overflow: "hidden",
-                    }}
-                  >
-                    {dailyPick.videoId ? (
-                      <DJPlayer
-                        ref={dailyPlayerRef}
-                        videoId={dailyPick.videoId}
-                        title={dailyPick.title}
-                        playing={dailyPlaying}
-                        volume={prefs.volume}
-                        muted={prefs.muted}
-                        onPlaybackChange={(s) => {
-                          if (s === "ended") setDailyPlaying(false);
-                        }}
-                        onAutoplayBlocked={() => setDailyPlaying(false)}
-                        onUnavailable={() => {
-                          setDailyExpanded(false);
-                          setDailyPlaying(false);
-                        }}
-                      />
-                    ) : dailyPick.audioUrl ? (
-                      <SyncedAudio
-                        controls
-                        autoPlay
-                        preload="none"
-                        src={dailyPick.audioUrl}
-                        volume={prefs.volume}
-                        muted={prefs.muted}
-                        onPreferenceChange={updatePrefs}
-                        style={{ width: "100%" }}
-                      >
-                        Your browser doesn&apos;t support inline audio —{" "}
-                        <a href={getWatchUrl(dailyPick)} target="_blank" rel="noopener noreferrer">listen at the source</a>.
-                      </SyncedAudio>
-                    ) : (
-                      <iframe
-                        src={getEmbedUrl(dailyPick)!}
-                        title={dailyPick.title}
-                        allow="autoplay *; encrypted-media *; clipboard-write"
-                        sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
-                        style={{ width: "100%", height: dailyPick.spotifyEmbed ? 352 : 450, border: 0, borderRadius: 14, overflow: "hidden", background: "transparent" }}
-                      />
-                    )}
-                  </div>
+                {dailyIsCurrent ? (
+                  // The persistent player (right below the category tabs, on
+                  // every tab) already has the real Play/Pause, Share, and
+                  // full transport for this exact item — a second copy here
+                  // would be a competing control for the same media.
+                  <p style={{ fontSize: 12.5, fontWeight: 800, color: sub, margin: 0 }}>
+                    ▶ Now playing in the player above ↑
+                  </p>
                 ) : (
                   <>
                     {/* compact 16:9 preview — belongs to the card, not a
                         giant embed dropped into it. Clicking either this
-                        or the button below expands the same box in place. */}
+                        or the button below starts it in the persistent
+                        player above. */}
                     <button
                       type="button"
-                      onClick={() => { setDailyExpanded(true); setDailyPlaying(true); }}
+                      onClick={() => startItem(dailyPick)}
                       aria-label={`Play ${dailyPick.title}`}
                       style={{ display: "block", width: "min(420px, 100%)", margin: "0 auto", background: "none", border: "none", padding: 0, cursor: "pointer" }}
                     >
@@ -1529,14 +1459,9 @@ export default function TheDJCaresPage({
                       </span>
                     </button>
                     <div style={{ marginTop: 14 }}>
-                      <button onClick={() => { setDailyExpanded(true); setDailyPlaying(true); }} style={bigButton}>▶ Play here</button>
+                      <button onClick={() => startItem(dailyPick)} style={bigButton}>▶ Play here</button>
                     </div>
                   </>
-                )}
-                {dailyExpanded && (
-                  <div style={{ marginTop: 14 }}>
-                    {dailyPick.videoId || dailyPick.audioUrl ? volumeControl("djc-daily-volume") : embedVolumeNote}
-                  </div>
                 )}
               </div>
             )}
@@ -1559,43 +1484,40 @@ export default function TheDJCaresPage({
           </section>
         )}
 
-        {/* THE MUSIC — the third deck, right after Daily Encouragement.
-            Same compact ⇄ expanded pattern as Daily Encouragement: cover
-            artwork + Play here in the collapsed state, the real Apple
-            Music embed only once actually pressed. "Choose a mix" (the
-            playlist picker that used to be a permanent row of buttons)
-            is now a closed-by-default disclosure. Apple/Spotify embeds
-            run their own playback and volume — this never pretends to
-            control either, it only tracks "the visitor pressed Play"
-            for cross-deck pause coordination (see activeDeck above). */}
+        {/* THE MUSIC — the third deck, right after Daily Encouragement. A
+            selector/featured card now: cover artwork + Play here, but
+            pressing it routes through the same startItem pipeline every
+            other pick on the page uses (see activePlayerNode above), which
+            renders the real Apple Music embed via podcastPanelNode — no
+            iframe mounted here, so there's exactly one place any playlist
+            actually plays, and it survives navigating to Music, Videos,
+            Sermons, or Podcasts. "Choose a mix" and "Another mix" just
+            re-cue which playlist is featured (heroPlaylistId); neither
+            starts playback on its own, same as the hero's Shuffle. */}
         {tab === "spin" && heroPlaylist && (
           <section id="music" aria-label="The Music" style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20, textAlign: "center" }}>
             <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 14px" }}>
               <span aria-hidden>🎶</span> The Music
             </p>
             <p style={{ fontSize: 20, fontWeight: 900, color: text, margin: 0 }}>{heroPlaylist.title}</p>
-            {!musicExpanded && heroPlaylist.summary && (
+            {!musicIsCurrent && heroPlaylist.summary && (
               <p style={{ fontSize: 13.5, color: sub, margin: "6px auto 0", maxWidth: 460, lineHeight: 1.55 }}>{heroPlaylist.summary}</p>
             )}
 
             <div style={{ marginTop: 16 }}>
-              {musicExpanded ? (
-                <>
-                  <iframe
-                    key={heroPlaylist.id}
-                    src={heroPlaylist.appleEmbed}
-                    title={heroPlaylist.title}
-                    allow="autoplay *; encrypted-media *;"
-                    sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
-                    style={{ width: "100%", height: 430, border: 0, borderRadius: 14, background: "transparent" }}
-                  />
-                  {embedVolumeNote}
-                </>
+              {musicIsCurrent ? (
+                // The persistent player (right below the category tabs, on
+                // every tab) already has the real embed, Share, and volume
+                // note for this exact playlist — a second copy here would
+                // be a competing control for the same media.
+                <p style={{ fontSize: 12.5, fontWeight: 800, color: sub, margin: 0 }}>
+                  ▶ Now playing in the player above ↑
+                </p>
               ) : (
                 <>
                   <button
                     type="button"
-                    onClick={() => { setMusicExpanded(true); setMusicPlaying(true); track("playlist_open", { content_title: heroPlaylist.title }); }}
+                    onClick={() => { startItem(heroPlaylist); track("playlist_open", { content_title: heroPlaylist.title }); }}
                     aria-label={`Play ${heroPlaylist.title}`}
                     style={{ display: "block", width: "min(300px, 100%)", margin: "0 auto", background: "none", border: "none", padding: 0, cursor: "pointer" }}
                   >
@@ -1612,7 +1534,7 @@ export default function TheDJCaresPage({
                     </span>
                   </button>
                   <div style={{ marginTop: 14 }}>
-                    <button onClick={() => { setMusicExpanded(true); setMusicPlaying(true); track("playlist_open", { content_title: heroPlaylist.title }); }} style={bigButton}>▶ Play</button>
+                    <button onClick={() => { startItem(heroPlaylist); track("playlist_open", { content_title: heroPlaylist.title }); }} style={bigButton}>▶ Play</button>
                   </div>
                 </>
               )}
@@ -1649,8 +1571,6 @@ export default function TheDJCaresPage({
                       key={p.id}
                       onClick={() => {
                         setHeroPlaylistId(p.id);
-                        setMusicExpanded(false);
-                        setMusicPlaying(false);
                         setChooseMixOpen(false);
                         track("playlist_open", { content_title: p.title });
                       }}
@@ -1709,21 +1629,36 @@ export default function TheDJCaresPage({
               <h2 style={sectionH}>🎙️ Podcasts</h2>
               <p style={sectionSub}>Bible-first shows — press play, they stream right here.</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 12 }}>
-                {podcasts.filter((p) => p.spotifyEmbed).map((p) => (
-                  <div key={p.id} className="pop" style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, padding: "16px 18px" }}>
-                    <p style={{ fontSize: 16, fontWeight: 900, color: text, margin: 0 }}>{p.title}</p>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{p.author}</p>
-                    {p.summary && <p style={{ fontSize: 13, color: sub, margin: "4px 0 0", lineHeight: 1.5 }}>{p.summary}</p>}
-                    <iframe
-                      src={p.spotifyEmbed}
-                      title={p.title}
-                      loading="lazy"
-                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                      style={{ width: "100%", height: 232, border: 0, borderRadius: 12, marginTop: 12 }}
-                    />
-                    <div style={{ marginTop: 10 }}>{share(mediaShareTarget(p))}</div>
-                  </div>
-                ))}
+                {/* A selector, not its own player: Play here routes through
+                    startItem into the one persistent player above — no
+                    iframe mounted here, so a preview list never means
+                    several Spotify embeds playable at once. */}
+                {podcasts.filter((p) => p.spotifyEmbed).map((p) => {
+                  const isCurrent = current?.id === p.id && started;
+                  return (
+                    <div key={p.id} className="pop" style={{ background: card, border: `2px solid ${isCurrent ? activeBorder : border}`, borderRadius: 16, padding: "16px 18px" }}>
+                      {isCurrent && (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 900, letterSpacing: "0.1em", color: accent, textTransform: "uppercase", marginBottom: 6 }}>
+                          {playerState === "playing" && (
+                            <span className="djc-eq" aria-hidden><span /><span /><span /><span /></span>
+                          )}
+                          Now Spinning
+                        </span>
+                      )}
+                      <p style={{ fontSize: 16, fontWeight: 900, color: text, margin: 0 }}>{p.title}</p>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{p.author}</p>
+                      {p.summary && <p style={{ fontSize: 13, color: sub, margin: "4px 0 0", lineHeight: 1.5 }}>{p.summary}</p>}
+                      <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                        {isCurrent ? (
+                          <span style={{ fontSize: 12.5, fontWeight: 800, color: sub }}>▶ Playing in the player above ↑</span>
+                        ) : (
+                          <button onClick={() => startItem(p)} style={bigButton}>▶ Play here</button>
+                        )}
+                        {share(mediaShareTarget(p))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
               <button onClick={() => goTab("podcasts")} style={{ ...quietButton, width: "100%", marginBottom: 30 }}>
                 All podcasts →

@@ -80,12 +80,11 @@ describe("homepage section order (locked: category tabs, then the persistent pla
     expect(homeClient).not.toContain("heroView"); // retired — no more record⇄player swap inside the hero
     expect(homeClient).not.toContain('setHeroView("player")');
     expect(homeClient).not.toContain('setHeroView("record")');
-    // exactly two <DJPlayer ...> elements in the whole file: the one
-    // persistent player's instance, and Daily Encouragement's own
-    // fully-local one (see the "entirely local player" describe block
-    // below) — neither is a duplicate of the other (the type-only
-    // useRef<DJPlayerHandle> doesn't count towards this).
-    expect(homeClient.match(/<DJPlayer[\s>]/g)?.length).toBe(2);
+    // exactly one <DJPlayer ...> element in the whole file — Daily
+    // Encouragement no longer mounts a second, fully-local instance (see
+    // the "Home cards are selectors, not players" describe block below);
+    // the type-only useRef<DJPlayerHandle> doesn't count towards this.
+    expect(homeClient.match(/<DJPlayer[\s>]/g)?.length).toBe(1);
   });
 
   it("REGRESSION: isHeroCurrent covers ANY currently-playing music video (not just the exact cued heroVideo pick) — a Music Videos preview card, a mood mix, or a vibe spin all merge into the SAME video deck instead of opening a second Now Spinning video player", () => {
@@ -173,45 +172,44 @@ describe("homepage section order (locked: category tabs, then the persistent pla
   });
 });
 
-describe("Daily Encouragement player is entirely local — never the shared deck/Now Spinning", () => {
-  it("REGRESSION 1: Play here never calls startItem() — the card has its own local play state, so it can never trigger the shared deck", () => {
+describe("Daily Encouragement is a selector card — Play here routes into the one persistent player, never a second local one", () => {
+  it("REGRESSION 1 (superseded): Play here always calls startItem() — Daily Encouragement has no local play state of its own anymore, so pressing Play IS triggering the one persistent player", () => {
     const section = homeClient.slice(homeClient.indexOf('id="daily-encouragement"') - 200, homeClient.indexOf("Original source ↗") + 400);
-    expect(section).not.toMatch(/startItem\(/);
-    expect(section).toContain("setDailyExpanded(true)");
-    expect(section).toContain("setDailyPlaying(true)");
+    expect(section).toContain("startItem(dailyPick)");
+    expect(section).not.toContain("setDailyExpanded");
+    expect(section).not.toContain("setDailyPlaying");
   });
 
-  it("REGRESSION 11: no Music Videos / Mood Mixes / Spin Something Else UI is reachable from Daily Encouragement's own handlers", () => {
-    // The card's handlers (spinDailyPick, the Play here onClick) never
-    // reference `started`, `setStarted`, `setMoodQueue`, or `spin` (the
-    // global "Spin Something Else" handler) — those only exist in the
-    // shared deck, which Daily Encouragement's local state can't reach.
-    const spinFn = homeClient.slice(homeClient.indexOf("const spinDailyPick"), homeClient.indexOf("const spinDailyPick") + 700);
-    expect(spinFn).not.toMatch(/\bsetStarted\b|\bsetMoodQueue\b|\bsetMainQueue\b/);
-  });
-
-  it("REGRESSION 8/9: compact 16:9 preview exists before expanded playback, and Play here expands that SAME box in place — not a second player", () => {
+  it("REGRESSION 8/9 (superseded): the compact 16:9 preview is shown until this pick is actually current, then a plain 'now playing above' note replaces it — never a second embedded player", () => {
     const section = homeClient.slice(homeClient.indexOf('id="daily-encouragement"'), homeClient.indexOf("Original source ↗"));
-    expect(section).toContain("dailyExpanded ? (");
+    expect(section).toContain("dailyIsCurrent ? (");
+    expect(section).toContain("Now playing in the player above");
     expect(section).toContain('aspectRatio: "16 / 9"'); // compact preview box
     expect(section).toContain("🎧"); // fallback preview icon for a podcast with no video thumbnail
-    // Exactly one DJPlayer / one audio / one iframe branch inside this one
-    // conditional — never two rendered at once.
-    expect(section.match(/<DJPlayer/g)?.length).toBe(1);
+    // No DJPlayer/SyncedAudio/iframe mounted inside the card itself.
+    expect(section).not.toContain("<DJPlayer");
+    expect(section).not.toContain("<SyncedAudio");
+    expect(section).not.toContain("<iframe");
   });
 
-  it("REGRESSION 10 (superseded): Daily Encouragement's video player now gets the same shared site-level volume/mute prefs as every other player, not a one-off initialVolume", () => {
+  it("REGRESSION 10 (superseded): Daily Encouragement no longer renders its own volume control — the one persistent player's transportPanel already shows it, right above this card", () => {
     const section = homeClient.slice(homeClient.indexOf('id="daily-encouragement"'), homeClient.indexOf("Original source ↗"));
     expect(section).not.toContain("initialVolume");
-    expect(section).toContain("volume={prefs.volume}");
-    expect(section).toContain("muted={prefs.muted}");
+    expect(section).not.toContain("volumeControl(");
+    expect(section).not.toContain("prefs.volume");
   });
 
-  it("REGRESSION 6/7: spinning resets this card's player (stops playback) and never autoplays the new pick", () => {
+  it("REGRESSION 6/7 (superseded): spinning re-cues a different pick without touching playback — if the outgoing pick was actually playing, it keeps playing in the persistent player (same 'shuffle never stops playback' pattern the hero and Music widget already use)", () => {
     const fn = homeClient.slice(homeClient.indexOf("const spinDailyPick"), homeClient.indexOf("const spinDailyPick") + 700);
-    expect(fn).toContain("setDailyExpanded(false)");
-    expect(fn).toContain("setDailyPlaying(false)");
-    expect(fn).not.toMatch(/setDailyPlaying\(true\)/); // never autoplays
+    expect(fn).toContain("setDailyPick(next)");
+    expect(fn).not.toMatch(/startItem\(/); // never autoplays the new pick
+    expect(fn).not.toContain("setDailyExpanded");
+    expect(fn).not.toContain("setDailyPlaying");
+  });
+
+  it("REGRESSION 11: no Music Videos / Mood Mixes UI is reachable from spinDailyPick — it only ever re-cues dailyPick", () => {
+    const spinFn = homeClient.slice(homeClient.indexOf("const spinDailyPick"), homeClient.indexOf("const spinDailyPick") + 700);
+    expect(spinFn).not.toMatch(/\bsetMoodQueue\b|\bsetMainQueue\b/);
   });
 
   it("REGRESSION 4/5: the current item's id is filtered out of the spin pool BEFORE picking — a deterministic exclusion, not left to chance", () => {
@@ -263,20 +261,21 @@ describe("Video Deck: filters collapsed by default, Spin scoped to music videos 
   });
 });
 
-describe("Music Deck: THE MUSIC, compact ⇄ expanded, own local player", () => {
-  it("REGRESSION 7: the Music deck never touches current/started/the video or Daily Encouragement pools — it's local state built on the existing Apple Music playlist data", () => {
-    expect(homeClient).toContain("const [musicExpanded, setMusicExpanded] = useState(false)");
-    expect(homeClient).toContain("const [musicPlaying, setMusicPlaying] = useState(false)");
+describe("Music Deck: THE MUSIC widget is a selector/featured card — Play routes into the one persistent player, never its own iframe", () => {
+  it("REGRESSION 7 (superseded): the Music widget's Play button goes through the authoritative startItem pipeline — the real Apple embed only ever mounts in the one persistent player (podcastPanelNode)", () => {
+    expect(homeClient).not.toContain("const [musicExpanded, setMusicExpanded] = useState(false)");
+    expect(homeClient).not.toContain("const [musicPlaying, setMusicPlaying] = useState(false)");
     const section = homeClient.slice(homeClient.indexOf('id="music" aria-label="The Music"'), homeClient.indexOf('id="videos" aria-label="Music Videos preview"'));
-    expect(section).not.toMatch(/startItem\(/);
-    expect(section).not.toContain("setCurrent(");
+    expect(section).toContain("startItem(heroPlaylist)");
+    expect(section).not.toContain("<iframe"); // no local embed — see podcastPanelNode
   });
 
-  it("compact cover-artwork preview exists before the real Apple Music embed mounts", () => {
+  it("compact cover-artwork preview is shown until this playlist is actually current, then a plain 'now playing above' note replaces it — never a second embedded player", () => {
     const section = homeClient.slice(homeClient.indexOf('id="music" aria-label="The Music"'), homeClient.indexOf('id="videos" aria-label="Music Videos preview"'));
-    expect(section).toContain("musicExpanded ? (");
+    expect(section).toContain("musicIsCurrent ? (");
+    expect(section).toContain("Now playing in the player above");
     expect(section).toContain('aspectRatio: "1"'); // square cover-art preview, not a 16:9 video box
-    expect(section.match(/<iframe/g)?.length).toBe(1); // only mounted once expanded
+    expect(section.match(/<iframe/g)).toBeNull(); // no iframe mounted here at all
   });
 
   it("REGRESSION 9: Choose a mix is a closed-by-default disclosure, not a permanent row of playlist buttons", () => {
@@ -292,34 +291,25 @@ describe("Music Deck: THE MUSIC, compact ⇄ expanded, own local player", () => 
   });
 });
 
-describe("cross-deck exclusivity: only one of Video/Daily/Music plays at once", () => {
-  it("REGRESSION 1: a single activeDeck value coordinates all three decks — smallest possible architecture, not a new app-wide media framework", () => {
-    expect(homeClient).toContain(
-      'const [activeDeck, setActiveDeck] = useState<"video" | "daily" | "music" | null>(null);',
-    );
+describe("REGRESSION (superseded): the old three-way deck coordinator is retired — `current` is now the single source of truth for what's playing, so there's nothing left to coordinate", () => {
+  it("the old three-way coordinator state no longer exists — Video/Daily/Music no longer have independent 'am I playing' state to reconcile against each other (a plain-English comment explaining why is fine — the actual useState/setter/useEffect wiring is gone)", () => {
+    expect(homeClient).not.toMatch(/useState<"video" \| "daily" \| "music" \| null>/);
+    expect(homeClient).not.toContain("setActiveDeck");
+    expect(homeClient).not.toMatch(/if \(dailyPlaying\) setActiveDeck/);
+    expect(homeClient).not.toMatch(/if \(musicPlaying\) setActiveDeck/);
   });
 
-  it("REGRESSION 2: starting Daily Encouragement (or Music) pauses the video deck", () => {
-    const fn = homeClient.slice(homeClient.indexOf('if (activeDeck !== "video"'), homeClient.indexOf('if (activeDeck !== "video"') + 200);
-    expect(fn).toContain("setPlaying(false)");
+  it("Home cards (hero, Daily Encouragement, Music widget) each derive their own 'is this what's playing' flag straight from `current`/`started` — isHeroCurrent, dailyIsCurrent, musicIsCurrent — instead of maintaining separate playing booleans", () => {
+    expect(homeClient).toContain("const isHeroCurrent = Boolean(current && current.type === \"music\" && current.videoId);");
+    expect(homeClient).toContain("const dailyIsCurrent = Boolean(started && current && dailyPick && current.id === dailyPick.id);");
+    expect(homeClient).toContain("const musicIsCurrent = Boolean(started && current && heroPlaylist && current.id === heroPlaylist.id);");
   });
 
-  it("REGRESSION 3: starting the video deck (or Music) pauses/collapses Daily Encouragement", () => {
-    const fn = homeClient.slice(homeClient.indexOf('if (activeDeck !== "daily"'), homeClient.indexOf('if (activeDeck !== "daily"') + 200);
-    expect(fn).toContain("setDailyPlaying(false)");
-    expect(fn).toContain("setDailyExpanded(false)");
-  });
-
-  it("starting the video deck (or Daily Encouragement) pauses/collapses the Music deck", () => {
-    const fn = homeClient.slice(homeClient.indexOf('if (activeDeck !== "music"'), homeClient.indexOf('if (activeDeck !== "music"') + 200);
-    expect(fn).toContain("setMusicPlaying(false)");
-    expect(fn).toContain("setMusicExpanded(false)");
-  });
-
-  it("each deck claims activeDeck the moment it actually starts playing (not merely when cued/idle)", () => {
-    expect(homeClient).toMatch(/if \(isHeroStarted && playing\) setActiveDeck\("video"\);/);
-    expect(homeClient).toMatch(/if \(dailyPlaying\) setActiveDeck\("daily"\);/);
-    expect(homeClient).toMatch(/if \(musicPlaying\) setActiveDeck\("music"\);/);
+  it("exclusivity is structural, not coordinated: starting any new item calls startItem, which replaces the single `current` value — there is no code path that lets two items be `current` at once", () => {
+    const fn = homeClient.slice(homeClient.indexOf("const startItem = "), homeClient.indexOf("const startItem = ") + 2000);
+    // setCurrent is called with exactly the new item — never merged with
+    // or appended to a previous value.
+    expect(fn).toMatch(/setCurrent\(item\)/);
   });
 });
 
@@ -402,11 +392,88 @@ describe("Persistent player: one continuous listening experience across Music, V
   });
 });
 
-describe("REGRESSION 12/13 (superseded): every homepage YouTube player shares one site-level volume/mute control, defaulting to a gentle 25%", () => {
-  it("Daily Encouragement's DJPlayer receives the same controlled volume/muted props as the hero/deck DJPlayer — no separate initialVolume path", () => {
-    const section = homeClient.slice(homeClient.indexOf('id="daily-encouragement"'), homeClient.indexOf("Original source ↗"));
-    expect(section).toContain("volume={prefs.volume}");
-    expect(section).toContain("muted={prefs.muted}");
+describe("Gap closed: Daily Encouragement and the Home Apple Music widget are selectors now, not independent playback authorities", () => {
+  it("REGRESSION: starting Daily Encouragement uses the SAME startItem call (and therefore the SAME activePlayerNode/DJPlayer/SyncedAudio/podcastPanelNode instance) as every other pick — switching through Music, Videos, Sermons, and Podcasts can't unmount it because it was never nested in a tab==='...' conditional to begin with", () => {
+    const dailySection = homeClient.slice(homeClient.indexOf('id="daily-encouragement"'), homeClient.indexOf("Original source ↗"));
+    expect(dailySection).toContain("startItem(dailyPick)");
+    // No local player of any kind lives in the card.
+    expect(dailySection).not.toContain("<DJPlayer");
+    expect(dailySection).not.toContain("<SyncedAudio");
+    expect(dailySection).not.toContain("<iframe");
+    // The actual player it starts is the one persistent instance, defined
+    // once, outside every tab conditional (see the "persistent player"
+    // describe block above for the full non-unmounting proof).
+    expect(homeClient.match(/<DJPlayer[\s>]/g)?.length).toBe(1);
+    expect(homeClient.match(/\{videoPanelNode\}/g)?.length).toBe(1);
+    expect(homeClient.match(/\{podcastPanelNode\}/g)?.length).toBe(1);
+  });
+
+  it("REGRESSION: starting a Home Apple playlist uses the SAME startItem call as every other pick — the actual <iframe> only ever mounts inside podcastPanelNode (one call site, outside every tab conditional), so it's the same mounted instance across every category tab, including Home itself", () => {
+    const musicSection = homeClient.slice(homeClient.indexOf('id="music" aria-label="The Music"'), homeClient.indexOf('id="videos" aria-label="Music Videos preview"'));
+    expect(musicSection).toContain("startItem(heroPlaylist)");
+    expect(musicSection).not.toContain("<iframe");
+    // Exactly one <iframe> exists anywhere in the file — podcastPanelNode's.
+    expect(homeClient.match(/<iframe/g)?.length).toBe(1);
+    const podcastPanelStart = homeClient.indexOf("const podcastPanelNode = ");
+    const podcastPanelEnd = homeClient.indexOf("\n  );", podcastPanelStart);
+    const iframeIdx = homeClient.indexOf("<iframe");
+    expect(iframeIdx).toBeGreaterThan(podcastPanelStart);
+    expect(iframeIdx).toBeLessThan(podcastPanelEnd);
+  });
+
+  it("REGRESSION: the Music tab's playlist browse grid (PlaylistCard) is also a selector, not a live embed — one Play-here button per card, no iframe, so browsing several playlists never means several are playable at once", () => {
+    const start = homeClient.indexOf("const PlaylistCard = ");
+    const end = homeClient.indexOf("\n  };", start);
+    const src = homeClient.slice(start, end);
+    expect(src).toContain("startItem(p)");
+    expect(src).not.toContain("<iframe");
+  });
+
+  it("REGRESSION: the Home tab's Podcasts preview cards are also selectors, not live embeds — same Play-here-via-startItem pattern as the Podcasts browsing tab, no per-card iframe", () => {
+    const start = homeClient.indexOf('<section id="podcasts">');
+    const end = homeClient.indexOf("</section>", start);
+    const src = homeClient.slice(start, end);
+    expect(src).toContain("startItem(p)");
+    expect(src).not.toContain("<iframe");
+  });
+
+  it("REGRESSION: exactly one playable provider surface of each kind exists in the whole file — one <DJPlayer>, one <SyncedAudio>, one <iframe> — proving there is exactly one authoritative active playback area, not several independent ones on Home", () => {
+    expect(homeClient.match(/<DJPlayer[\s>]/g)?.length).toBe(1);
+    expect(homeClient.match(/<SyncedAudio/g)?.length).toBe(1);
+    expect(homeClient.match(/<iframe/g)?.length).toBe(1);
+  });
+
+  it("REGRESSION: starting a new selection (Daily Encouragement, a Home playlist, a library pick, anything) always calls startItem, which replaces the single `current` value — the previous source stops because it was never a second independent player to begin with, just a different value of the one `current`", () => {
+    const fn = homeClient.slice(homeClient.indexOf("const startItem = "), homeClient.indexOf("const startItem = ") + 2000);
+    expect(fn).toContain("setCurrent(item)");
+    expect(fn).toContain("setStarted(true)");
+    expect(fn).toContain("setPlaying(true)");
+    // Every Home-card Play action funnels through this one function.
+    expect(homeClient).toContain("onClick={() => startItem(dailyPick)}");
+    expect(homeClient).toMatch(/onClick=\{\(\) => \{ startItem\(heroPlaylist\);/);
+  });
+
+  it("REGRESSION: volume/mute preferences survive every category transition regardless of which card started playback — the one persistent player always reads prefs.volume/prefs.muted, and goTab (the only tab-switch path) never touches prefs", () => {
+    expect(homeClient).toContain("volume={prefs.volume}");
+    expect(homeClient).toContain("muted={prefs.muted}");
+    const fn = homeClient.slice(homeClient.indexOf("const goTab = "), homeClient.indexOf("const goTab = ") + 400);
+    expect(fn).not.toMatch(/setPrefs\(|updatePrefs\(/);
+  });
+
+  it("no data-model workaround was needed for playlists: MediaItem already models them (type \"playlist\", appleEmbed/spotifyEmbed fields) and startItem/spinPool already handled them elsewhere on the page — no new playback union type or duplicated player logic was introduced", () => {
+    const lib = readFileSync(join(app, "lib/djCaresLibrary.ts"), "utf8");
+    expect(lib).toContain('export type MediaType = "music" | "podcast" | "sermon" | "playlist";');
+    // startItem/podcastPanelNode are still the single generic pipeline —
+    // no parallel "playlist-only" player component exists.
+    expect(homeClient.match(/const startItem = /g)?.length).toBe(1);
+    expect(homeClient.match(/const podcastPanelNode = /g)?.length).toBe(1);
+  });
+});
+
+describe("REGRESSION 12/13 (superseded): every homepage player — video, audio, or embed, wherever it was started from — shares the one site-level volume/mute control, defaulting to a gentle 25%", () => {
+  it("the one persistent DJPlayer instance (which now also plays Daily Encouragement's video picks) receives the controlled volume/muted props — no separate initialVolume path anywhere", () => {
+    expect(homeClient).toContain("volume={prefs.volume}");
+    expect(homeClient).toContain("muted={prefs.muted}");
     expect(homeClient).not.toContain("initialVolume");
   });
 
@@ -448,11 +515,11 @@ describe("shared VolumeControl: a real slider + Mute/Unmute button near playback
     expect(moodQueue).toMatch(/clamped <= 0 \? \{ volume: 0, muted: true \} : \{ volume: clamped, muted: false \}/);
   });
 
-  it("HomeClient wires the same volumeControl/toggleMute helpers into the shared transportPanel and Daily Encouragement", () => {
+  it("REGRESSION (superseded): HomeClient renders exactly one VolumeControl instance — inside the one persistent player's transportPanel — since Daily Encouragement and the Music widget no longer have anything of their own to control", () => {
     expect(homeClient).toContain('const setVolumeFromSlider = (value: number) => updatePrefs(volumeFromSlider(value));');
     expect(homeClient).toContain('const toggleMute = () => updatePrefs(volumeFromMuteToggle(prefs, lastNonZeroVolumeRef.current));');
+    expect(homeClient.match(/volumeControl\(/g)?.length).toBe(1);
     expect(homeClient).toContain('volumeControl("djc-transport-volume")');
-    expect(homeClient).toContain('volumeControl("djc-daily-volume")');
   });
 });
 
@@ -470,21 +537,26 @@ describe("SyncedAudio: native <audio> initializes at the shared volume and stays
     expect(syncedAudio).toContain("onPreferenceChange({ volume: Math.round(el.volume * 100), muted: el.muted });");
   });
 
-  it("both homepage <audio> playback paths (the shared deck's podcast panel and Daily Encouragement's) use SyncedAudio with the shared prefs, not a bare <audio>", () => {
+  it("REGRESSION (superseded): the one homepage <audio> playback path — inside podcastPanelNode, now covering Daily Encouragement's audio picks too — uses SyncedAudio with the shared prefs, not a bare <audio>, and autoplays so 'Play here' actually plays immediately", () => {
     expect(homeClient).not.toMatch(/<audio\s/);
-    expect(homeClient.match(/<SyncedAudio/g)?.length).toBe(2);
+    expect(homeClient.match(/<SyncedAudio/g)?.length).toBe(1);
+    const start = homeClient.indexOf("const podcastPanelNode = ");
+    const end = homeClient.indexOf("\n  );", start);
+    expect(homeClient.slice(start, end)).toMatch(/<SyncedAudio\s[\s\S]*?\bautoPlay\b/);
   });
 });
 
 describe("Spotify/Apple embeds: real controls preserved, no fake site-level control that can't affect playback", () => {
-  it("every provider-embed iframe (shared deck podcast fallback, Daily Encouragement fallback, and the Music deck's Apple Music embed) is followed by the same honest note instead of a non-functional slider", () => {
+  it("REGRESSION (superseded): the one provider-embed <iframe> in the whole file (inside podcastPanelNode — now covering the Music widget's playlists and Daily Encouragement's embed fallback too) is followed by the same honest note instead of a non-functional slider", () => {
     expect(homeClient).toContain("🔊 Volume is controlled inside this player.");
-    // one shared embedVolumeNote node (its definition), referenced at all
-    // three embed sites — never a fake volume control standing in for it.
-    expect(homeClient.match(/embedVolumeNote/g)?.length).toBe(4);
+    // one shared embedVolumeNote node (its definition), referenced at the
+    // one embed site — never a fake volume control standing in for it,
+    // and never duplicated per card now that Daily Encouragement and the
+    // Music widget route through the same persistent embed.
+    expect(homeClient.match(/embedVolumeNote/g)?.length).toBe(2);
   });
 
-  it("the Music deck still never claims to control the Apple Music embed's volume directly", () => {
+  it("the Music widget still never claims to control the Apple Music embed's volume directly", () => {
     expect(homeClient).not.toMatch(/heroPlaylist\.(volume|setVolume)/);
   });
 });
