@@ -10,6 +10,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DJPlayer, { type DJPlayerHandle } from "./components/DJPlayer";
 import ChurchSubmitForm from "./components/ChurchSubmitForm";
 import ShareSheet, { ShareTrigger } from "./components/ShareMenu";
+import VolumeControl from "./components/VolumeControl";
+import SyncedAudio from "./components/SyncedAudio";
 import {
   APPROVED_CHURCHES,
   artworkUrl,
@@ -55,6 +57,8 @@ import {
   resolveQueue,
   savePrefs,
   saveSession,
+  volumeFromMuteToggle,
+  volumeFromSlider,
   type MixMode,
   type PlayerPrefs,
 } from "./lib/moodQueue";
@@ -692,6 +696,17 @@ export default function TheDJCaresPage({
     });
   };
 
+  // The volume the listener last set above zero — remembered so Unmute has
+  // something real to restore to even after the slider itself was dragged
+  // down to zero (which clears prefs.volume; see volumeFromSlider).
+  const lastNonZeroVolumeRef = useRef(prefs.volume > 0 ? prefs.volume : DEFAULT_PREFS.volume);
+  useEffect(() => {
+    if (prefs.volume > 0) lastNonZeroVolumeRef.current = prefs.volume;
+  }, [prefs.volume]);
+
+  const setVolumeFromSlider = (value: number) => updatePrefs(volumeFromSlider(value));
+  const toggleMute = () => updatePrefs(volumeFromMuteToggle(prefs, lastNonZeroVolumeRef.current));
+
   // Palette — flat + cool, matched to the Open Mirror family.
   const bg = dark ? "#0b1220" : "#eef2f7";
   const text = dark ? "#e8edf5" : "#0f172a";
@@ -711,6 +726,30 @@ export default function TheDJCaresPage({
   };
   const share = (target: ShareTarget, scope?: string) => (
     <ShareTrigger target={target} scope={scope} palette={sharePalette} onOpen={openShare} />
+  );
+
+  // One volume look everywhere: the shared prefs drive it, the pure
+  // volumeFromSlider/volumeFromMuteToggle helpers (moodQueue.ts) decide
+  // what a change means.
+  const volumePalette = { text, sub, border, accent };
+  const volumeControl = (idPrefix: string) => (
+    <VolumeControl
+      idPrefix={idPrefix}
+      volume={prefs.volume}
+      muted={prefs.muted}
+      onVolumeChange={setVolumeFromSlider}
+      onMuteToggle={toggleMute}
+      palette={volumePalette}
+    />
+  );
+  // Spotify/Apple embeds run their own playback in a cross-origin iframe —
+  // there's no documented, reliable API to drive their volume from here,
+  // so instead of a fake control that can't do anything, this just tells
+  // the listener where the real one lives.
+  const embedVolumeNote = (
+    <p role="note" style={{ textAlign: "center", fontSize: 12, fontWeight: 700, color: sub, margin: "10px 0 0" }}>
+      🔊 Volume is controlled inside this player.
+    </p>
   );
 
   const pill = (selected: boolean): React.CSSProperties => ({
@@ -924,18 +963,29 @@ export default function TheDJCaresPage({
   const podcastPanelNode = (showAudio || showEmbed) && (
     <div style={{ marginTop: 12 }}>
       {showAudio ? (
-        <audio controls preload="none" src={current!.audioUrl} style={{ width: "100%" }}>
+        <SyncedAudio
+          controls
+          preload="none"
+          src={current!.audioUrl}
+          volume={prefs.volume}
+          muted={prefs.muted}
+          onPreferenceChange={updatePrefs}
+          style={{ width: "100%" }}
+        >
           Your browser doesn&apos;t support inline audio —{" "}
           <a href={current!.url} target="_blank" rel="noopener noreferrer">listen at the source</a>.
-        </audio>
+        </SyncedAudio>
       ) : (
-        <iframe
-          src={getEmbedUrl(current!)!}
-          title={current!.title}
-          allow="autoplay *; encrypted-media *; clipboard-write"
-          sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
-          style={{ width: "100%", height: current!.spotifyEmbed ? 352 : 450, border: 0, borderRadius: 14, overflow: "hidden", background: "transparent" }}
-        />
+        <>
+          <iframe
+            src={getEmbedUrl(current!)!}
+            title={current!.title}
+            allow="autoplay *; encrypted-media *; clipboard-write"
+            sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+            style={{ width: "100%", height: current!.spotifyEmbed ? 352 : 450, border: 0, borderRadius: 14, overflow: "hidden", background: "transparent" }}
+          />
+          {embedVolumeNote}
+        </>
       )}
     </div>
   );
@@ -1044,10 +1094,12 @@ export default function TheDJCaresPage({
         {/* same reasoning — the hero / Daily Encouragement card already has
             its own Share for whichever item it's showing. */}
         {current && !isHeroCurrent && share(mediaShareTarget(current), "deck")}
-        <button onClick={() => updatePrefs({ muted: !prefs.muted })} aria-label={prefs.muted ? "Unmute" : "Mute"} style={quietButton}>
-          {prefs.muted ? "🔇" : "🔊"}
-        </button>
       </div>
+      {(showVideo || showAudio) && (
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+          {volumeControl("djc-transport-volume")}
+        </div>
+      )}
     </>
   );
 
@@ -1427,7 +1479,8 @@ export default function TheDJCaresPage({
                         videoId={dailyPick.videoId}
                         title={dailyPick.title}
                         playing={dailyPlaying}
-                        initialVolume={25}
+                        volume={prefs.volume}
+                        muted={prefs.muted}
                         onPlaybackChange={(s) => {
                           if (s === "ended") setDailyPlaying(false);
                         }}
@@ -1438,10 +1491,19 @@ export default function TheDJCaresPage({
                         }}
                       />
                     ) : dailyPick.audioUrl ? (
-                      <audio controls autoPlay preload="none" src={dailyPick.audioUrl} style={{ width: "100%" }}>
+                      <SyncedAudio
+                        controls
+                        autoPlay
+                        preload="none"
+                        src={dailyPick.audioUrl}
+                        volume={prefs.volume}
+                        muted={prefs.muted}
+                        onPreferenceChange={updatePrefs}
+                        style={{ width: "100%" }}
+                      >
                         Your browser doesn&apos;t support inline audio —{" "}
                         <a href={getWatchUrl(dailyPick)} target="_blank" rel="noopener noreferrer">listen at the source</a>.
-                      </audio>
+                      </SyncedAudio>
                     ) : (
                       <iframe
                         src={getEmbedUrl(dailyPick)!}
@@ -1479,6 +1541,11 @@ export default function TheDJCaresPage({
                       <button onClick={() => { setDailyExpanded(true); setDailyPlaying(true); }} style={bigButton}>▶ Play here</button>
                     </div>
                   </>
+                )}
+                {dailyExpanded && (
+                  <div style={{ marginTop: 14 }}>
+                    {dailyPick.videoId || dailyPick.audioUrl ? volumeControl("djc-daily-volume") : embedVolumeNote}
+                  </div>
                 )}
               </div>
             )}
@@ -1522,14 +1589,17 @@ export default function TheDJCaresPage({
 
             <div style={{ marginTop: 16 }}>
               {musicExpanded ? (
-                <iframe
-                  key={heroPlaylist.id}
-                  src={heroPlaylist.appleEmbed}
-                  title={heroPlaylist.title}
-                  allow="autoplay *; encrypted-media *;"
-                  sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
-                  style={{ width: "100%", height: 430, border: 0, borderRadius: 14, background: "transparent" }}
-                />
+                <>
+                  <iframe
+                    key={heroPlaylist.id}
+                    src={heroPlaylist.appleEmbed}
+                    title={heroPlaylist.title}
+                    allow="autoplay *; encrypted-media *;"
+                    sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+                    style={{ width: "100%", height: 430, border: 0, borderRadius: 14, background: "transparent" }}
+                  />
+                  {embedVolumeNote}
+                </>
               ) : (
                 <>
                   <button

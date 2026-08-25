@@ -10,9 +10,14 @@ import {
   saveSession,
   loadPrefs,
   savePrefs,
+  parsePrefs,
   resolveQueue,
   QUEUE_MOODS,
   DEFAULT_PREFS,
+  PLAYER_PREFS_KEY,
+  PLAYER_PREFS_VERSION,
+  volumeFromSlider,
+  volumeFromMuteToggle,
   type PlayerPrefs,
 } from "../moodQueue";
 import { LIBRARY, type MediaItem } from "../djCaresLibrary";
@@ -181,13 +186,95 @@ describe("mood queue end-to-end: build → play → advance", () => {
     expect(restored.repeat).toBe("one");
   });
 
-  it("preferences default to sensible values on cold start", () => {
+  it("preferences default to a gentle 25% volume on cold start (not the old 100% blast default)", () => {
     localStorage.clear();
     const prefs = loadPrefs();
 
-    expect(prefs.volume).toBe(100);
+    expect(prefs.volume).toBe(25);
     expect(prefs.muted).toBe(false);
     expect(prefs.repeat).toBe("queue");
+  });
+
+  it("savePrefs stamps the current schema version, so a subsequent load never re-migrates a listener's own choice", () => {
+    localStorage.clear();
+    savePrefs({ volume: 25, muted: false, repeat: "queue" });
+    const raw = localStorage.getItem(PLAYER_PREFS_KEY);
+    expect(raw).not.toBeNull();
+    expect(JSON.parse(raw as string).version).toBe(PLAYER_PREFS_VERSION);
+  });
+
+  describe("legacy preference migration", () => {
+    it("migrates an unversioned record at the old 100% default to the new 25% default — it was never a deliberate choice", () => {
+      const prefs = parsePrefs(JSON.stringify({ volume: 100, muted: false, repeat: "queue" }));
+      expect(prefs.volume).toBe(25);
+    });
+
+    it("migrates an unversioned record with no volume field at all to the new 25% default", () => {
+      const prefs = parsePrefs(JSON.stringify({ muted: false, repeat: "queue" }));
+      expect(prefs.volume).toBe(25);
+    });
+
+    it("preserves a legacy unversioned record's non-default volume — a deliberate listener choice, not touched by migration", () => {
+      const prefs = parsePrefs(JSON.stringify({ volume: 60, muted: false, repeat: "queue" }));
+      expect(prefs.volume).toBe(60);
+    });
+
+    it("preserves a legacy unversioned record even at the extremes (0 and 100 is the only ambiguous case)", () => {
+      expect(parsePrefs(JSON.stringify({ volume: 0, muted: true, repeat: "queue" })).volume).toBe(0);
+    });
+
+    it("a versioned (post-migration) record at 100% is a real listener choice and is kept — migration only ever runs once", () => {
+      const prefs = parsePrefs(JSON.stringify({ volume: 100, muted: false, repeat: "queue", version: PLAYER_PREFS_VERSION }));
+      expect(prefs.volume).toBe(100);
+    });
+
+    it("returning visitors keep getting normal saves after migration — no repeated forced resets", () => {
+      localStorage.clear();
+      // Simulate a legacy visitor's stored record (no version field).
+      localStorage.setItem(PLAYER_PREFS_KEY, JSON.stringify({ volume: 100, muted: false, repeat: "queue" }));
+      const migrated = loadPrefs();
+      expect(migrated.volume).toBe(25);
+
+      // The listener then deliberately turns it up — this must persist
+      // normally, not be treated as another legacy 100% to migrate away.
+      savePrefs({ ...migrated, volume: 100 });
+      expect(loadPrefs().volume).toBe(100);
+    });
+  });
+
+  describe("volume slider / mute-toggle decision helpers", () => {
+    it("moving the slider above zero sets that volume and unmutes", () => {
+      expect(volumeFromSlider(42)).toEqual({ volume: 42, muted: false });
+    });
+
+    it("moving the slider to zero mutes", () => {
+      expect(volumeFromSlider(0)).toEqual({ volume: 0, muted: true });
+    });
+
+    it("clamps out-of-range slider input", () => {
+      expect(volumeFromSlider(-5)).toEqual({ volume: 0, muted: true });
+      expect(volumeFromSlider(150)).toEqual({ volume: 100, muted: false });
+    });
+
+    it("unmuting restores the current nonzero volume (a plain Mute press never zeroes it)", () => {
+      const prefs: PlayerPrefs = { volume: 70, muted: true, repeat: "queue" };
+      expect(volumeFromMuteToggle(prefs, 25)).toEqual({ volume: 70, muted: false });
+    });
+
+    it("unmuting after the slider itself was dragged to zero restores the remembered last-nonzero volume", () => {
+      const prefs: PlayerPrefs = { volume: 0, muted: true, repeat: "queue" };
+      expect(volumeFromMuteToggle(prefs, 65)).toEqual({ volume: 65, muted: false });
+    });
+
+    it("unmuting falls back to the 25% default when there's no remembered nonzero volume either", () => {
+      const prefs: PlayerPrefs = { volume: 0, muted: true, repeat: "queue" };
+      expect(volumeFromMuteToggle(prefs, 0)).toEqual({ volume: 25, muted: false });
+    });
+
+    it("muting leaves the volume field untouched (so a later Unmute can restore it directly)", () => {
+      const prefs: PlayerPrefs = { volume: 55, muted: false, repeat: "queue" };
+      expect(volumeFromMuteToggle(prefs, 55)).toEqual({ volume: 55, muted: true });
+    });
   });
 
   it("mix mode switching: music-only queue differs from both", () => {

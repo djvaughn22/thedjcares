@@ -101,9 +101,9 @@ describe("homepage section order (locked: hero, then Daily Encouragement, then e
     expect(homeClient).toContain("{!isHeroCurrent && transportPanel}");
   });
 
-  it("prefers a direct verified audioUrl (native <audio controls>) over a provider embed, for whichever item is playing in the shared deck (e.g. a podcast played from the Podcasts tab)", () => {
+  it("prefers a direct verified audioUrl (native <audio controls>, wrapped in SyncedAudio for shared-volume sync) over a provider embed, for whichever item is playing in the shared deck (e.g. a podcast played from the Podcasts tab)", () => {
     expect(homeClient).toContain("const showAudio = Boolean(started && current && !current.videoId && current.audioUrl);");
-    expect(homeClient).toContain("<audio controls");
+    expect(homeClient).toMatch(/<SyncedAudio\s+controls/);
   });
 
   it("shows only the small honest \"Original source ↗\" link — never a giant CTA, never a fabricated MP3 — and it always points at whatever's currently displayed", () => {
@@ -196,9 +196,11 @@ describe("Daily Encouragement player is entirely local — never the shared deck
     expect(section.match(/<DJPlayer/g)?.length).toBe(1);
   });
 
-  it("REGRESSION 10: Daily Encouragement's video player gets initialVolume 25, not the shared site-level volume control", () => {
+  it("REGRESSION 10 (superseded): Daily Encouragement's video player now gets the same shared site-level volume/mute prefs as every other player, not a one-off initialVolume", () => {
     const section = homeClient.slice(homeClient.indexOf('id="daily-encouragement"'), homeClient.indexOf("Original source ↗"));
-    expect(section).toContain("initialVolume={25}");
+    expect(section).not.toContain("initialVolume");
+    expect(section).toContain("volume={prefs.volume}");
+    expect(section).toContain("muted={prefs.muted}");
   });
 
   it("REGRESSION 6/7: spinning resets this card's player (stops playback) and never autoplays the new pick", () => {
@@ -318,16 +320,90 @@ describe("cross-deck exclusivity: only one of Video/Daily/Music plays at once", 
   });
 });
 
-describe("REGRESSION 12/13: Daily Encouragement's YouTube player starts at ~25% volume and is never forced back", () => {
-  it("DJPlayer gets initialVolume={25}, not the continuously-synced volume prop, inside Daily Encouragement's card", () => {
+describe("REGRESSION 12/13 (superseded): every homepage YouTube player shares one site-level volume/mute control, defaulting to a gentle 25%", () => {
+  it("Daily Encouragement's DJPlayer receives the same controlled volume/muted props as the hero/deck DJPlayer — no separate initialVolume path", () => {
     const section = homeClient.slice(homeClient.indexOf('id="daily-encouragement"'), homeClient.indexOf("Original source ↗"));
-    expect(section).toContain("initialVolume={25}");
+    expect(section).toContain("volume={prefs.volume}");
+    expect(section).toContain("muted={prefs.muted}");
+    expect(homeClient).not.toContain("initialVolume");
   });
 
-  it("DJPlayer only applies initialVolume once (on ready) and skips the continuous volume-sync effect entirely when volume is omitted, so a user's own adjustment is never reset", () => {
+  it("DJPlayer no longer has an initialVolume prop at all — every consumer uses the continuously-synced volume/muted props", () => {
     const djPlayer = readFileSync(join(app, "components/DJPlayer.tsx"), "utf8");
-    expect(djPlayer).toContain("const v = cbRef.current.initialVolume ?? cbRef.current.volume;");
-    expect(djPlayer).toMatch(/if \(!p \|\| !readyRef\.current \|\| volume === undefined\) return;/);
+    expect(djPlayer).not.toContain("initialVolume");
+    expect(djPlayer).toContain("if (cbRef.current.volume !== undefined) playerRef.current?.setVolume(cbRef.current.volume);");
+  });
+
+  it("the shared PlayerPrefs default volume is the gentle 25%, not the old 100% blast default", () => {
+    const moodQueue = readFileSync(join(app, "lib/moodQueue.ts"), "utf8");
+    expect(moodQueue).toContain('export const DEFAULT_PREFS: PlayerPrefs = { volume: 25, muted: false, repeat: "queue" };');
+  });
+});
+
+describe("shared VolumeControl: a real slider + Mute/Unmute button near playback controls, not just a small icon", () => {
+  const volumeControl = readFileSync(join(app, "components/VolumeControl.tsx"), "utf8");
+
+  it("renders a labeled Mute/Unmute button with visible text and an icon, at least a 44px touch target", () => {
+    expect(volumeControl).toMatch(/aria-label=\{muted \? "Unmute" : "Mute"\}/);
+    expect(volumeControl).toContain("{muted ? \"Unmute\" : \"Mute\"}");
+    expect(volumeControl).toMatch(/minWidth:\s*44/);
+    expect(volumeControl).toMatch(/minHeight:\s*44/);
+  });
+
+  it("renders a labeled range slider (native, so keyboard-operable by default) with a visible percentage", () => {
+    expect(volumeControl).toContain('type="range"');
+    expect(volumeControl).toContain("min={0}");
+    expect(volumeControl).toContain("max={100}");
+    expect(volumeControl).toContain('htmlFor={sliderId}');
+    expect(volumeControl).toMatch(/id=\{sliderId\}/);
+    expect(volumeControl).toContain("aria-valuetext={`${effectiveVolume}%`}");
+    expect(volumeControl).toMatch(/\{effectiveVolume\}%/);
+  });
+
+  it("moving the slider above zero unmutes, moving it to zero mutes — decided by the pure volumeFromSlider helper, not inline in the component", () => {
+    const moodQueue = readFileSync(join(app, "lib/moodQueue.ts"), "utf8");
+    expect(moodQueue).toContain("export function volumeFromSlider(value: number)");
+    expect(moodQueue).toMatch(/clamped <= 0 \? \{ volume: 0, muted: true \} : \{ volume: clamped, muted: false \}/);
+  });
+
+  it("HomeClient wires the same volumeControl/toggleMute helpers into the shared transportPanel and Daily Encouragement", () => {
+    expect(homeClient).toContain('const setVolumeFromSlider = (value: number) => updatePrefs(volumeFromSlider(value));');
+    expect(homeClient).toContain('const toggleMute = () => updatePrefs(volumeFromMuteToggle(prefs, lastNonZeroVolumeRef.current));');
+    expect(homeClient).toContain('volumeControl("djc-transport-volume")');
+    expect(homeClient).toContain('volumeControl("djc-daily-volume")');
+  });
+});
+
+describe("SyncedAudio: native <audio> initializes at the shared volume and stays in sync", () => {
+  const syncedAudio = readFileSync(join(app, "components/SyncedAudio.tsx"), "utf8");
+
+  it("applies volume/100 and mute on mount and whenever prefs change", () => {
+    expect(syncedAudio).toContain("el.volume = Math.min(1, Math.max(0, volume / 100));");
+    expect(syncedAudio).toContain("el.muted = muted;");
+    expect(syncedAudio).toMatch(/\}, \[volume, muted\]\);/);
+  });
+
+  it("reports the listener's own native volume/mute adjustments back via onPreferenceChange", () => {
+    expect(syncedAudio).toContain('el.addEventListener("volumechange"');
+    expect(syncedAudio).toContain("onPreferenceChange({ volume: Math.round(el.volume * 100), muted: el.muted });");
+  });
+
+  it("both homepage <audio> playback paths (the shared deck's podcast panel and Daily Encouragement's) use SyncedAudio with the shared prefs, not a bare <audio>", () => {
+    expect(homeClient).not.toMatch(/<audio\s/);
+    expect(homeClient.match(/<SyncedAudio/g)?.length).toBe(2);
+  });
+});
+
+describe("Spotify/Apple embeds: real controls preserved, no fake site-level control that can't affect playback", () => {
+  it("every provider-embed iframe (shared deck podcast fallback, Daily Encouragement fallback, and the Music deck's Apple Music embed) is followed by the same honest note instead of a non-functional slider", () => {
+    expect(homeClient).toContain("🔊 Volume is controlled inside this player.");
+    // one shared embedVolumeNote node (its definition), referenced at all
+    // three embed sites — never a fake volume control standing in for it.
+    expect(homeClient.match(/embedVolumeNote/g)?.length).toBe(4);
+  });
+
+  it("the Music deck still never claims to control the Apple Music embed's volume directly", () => {
+    expect(homeClient).not.toMatch(/heroPlaylist\.(volume|setVolume)/);
   });
 });
 

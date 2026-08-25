@@ -150,7 +150,17 @@ export type PlayerPrefs = {
   repeat: "queue" | "one";
 };
 
-export const DEFAULT_PREFS: PlayerPrefs = { volume: 100, muted: false, repeat: "queue" };
+// A gentle 25% is the starting volume for every controllable player (site
+// volume slider, YouTube players, native <audio>) — loud enough to hear,
+// quiet enough not to blast a listener who didn't expect sound, especially
+// older visitors. See PLAYER_PREFS_VERSION below for how a visitor with an
+// old saved preference gets moved off the previous 100% default.
+export const DEFAULT_PREFS: PlayerPrefs = { volume: 25, muted: false, repeat: "queue" };
+
+// Bump this whenever a stored default needs a one-time migration on load
+// (see parsePrefs). v1 records predate this field entirely (no `version`
+// key at all) and carried the old 100% blast default.
+export const PLAYER_PREFS_VERSION = 2;
 
 // Sessions older than this restore to a fresh mix instead (stale queues are
 // worse than a new one — the catalog may have changed underneath them).
@@ -191,13 +201,38 @@ export function parsePrefs(raw: string | null): PlayerPrefs {
   if (!raw) return DEFAULT_PREFS;
   try {
     const p = JSON.parse(raw) as Record<string, unknown>;
-    const volume = typeof p.volume === "number" && p.volume >= 0 && p.volume <= 100 ? Math.round(p.volume) : DEFAULT_PREFS.volume;
+    const storedVersion = typeof p.version === "number" ? p.version : 1;
+    const rawVolume = typeof p.volume === "number" && p.volume >= 0 && p.volume <= 100 ? Math.round(p.volume) : undefined;
     const muted = typeof p.muted === "boolean" ? p.muted : DEFAULT_PREFS.muted;
     const repeat = p.repeat === "one" ? "one" : "queue";
+    // A pre-v2 record at the old 100% default (or with no volume at all)
+    // never reflected a deliberate choice — every v1 visitor landed on 100
+    // whether they touched the control or not — so it's moved to the new
+    // gentle default, once. Any other saved value is a real listener
+    // choice and survives the migration untouched.
+    const volume =
+      storedVersion < PLAYER_PREFS_VERSION && (rawVolume === undefined || rawVolume === 100)
+        ? DEFAULT_PREFS.volume
+        : (rawVolume ?? DEFAULT_PREFS.volume);
     return { volume, muted, repeat };
   } catch {
     return DEFAULT_PREFS;
   }
+}
+
+// Moving the slider itself to zero mutes; above zero always unmutes.
+export function volumeFromSlider(value: number): Pick<PlayerPrefs, "volume" | "muted"> {
+  const clamped = Math.min(100, Math.max(0, Math.round(value)));
+  return clamped <= 0 ? { volume: 0, muted: true } : { volume: clamped, muted: false };
+}
+
+// Unmuting restores the last nonzero volume — the current prefs value when
+// it's still nonzero (a plain Mute-button press never zeroes it), otherwise
+// the caller's remembered last-nonzero value, falling back to the default.
+export function volumeFromMuteToggle(prefs: PlayerPrefs, lastNonZeroVolume: number): Pick<PlayerPrefs, "volume" | "muted"> {
+  if (!prefs.muted) return { volume: prefs.volume, muted: true };
+  const restored = prefs.volume > 0 ? prefs.volume : lastNonZeroVolume > 0 ? lastNonZeroVolume : DEFAULT_PREFS.volume;
+  return { volume: restored, muted: false };
 }
 
 // Storage wrappers — private mode just forgets between visits.
@@ -228,7 +263,7 @@ export function loadPrefs(): PlayerPrefs {
 
 export function savePrefs(p: PlayerPrefs): void {
   try {
-    window.localStorage.setItem(PLAYER_PREFS_KEY, JSON.stringify(p));
+    window.localStorage.setItem(PLAYER_PREFS_KEY, JSON.stringify({ ...p, version: PLAYER_PREFS_VERSION }));
   } catch {
     // Storage unavailable.
   }
