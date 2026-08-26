@@ -150,6 +150,24 @@ export default function TheDJCaresPage({
   const playedCountRef = useRef(0);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const playerRef = useRef<DJPlayerHandle>(null);
+  // Native audio doesn't report play/pause through props like DJPlayer
+  // does — this ref reaches the real <audio> element (SyncedAudio forwards
+  // its ref) so the mini-player's own Play/Pause button can call
+  // .play()/.pause() directly, and this state (kept in sync via the
+  // element's native "play"/"pause" events) drives that button's icon.
+  const podcastAudioRef = useRef<HTMLAudioElement>(null);
+  const [audioPlayingState, setAudioPlayingState] = useState(false);
+  const toggleAudioPlayback = () => {
+    const el = podcastAudioRef.current;
+    if (!el) return;
+    if (el.paused) el.play().catch(() => {});
+    else el.pause();
+  };
+  // Whether the compact mini-player has been expanded into the full-size
+  // overlay sheet — only meaningful off the natural tab; reset below
+  // whenever the listener returns to a tab where the full player already
+  // shows inline.
+  const [playerExpanded, setPlayerExpanded] = useState(false);
   const onEndedInProgressRef = useRef(false); // Prevent re-entrance
   // Which item the (single, page-level) share sheet is open for.
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null);
@@ -953,16 +971,57 @@ export default function TheDJCaresPage({
   // type (video, audio, embed).
   const dailyIsCurrent = Boolean(started && current && dailyPick && current.id === dailyPick.id);
 
+  // Which category tabs are the "natural home" for whatever `current` is.
+  // Home ("spin") always qualifies — it hosts the hero/Daily/Music widgets
+  // covering every media type — plus the one browsing tab that matches
+  // current's own category. Used to decide whether the persistent player
+  // renders full-size, leading that tab's own content, or collapses into
+  // the compact mini-player bar because the listener has navigated away
+  // from any section related to what's actually playing (e.g. a video
+  // playing while browsing Podcasts).
+  const naturalTabsForCurrent: readonly Tab[] | null = !current
+    ? null
+    : isHeroCurrent
+      ? ["spin", "videos"]
+      : current.type === "sermon"
+        ? ["spin", "sermons"]
+        : current.type === "podcast"
+          ? ["spin", "podcasts"]
+          : current.type === "playlist"
+            ? ["spin", "music"]
+            : ["spin"];
+  const isNaturalTab = !started || !current || (naturalTabsForCurrent?.includes(tab) ?? true);
+  // full: inline, normal document flow, leading whichever tab is natural.
+  // mini: collapsed to the compact bottom bar (off the natural tab).
+  // overlay: the mini-player's own Expand control, showing the full player
+  // as a sheet without navigating tabs or touching current/started/playing.
+  const playerDisplayMode: "full" | "mini" | "overlay" = isNaturalTab ? "full" : playerExpanded ? "overlay" : "mini";
+
+  // Both media slots below are size-aware, not mode-aware in *structure* —
+  // "mini"/"overlay"/"full" only ever change style values (size, whether
+  // native audio controls show) on the exact same DJPlayer/SyncedAudio/
+  // iframe element, at the exact same position in the tree. That's what
+  // keeps the provider mounted (never unmounted, never reparented) as the
+  // mini-player expands, collapses, or the listener changes tabs — see
+  // activePlayerNode below, where this is the ONLY place either renders.
+  const isMiniSlot = playerDisplayMode === "mini";
+
   // The actual inline audio/embed element for whatever podcast/sermon is
   // current — including a Daily Encouragement pick, now that its Play
   // action routes through the same startItem pipeline as everything else
   // (see the Daily Encouragement section below). autoPlay so pressing
   // "Play here" anywhere (Podcasts tab, Daily Encouragement) starts sound
-  // immediately, same as DJPlayer's `playing` prop does for video.
+  // immediately, same as DJPlayer's `playing` prop does for video. Native
+  // controls are hidden in the mini slot (the mini-player draws its own
+  // compact Play/Pause/Mute instead) by visually shrinking the element to
+  // 1px — never display:none, so playback is never interrupted — rather
+  // than removing the `controls` attribute (some browsers still show a
+  // native affordance at zero size, so shrinking is the reliable one).
   const podcastPanelNode = (showAudio || showEmbed) && (
-    <div style={{ marginTop: 12 }}>
+    <div style={{ marginTop: isMiniSlot ? 0 : 12 }}>
       {showAudio ? (
         <SyncedAudio
+          ref={podcastAudioRef}
           controls
           autoPlay
           preload="none"
@@ -970,7 +1029,11 @@ export default function TheDJCaresPage({
           volume={prefs.volume}
           muted={prefs.muted}
           onPreferenceChange={updatePrefs}
-          style={{ width: "100%" }}
+          style={
+            isMiniSlot
+              ? { position: "absolute", width: 1, height: 1, overflow: "hidden", opacity: 0, pointerEvents: "none" }
+              : { width: "100%" }
+          }
         >
           Your browser doesn&apos;t support inline audio —{" "}
           <a href={current!.url} target="_blank" rel="noopener noreferrer">listen at the source</a>.
@@ -982,9 +1045,13 @@ export default function TheDJCaresPage({
             title={current!.title}
             allow="autoplay *; encrypted-media *; clipboard-write"
             sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
-            style={{ width: "100%", height: current!.spotifyEmbed ? 352 : 450, border: 0, borderRadius: 14, overflow: "hidden", background: "transparent" }}
+            style={
+              isMiniSlot
+                ? { width: 52, height: 52, border: 0, borderRadius: 10, overflow: "hidden", background: "transparent" }
+                : { width: "100%", height: current!.spotifyEmbed ? 352 : 450, border: 0, borderRadius: 14, overflow: "hidden", background: "transparent" }
+            }
           />
-          {embedVolumeNote}
+          {!isMiniSlot && embedVolumeNote}
         </>
       )}
     </div>
@@ -995,9 +1062,19 @@ export default function TheDJCaresPage({
   // case) or any other video (a sermon with a videoId, etc). Rendered once,
   // at a single stable position in activePlayerNode below (never nested
   // inside a tab-conditional section), so switching category tabs never
-  // unmounts it.
+  // unmounts it. Shrinks to a thumbnail in the mini slot via style only —
+  // DJPlayer itself (position:absolute; inset:0) fills whatever size this
+  // wrapper is, so resizing it never touches the DJPlayer/YouTube iframe's
+  // own mount.
   const videoPanelNode = showVideo && !blocked && (
-    <div className="djc-daily-video-enter" style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }}>
+    <div
+      className={isMiniSlot ? undefined : "djc-daily-video-enter"}
+      style={
+        isMiniSlot
+          ? { position: "relative", width: 52, height: 52, flexShrink: 0, background: "#000", borderRadius: 10, overflow: "hidden" }
+          : { position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }
+      }
+    >
       {(() => {
         const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
         DEV && console.log('[HomeClient.render] DJPlayer props: videoId:', current?.videoId, 'title:', current?.title, 'playing:', playing, 'volume:', prefs.volume);
@@ -1101,76 +1178,154 @@ export default function TheDJCaresPage({
     </>
   );
 
+  // Which widget "owns" whatever's current — drives the label so this
+  // never reads as a generic, unrelated "mixer": the video hero, Daily
+  // Encouragement, or a plain type label for anything picked straight off
+  // a browsing tab.
+  const originIcon = isHeroCurrent ? "📀" : dailyIsCurrent ? "🌅" : current?.type === "sermon" ? "✝️" : current?.type === "podcast" ? "🎙️" : current?.type === "playlist" ? "🎶" : "🎧";
+  const originLabel = isHeroCurrent ? "Music Video" : dailyIsCurrent ? "Daily Encouragement" : current ? typeLabel(current) : "";
+
   // The one persistent player shell — the SAME mounted instance for
   // whatever `current` is (a music video, any other video, a podcast/
   // sermon's native audio, or a provider embed). Rendered at a single
   // stable position in the tree (right after the category tabs, before the
   // per-tab content switch — see the return below), never nested inside a
   // tab==="..." conditional, so selecting Music/Videos/Sermons/Podcasts
-  // never unmounts or recreates it. The old hero-only "Video of the Day"
-  // embed and the old isHeroCurrent split are gone — this is the only
-  // place any media actually plays.
+  // never unmounts or recreates it.
+  //
+  // Three visual modes, ONE unchanging JSX shape — only style values and
+  // which chrome is shown differ; the media slot below always sits at the
+  // exact same position in the exact same wrapper elements, so
+  // DJPlayer/SyncedAudio/the embed iframe is never unmounted or
+  // reparented switching between them:
+  //  - "full": normal document flow, leading whichever tab is natural for
+  //    `current` (including Home, which is natural for every type).
+  //  - "mini": collapsed to a compact fixed bottom bar when the listener
+  //    has navigated away from any natural section — playback keeps going,
+  //    just out of the way.
+  //  - "overlay": the mini-player's own Expand control — the full chrome
+  //    as a bottom sheet, without touching `tab`/current/started/playing.
+  // zIndex stays below OpenMirrorNav's sticky top header (zIndex 50/60, see
+  // app/OpenMirrorNav.tsx) so the family header always wins if they ever
+  // overlap, and well below ShareSheet's modal (zIndex 1000) so Share still
+  // opens on top of either player state.
+  const playerOuterStyle: React.CSSProperties =
+    playerDisplayMode === "mini"
+      ? { position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 45 }
+      : playerDisplayMode === "overlay"
+        ? { position: "fixed", inset: 0, zIndex: 46, background: "rgba(8,12,20,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center" }
+        : { position: "static" };
+  const playerInnerStyle: React.CSSProperties =
+    playerDisplayMode === "mini"
+      ? { background: card, borderTop: `2px solid ${border}`, padding: "10px 14px", paddingBottom: "calc(10px + env(safe-area-inset-bottom, 0px))", boxShadow: "0 -4px 20px rgba(0,0,0,0.25)" }
+      : playerDisplayMode === "overlay"
+        ? { background: card, borderRadius: "22px 22px 0 0", padding: "16px 20px", paddingBottom: "calc(20px + env(safe-area-inset-bottom, 0px))", width: "100%", maxWidth: 760, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 -8px 30px rgba(0,0,0,0.4)" }
+        : { background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 28 };
+
   const activePlayerNode = (
-    <section
-      ref={deckRef}
-      id="now-playing"
-      aria-label="Now Spinning"
-      style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 28 }}
+    <div
+      style={playerOuterStyle}
+      onClick={playerDisplayMode === "overlay" ? () => setPlayerExpanded(false) : undefined}
     >
-      <div aria-live="polite" className="djc-sr-only">{announce}</div>
+      <div
+        ref={playerDisplayMode === "full" ? deckRef : undefined}
+        id="now-playing"
+        role="region"
+        aria-label={playerDisplayMode === "mini" ? "Now playing (compact)" : originLabel || "Now playing"}
+        style={playerInnerStyle}
+        onClick={playerDisplayMode === "overlay" ? (e) => e.stopPropagation() : undefined}
+      >
+        <div aria-live="polite" className="djc-sr-only">{announce}</div>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
-        <p style={{ display: "inline-flex", alignItems: "center", gap: 10, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: 0 }}>
-          <span className={`djc-mini-vinyl${playerState === "playing" ? " spinning" : ""}`} aria-hidden />
-          {playerState === "playing" && (
-            <span className="djc-eq" aria-hidden><span /><span /><span /><span /></span>
-          )}
-          Now Spinning
-        </p>
-        {current && <span style={{ fontSize: 12, fontWeight: 800, color: sub, textTransform: "uppercase", letterSpacing: "0.08em" }}>{typeLabel(current)}</span>}
-      </div>
+        {playerDisplayMode === "overlay" && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+            <button onClick={() => setPlayerExpanded(false)} aria-label="Close player" style={{ ...quietButton, minHeight: 44 }}>
+              ✕ Close
+            </button>
+          </div>
+        )}
 
-      {/* the record / player */}
-      {!started && current && (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, padding: "6px 0 4px" }}>
-          <button
-            onClick={() => startItem(current)}
-            aria-label={`Play ${current.title} by ${current.author}`}
-            style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
-          >
-            <span className="djc-record" style={{ display: "block", width: "min(200px, 52vw)", aspectRatio: "1", border: `6px solid ${dark ? "#0c1220" : "#dbe2ea"}`, boxSizing: "content-box" }}>
-              {artworkUrl(current) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={artworkUrl(current)!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : (
-                <span style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", fontSize: 56, background: active }}>🎧</span>
+        {playerDisplayMode !== "mini" && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
+            <p style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", color: accent, margin: 0 }}>
+              <span aria-hidden>{originIcon}</span> {originLabel}
+              {playerState === "playing" && (
+                <span className="djc-eq" aria-hidden><span /><span /><span /><span /></span>
               )}
-              <span aria-hidden style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(11,18,32,0.85)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>▶</span>
-              </span>
-            </span>
-          </button>
-        </div>
-      )}
+            </p>
+            {current && <span style={{ fontSize: 12, fontWeight: 800, color: sub, textTransform: "uppercase", letterSpacing: "0.08em" }}>{typeLabel(current)}</span>}
+          </div>
+        )}
 
-      {videoPanelNode}
-      {podcastPanelNode}
+        <div style={playerDisplayMode === "mini" ? { display: "flex", alignItems: "center", gap: 12 } : undefined}>
+          <div style={playerDisplayMode === "mini" ? { flexShrink: 0 } : undefined}>
+            {videoPanelNode}
+            {podcastPanelNode}
+          </div>
 
-      {current && !blocked && (
-        <div style={{ textAlign: "center", margin: "14px 0 0" }}>
-          <p style={{ fontSize: 18, fontWeight: 900, color: text, margin: 0 }}>{current.title}</p>
-          <p style={{ fontSize: 14, fontWeight: 700, color: accent, margin: "2px 0 0" }}>
-            {current.author}
-            {current.ministry ? ` · ${ministryByKey(current.ministry)?.name}` : ""}
-          </p>
-          {!started && current.summary && (
-            <p style={{ fontSize: 13.5, color: sub, margin: "6px auto 0", maxWidth: 420, lineHeight: 1.55 }}>{current.summary}</p>
+          {playerDisplayMode === "mini" ? (
+            <>
+              <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 13.5, fontWeight: 800, color: text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {current?.title}
+                </p>
+                <p style={{ margin: 0, fontSize: 11.5, fontWeight: 700, color: sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <span aria-hidden>{originIcon}</span> {originLabel}
+                </p>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+                {showEmbed ? (
+                  // No reliable API to control a Spotify/Apple embed from
+                  // here (see the honest volume note below) — a plain label
+                  // instead of a Play/Pause/Mute button that can't do
+                  // anything.
+                  <span style={{ fontSize: 11, fontWeight: 700, color: sub, padding: "0 8px" }}>
+                    via {current?.spotifyEmbed ? "Spotify" : "Apple Music"}
+                  </span>
+                ) : (
+                  <>
+                    <button
+                      onClick={showVideo ? () => setPlaying(playerState !== "playing") : toggleAudioPlayback}
+                      aria-label={(showVideo ? playerState === "playing" : audioPlayingState) ? "Pause" : "Play"}
+                      style={{ minWidth: 44, minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", fontSize: 22, cursor: "pointer", color: text }}
+                    >
+                      {(showVideo ? playerState === "playing" : audioPlayingState) ? "⏸" : "▶"}
+                    </button>
+                    <button
+                      onClick={toggleMute}
+                      aria-label={prefs.muted ? "Unmute" : "Mute"}
+                      style={{ minWidth: 44, minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", fontSize: 18, cursor: "pointer", color: text }}
+                    >
+                      {prefs.muted ? "🔇" : "🔊"}
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => setPlayerExpanded(true)}
+                  aria-label="Expand player"
+                  style={{ minWidth: 44, minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", fontSize: 18, cursor: "pointer", color: text }}
+                >
+                  ⌃
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              {current && !blocked && (
+                <div style={{ textAlign: "center", margin: "14px 0 0" }}>
+                  <p style={{ fontSize: 18, fontWeight: 900, color: text, margin: 0 }}>{current.title}</p>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: accent, margin: "2px 0 0" }}>
+                    {current.author}
+                    {current.ministry ? ` · ${ministryByKey(current.ministry)?.name}` : ""}
+                  </p>
+                </div>
+              )}
+              {transportPanel}
+            </>
           )}
         </div>
-      )}
-
-      {transportPanel}
-    </section>
+      </div>
+    </div>
   );
 
   // --- ministries with content counts ---
@@ -1202,6 +1357,31 @@ export default function TheDJCaresPage({
   const isHeroStarted = isHeroCurrent && started;
   const isHeroPlaying = isHeroCurrent && playerState === "playing";
 
+  // Once the listener is back on a tab where the full player already shows
+  // inline, an expanded mini-player sheet has nothing left to add — collapse
+  // it automatically so it doesn't linger stuck open over the wrong tab.
+  useEffect(() => {
+    if (isNaturalTab) setPlayerExpanded(false);
+  }, [isNaturalTab]);
+
+  // Mirror the real <audio> element's own play/pause state (native controls
+  // are hidden in the mini-player, replaced by our own button) — reattaches
+  // whenever the underlying element could be a different one (a new current
+  // audio pick).
+  useEffect(() => {
+    const el = podcastAudioRef.current;
+    if (!el) return;
+    const onPlay = () => setAudioPlayingState(true);
+    const onPause = () => setAudioPlayingState(false);
+    el.addEventListener("play", onPlay);
+    el.addEventListener("pause", onPause);
+    setAudioPlayingState(!el.paused);
+    return () => {
+      el.removeEventListener("play", onPlay);
+      el.removeEventListener("pause", onPause);
+    };
+  }, [current?.id, showAudio]);
+
   // Cross-card exclusivity used to need a separate activeDeck coordinator
   // because Daily Encouragement and the Music widget each kept their own
   // local "am I playing" state, entirely apart from `current`. Now that
@@ -1212,9 +1392,14 @@ export default function TheDJCaresPage({
   // construction never more than one item at a time. Nothing left to
   // coordinate.
 
+  // The mini-player is position:fixed (out of normal flow) — reserve room
+  // for it at the bottom of the page so it never overlaps the footer or
+  // any other real content underneath it.
+  const miniPlayerShowing = started && playerDisplayMode === "mini";
+
   return (
     <main style={{ background: bg, minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "32px 20px 80px" }}>
+      <div style={{ maxWidth: 760, margin: "0 auto", padding: `32px 20px ${miniPlayerShowing ? "96px" : "80px"}` }}>
         {/* identity */}
         <div style={{ textAlign: "center", marginBottom: 22 }}>
           <h1 style={{ fontSize: "clamp(1.8rem, 8vw, 2.4rem)", fontWeight: 900, color: text, margin: "0 0 8px" }}>

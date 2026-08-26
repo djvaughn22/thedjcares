@@ -105,7 +105,7 @@ describe("homepage section order (locked: category tabs, then the persistent pla
 
   it("prefers a direct verified audioUrl (native <audio controls>, wrapped in SyncedAudio for shared-volume sync) over a provider embed, for whichever item is playing in the shared deck (e.g. a podcast played from the Podcasts tab)", () => {
     expect(homeClient).toContain("const showAudio = Boolean(started && current && !current.videoId && current.audioUrl);");
-    expect(homeClient).toMatch(/<SyncedAudio\s+controls/);
+    expect(homeClient).toMatch(/<SyncedAudio\s[\s\S]*?\bcontrols\b/);
   });
 
   it("shows only the small honest \"Original source ↗\" link — never a giant CTA, never a fabricated MP3 — and it always points at whatever's currently displayed", () => {
@@ -467,6 +467,148 @@ describe("Gap closed: Daily Encouragement and the Home Apple Music widget are se
     // no parallel "playlist-only" player component exists.
     expect(homeClient.match(/const startItem = /g)?.length).toBe(1);
     expect(homeClient.match(/const podcastPanelNode = /g)?.length).toBe(1);
+  });
+});
+
+describe("Visual fix (78c8e55/26a9893 corrected): the full player only leads a tab when it's natural for that tab — never a generic mixer sitting above unrelated content", () => {
+  it("REGRESSION: a natural-tab map decides full-vs-mini — Home is natural for everything (it hosts the hero/Daily/Music widgets covering every type); Videos/Sermons/Podcasts/Music are each natural ONLY for their own matching current type", () => {
+    expect(homeClient).toContain('? ["spin", "videos"]');
+    expect(homeClient).toContain('? ["spin", "sermons"]');
+    expect(homeClient).toContain('? ["spin", "podcasts"]');
+    expect(homeClient).toContain('? ["spin", "music"]');
+    expect(homeClient).toContain("const isNaturalTab = !started || !current || (naturalTabsForCurrent?.includes(tab) ?? true);");
+  });
+
+  it('REGRESSION: Videos leads with video content — a music video is natural on tab "videos" (and nowhere else besides Home)', () => {
+    const idx = homeClient.indexOf("naturalTabsForCurrent");
+    const fn = homeClient.slice(idx, idx + 700);
+    expect(fn).toMatch(/isHeroCurrent\s*\n?\s*\?\s*\["spin", "videos"\]/);
+  });
+
+  it('REGRESSION: Sermons leads with sermon content — a sermon is natural on tab "sermons" (and nowhere else besides Home)', () => {
+    const idx = homeClient.indexOf("naturalTabsForCurrent");
+    const fn = homeClient.slice(idx, idx + 700);
+    expect(fn).toMatch(/current\.type === "sermon"\s*\n?\s*\?\s*\["spin", "sermons"\]/);
+  });
+
+  it('REGRESSION: Podcasts leads with podcast content — a podcast is natural on tab "podcasts" (and nowhere else besides Home) — this is the exact case from the screenshot: an unrelated video no longer shows full-size while browsing Podcasts, it collapses to the mini-player instead', () => {
+    const idx = homeClient.indexOf("naturalTabsForCurrent");
+    const fn = homeClient.slice(idx, idx + 700);
+    expect(fn).toMatch(/current\.type === "podcast"\s*\n?\s*\?\s*\["spin", "podcasts"\]/);
+  });
+
+  it('REGRESSION: Music leads with music content — a playlist is natural on tab "music" (and nowhere else besides Home)', () => {
+    const idx = homeClient.indexOf("naturalTabsForCurrent");
+    const fn = homeClient.slice(idx, idx + 700);
+    expect(fn).toMatch(/current\.type === "playlist"\s*\n?\s*\?\s*\["spin", "music"\]/);
+  });
+
+  it("REGRESSION: Home's original video-first ordering is restored — the category tabs and the persistent player still lead Home (as locked by the existing section-order test above), and \"spin\" is natural for every media type so the full player (never the mixer-branded header) always shows inline there, right where the hero used to be", () => {
+    const nav = at(homeClient, 'aria-label="Category tabs"');
+    const playerInsertion = at(homeClient, "{started && activePlayerNode}");
+    const hero = at(homeClient, 'id="video-of-the-day"');
+    expect(nav).toBeLessThan(playerInsertion);
+    expect(playerInsertion).toBeLessThan(hero);
+    // "spin" appears in every branch of naturalTabsForCurrent.
+    const idx = homeClient.indexOf("naturalTabsForCurrent");
+    const fn = homeClient.slice(idx, idx + 700);
+    expect(fn.match(/"spin"/g)?.length).toBeGreaterThanOrEqual(5); // 4 typed branches + the bare fallback
+  });
+
+  it('the generic "Now Spinning" mixer branding is gone from the persistent player\'s header — replaced by a label naming what\'s actually playing (its origin: Music Video / Daily Encouragement / a plain type label)', () => {
+    const start = homeClient.indexOf("const activePlayerNode = (");
+    const end = homeClient.indexOf("\n  );", start);
+    const section = homeClient.slice(start, end);
+    expect(section).not.toContain("Now Spinning");
+    expect(section).not.toContain("djc-mini-vinyl");
+    expect(homeClient).toContain('const originLabel = isHeroCurrent ? "Music Video" : dailyIsCurrent ? "Daily Encouragement"');
+  });
+});
+
+describe("Playback collapses to a compact mini-player off the natural tab — never a second full player, never interrupted", () => {
+  it('REGRESSION: three visual modes ("full"/"mini"/"overlay") share ONE unchanging JSX shape for the media slot — {videoPanelNode} and {podcastPanelNode} sit together in one wrapper div that is OUTSIDE the mini-vs-full ternary, so switching modes only ever changes style values on the same DJPlayer/SyncedAudio/iframe element, never its position in the tree', () => {
+    const start = homeClient.indexOf("const activePlayerNode = (");
+    const end = homeClient.indexOf("\n  );", start);
+    const section = homeClient.slice(start, end);
+    // The media-slot wrapper appears once, and the mode ternary that
+    // decides mini-vs-full chrome starts AFTER it — proving the media
+    // slot's own ancestor div is never inside that ternary's branches.
+    const mediaSlotIdx = section.indexOf("{videoPanelNode}");
+    const ternaryIdx = section.indexOf('playerDisplayMode === "mini" ? (');
+    expect(mediaSlotIdx).toBeGreaterThan(-1);
+    expect(ternaryIdx).toBeGreaterThan(mediaSlotIdx);
+    expect(section.match(/\{videoPanelNode\}/g)?.length).toBe(1);
+    expect(section.match(/\{podcastPanelNode\}/g)?.length).toBe(1);
+  });
+
+  it("REGRESSION: the mini slot only ever changes size/visibility via style values, never display:none, on the exact same elements used at full size — DJPlayer fills whatever box it's given (position:absolute; inset:0 — see DJPlayer.tsx), so shrinking the wrapper never touches its own mount", () => {
+    const videoStart = homeClient.indexOf("const videoPanelNode = ");
+    const videoEnd = homeClient.indexOf("\n  );", videoStart);
+    const videoSrc = homeClient.slice(videoStart, videoEnd);
+    expect(videoSrc).not.toMatch(/display:\s*["']none["']/);
+    expect(videoSrc).toContain("width: 52, height: 52");
+
+    const podcastStart = homeClient.indexOf("const podcastPanelNode = ");
+    const podcastEnd = homeClient.indexOf("\n  );", podcastStart);
+    const podcastSrc = homeClient.slice(podcastStart, podcastEnd);
+    expect(podcastSrc).not.toMatch(/display:\s*["']none["']/);
+    // Native audio is visually hidden in mini mode via a 1px clipped box
+    // (opacity/overflow), not display:none or removal — playback is never
+    // interrupted by hiding it this way.
+    expect(podcastSrc).toMatch(/width:\s*1,\s*height:\s*1/);
+
+    const djPlayer = readFileSync(join(app, "components/DJPlayer.tsx"), "utf8");
+    expect(djPlayer).toContain('style={{ position: "absolute", inset: 0 }}');
+  });
+
+  it("REGRESSION: expanding the mini-player (Expand button) and collapsing it (Close button) only ever flip `playerExpanded` — they never touch current/started/playing, so the provider is never remounted or restarted by opening/closing the overlay", () => {
+    expect(homeClient).toContain("onClick={() => setPlayerExpanded(true)}");
+    expect(homeClient).toContain("onClick={() => setPlayerExpanded(false)}");
+    // No handler that opens/closes the overlay touches playback state.
+    const expandIdx = homeClient.indexOf("onClick={() => setPlayerExpanded(true)}");
+    const nearbyExpand = homeClient.slice(Math.max(0, expandIdx - 200), expandIdx + 50);
+    expect(nearbyExpand).not.toMatch(/setCurrent\(|setStarted\(|setPlaying\(/);
+  });
+
+  it("the mini-player shows a thumbnail/icon, title, real Play/Pause and Mute for controllable media (video/audio), an honest provider label instead of fake controls for embeds, and an Expand button — all with 44px touch targets", () => {
+    const start = homeClient.indexOf("const activePlayerNode = (");
+    const end = homeClient.indexOf("\n  );", start);
+    const section = homeClient.slice(start, end);
+    expect(section).toContain('aria-label={(showVideo ? playerState === "playing" : audioPlayingState) ? "Pause" : "Play"}');
+    expect(section).toContain('aria-label={prefs.muted ? "Unmute" : "Mute"}');
+    expect(section).toContain('aria-label="Expand player"');
+    expect(section).toMatch(/via \{current\?\.spotifyEmbed \? "Spotify" : "Apple Music"\}/);
+    expect(section.match(/minWidth: 44, minHeight: 44/g)?.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("the mini-player is fixed to the bottom of the screen, respects the iPhone safe area, and sits below the family header's z-index so it never fights the site-wide nav for stacking", () => {
+    const start = homeClient.indexOf("const playerOuterStyle");
+    const end = homeClient.indexOf("const playerInnerStyle", start);
+    const src = homeClient.slice(start, end);
+    expect(src).toContain('position: "fixed", left: 0, right: 0, bottom: 0');
+    expect(src).toContain("zIndex: 45");
+    const innerStart = homeClient.indexOf("const playerInnerStyle");
+    const innerEnd = homeClient.indexOf("const activePlayerNode = (", innerStart);
+    expect(homeClient.slice(innerStart, innerEnd)).toContain("env(safe-area-inset-bottom, 0px)");
+  });
+
+  it("REGRESSION: only one active media source can ever exist — reconfirmed after the mini-player rework: exactly one <DJPlayer>, one <SyncedAudio>, one <iframe> in the whole file", () => {
+    expect(homeClient.match(/<DJPlayer[\s>]/g)?.length).toBe(1);
+    expect(homeClient.match(/<SyncedAudio/g)?.length).toBe(1);
+    expect(homeClient.match(/<iframe/g)?.length).toBe(1);
+  });
+
+  it("REGRESSION: volume and mute still survive every transition, including collapsing to and expanding from the mini-player — the mini-player's own Mute button reuses the exact same toggleMute/prefs the full player uses, not a separate state", () => {
+    const start = homeClient.indexOf("const activePlayerNode = (");
+    const end = homeClient.indexOf("\n  );", start);
+    const section = homeClient.slice(start, end);
+    expect(section).toContain("onClick={toggleMute}");
+    expect(section).toContain("prefs.muted");
+  });
+
+  it("Daily Encouragement and the Music widget selectors still route through startItem, unaffected by the mini-player rework", () => {
+    expect(homeClient).toContain("onClick={() => startItem(dailyPick)}");
+    expect(homeClient).toMatch(/onClick=\{\(\) => \{ startItem\(heroPlaylist\);/);
   });
 });
 
