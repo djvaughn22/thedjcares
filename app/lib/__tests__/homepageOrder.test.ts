@@ -17,12 +17,8 @@ const encouragementActions = readFileSync(join(app, "components/EncouragementAct
 
 const at = (haystack: string, needle: string) => haystack.indexOf(needle);
 
-describe("homepage section order (locked: category tabs, then the persistent player, then Home's own content)", () => {
-  it("Category tabs lead, then the one persistent player shell, then Home's own decks (hero, Daily Encouragement, Music) in their original order, then Videos/Sermons/Podcasts previews, Digital DJ last", () => {
-    // activePlayerNode (id="now-playing") is a const defined well above the
-    // return statement and referenced by name where it actually renders —
-    // so its render POSITION is where it's actually inserted into the
-    // tree, not its definition's id=.
+describe("homepage section presence (locked: every section exists; VISUAL order is governed by CSS `order`, not source position — see the \"Home and category-tab visual order\" describe block below for the authoritative ordering tests)", () => {
+  it("every homepage section exists in the file, all as siblings inside the same flex column (activePlayerNode is a const referenced once, well below its definition, so its render POSITION — not its definition — is what's checked)", () => {
     const nav = at(homeClient, 'aria-label="Category tabs"');
     const playerInsertion = at(homeClient, "{started && activePlayerNode}");
     const hero = at(homeClient, 'id="video-of-the-day"');
@@ -36,18 +32,6 @@ describe("homepage section order (locked: category tabs, then the persistent pla
     for (const idx of [nav, playerInsertion, hero, daily, music, videos, sermons, podcasts, digitalDj]) {
       expect(idx).toBeGreaterThan(-1);
     }
-    // Requirement 1's literal order: category tabs, then the persistent
-    // player shell, then the selected category's own content — applied on
-    // every tab, Home included, so the player is never nested inside a
-    // tab==="..." conditional and never unmounts on a tab click.
-    expect(nav).toBeLessThan(playerInsertion);
-    expect(playerInsertion).toBeLessThan(hero);
-    expect(hero).toBeLessThan(daily);
-    expect(daily).toBeLessThan(music);
-    expect(music).toBeLessThan(videos);
-    expect(videos).toBeLessThan(sermons);
-    expect(sermons).toBeLessThan(podcasts);
-    expect(podcasts).toBeLessThan(digitalDj);
   });
 
   it('the shared deck still carries the id="now-playing" anchor for non-video playback (e.g. a sermon/podcast started from browse content)', () => {
@@ -169,6 +153,114 @@ describe("homepage section order (locked: category tabs, then the persistent pla
     expect(homeClient).not.toMatch(/isHeroCurrent \? null : current\?\.videoId/);
     expect(homeClient).toContain("current?.videoId && started && !blocked ? (");
     expect(homeClient).toContain("{current && share(mediaShareTarget(current), \"deck\")}");
+  });
+});
+
+describe("Home and category-tab visual order (locked: CSS `order`, not source position, decides what the listener actually sees)", () => {
+  // The whole content column is a CSS flex column — every top-level
+  // section carries an explicit `order`, so source position in the file no
+  // longer determines what renders first. These tests read the numeric
+  // order values themselves and prove they encode the required sequence.
+  const homeOrderIdx = homeClient.indexOf("const HOME_ORDER = {");
+  const homeOrderEnd = homeClient.indexOf("} as const;", homeOrderIdx);
+  const homeOrderSrc = homeClient.slice(homeOrderIdx, homeOrderEnd);
+  const browseOrderIdx = homeClient.indexOf("const BROWSE_ORDER = {");
+  const browseOrderEnd = homeClient.indexOf("} as const;", browseOrderIdx);
+  const browseOrderSrc = homeClient.slice(browseOrderIdx, browseOrderEnd);
+
+  const readOrderValue = (src: string, key: string): number => {
+    const m = src.match(new RegExp(`\\b${key}:\\s*(\\d+)`));
+    if (!m) throw new Error(`order key "${key}" not found`);
+    return Number(m[1]);
+  };
+
+  it("the content column is a real flex container, so `order` actually takes effect", () => {
+    expect(homeClient).toMatch(/maxWidth: 760, margin: "0 auto"[\s\S]*?display: "flex", flexDirection: "column"/);
+  });
+
+  it('REGRESSION: Home\'s locked order is Intro < Video of the Day < Daily Encouragement < The Music < category tabs < remaining content — the tabs never appear before the hero', () => {
+    const intro = readOrderValue(homeOrderSrc, "intro");
+    const hero = readOrderValue(homeOrderSrc, "hero");
+    const daily = readOrderValue(homeOrderSrc, "daily");
+    const music = readOrderValue(homeOrderSrc, "music");
+    const nav = readOrderValue(homeOrderSrc, "nav");
+    const musicVideosPreview = readOrderValue(homeOrderSrc, "musicVideosPreview");
+    const rest = readOrderValue(homeOrderSrc, "rest");
+
+    expect(intro).toBeLessThan(hero);
+    expect(hero).toBeLessThan(daily);
+    expect(daily).toBeLessThan(music);
+    expect(music).toBeLessThan(nav); // category buttons never appear before the video hero
+    expect(nav).toBeLessThan(musicVideosPreview);
+    expect(musicVideosPreview).toBeLessThan(rest);
+  });
+
+  it('REGRESSION: every browsing tab (Music/Videos/Sermons/Podcasts) is ordered Intro < category tabs < heading/description/filters < full player < library/cards — the full player never appears before the heading', () => {
+    const intro = readOrderValue(browseOrderSrc, "intro");
+    const nav = readOrderValue(browseOrderSrc, "nav");
+    const heading = readOrderValue(browseOrderSrc, "heading");
+    const player = readOrderValue(browseOrderSrc, "player");
+    const cards = readOrderValue(browseOrderSrc, "cards");
+
+    expect(intro).toBeLessThan(nav);
+    expect(nav).toBeLessThan(heading);
+    expect(heading).toBeLessThan(player);
+    expect(player).toBeLessThan(cards);
+  });
+
+  it("REGRESSION: on Home, the nav's own order flips to HOME_ORDER.nav (after the hero/Daily/Music triad); on every other tab it stays BROWSE_ORDER.nav (right after the intro, leading that tab's content, unchanged from before)", () => {
+    expect(homeClient).toContain('order: tab === "spin" ? HOME_ORDER.nav : BROWSE_ORDER.nav');
+  });
+
+  it("REGRESSION: the hero, Daily Encouragement, The Music, and the Music Videos preview sections each carry their own fixed HOME_ORDER value — none of them depend on which tab is active (they only ever render on tab===\"spin\" anyway) or on what's currently playing", () => {
+    expect(homeClient).toContain("order: HOME_ORDER.hero");
+    expect(homeClient).toContain("order: HOME_ORDER.daily");
+    expect(homeClient).toContain("order: HOME_ORDER.music");
+    expect(homeClient).toContain("order: HOME_ORDER.musicVideosPreview");
+    expect(homeClient).toContain("order: HOME_ORDER.rest");
+  });
+
+  it("REGRESSION: the persistent player's own `order` is computed from what's actually playing — HOME_ORDER.hero/daily/music on Home (so it visually sits at whichever widget owns the current item, never as a separate block above everything), and a single BROWSE_ORDER.player slot (between heading and cards) on every browsing tab", () => {
+    const start = homeClient.indexOf("const playerOrder =");
+    const end = homeClient.indexOf(";", homeClient.indexOf("BROWSE_ORDER.player", start));
+    const src = homeClient.slice(start, end);
+    expect(src).toContain("HOME_ORDER.hero");
+    expect(src).toContain("HOME_ORDER.daily");
+    expect(src).toContain("HOME_ORDER.music");
+    expect(src).toContain("BROWSE_ORDER.player");
+  });
+
+  it("REGRESSION: `order` is a pure CSS paint-order property applied to playerOuterStyle (the persistent player's one stable wrapper) — it's never used to conditionally include/exclude the player from the tree, so this reordering can't reparent or remount DJPlayer/SyncedAudio/the embed iframe", () => {
+    expect(homeClient).toContain("style={playerOuterStyle}");
+    const start = homeClient.indexOf("const playerOuterStyle: React.CSSProperties =");
+    const end = homeClient.indexOf("const playerInnerStyle", start);
+    const src = homeClient.slice(start, end);
+    expect(src).toContain("order: playerOrder");
+    // Still exactly one mounted instance of each provider — reconfirmed
+    // after the reordering rework.
+    expect(homeClient.match(/<DJPlayer[\s>]/g)?.length).toBe(1);
+    expect(homeClient.match(/<SyncedAudio/g)?.length).toBe(1);
+    expect(homeClient.match(/<iframe/g)?.length).toBe(1);
+  });
+
+  it("REGRESSION: each of the 4 browsing tabs (Music, Videos, Sermons, Podcasts) splits its content into a heading/filters block (BROWSE_ORDER.heading) and a library/cards block (BROWSE_ORDER.cards) — the player's BROWSE_ORDER.player slot sits between them, so it can never render before that tab's own heading", () => {
+    for (const tabId of ["music", "videos", "podcasts", "sermons"]) {
+      const tabIdx = homeClient.indexOf(`{tab === "${tabId}" && (`);
+      expect(tabIdx, `tab "${tabId}"`).toBeGreaterThan(-1);
+      const section = homeClient.slice(tabIdx, tabIdx + 2200);
+      expect(section, `tab "${tabId}" heading block`).toContain("order: BROWSE_ORDER.heading");
+      expect(section, `tab "${tabId}" cards block`).toMatch(/order: BROWSE_ORDER\.cards|BROWSE_ORDER\.cards/);
+    }
+  });
+
+  it("Ministries, Churches, and About each get a real order value too (BROWSE_ORDER.heading) — none of them default to CSS order:0, which would otherwise jump them above the intro/nav", () => {
+    const ministriesIdx = homeClient.indexOf('{tab === "ministries" && (');
+    const churchesIdx = homeClient.indexOf('{tab === "churches" && (');
+    const aboutIdx = homeClient.indexOf('{tab === "about" && (');
+    for (const idx of [ministriesIdx, churchesIdx, aboutIdx]) {
+      expect(idx).toBeGreaterThan(-1);
+      expect(homeClient.slice(idx, idx + 120)).toContain("order: BROWSE_ORDER.heading");
+    }
   });
 });
 

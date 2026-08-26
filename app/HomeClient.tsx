@@ -91,6 +91,41 @@ const TABS = [
 
 type Tab = (typeof TABS)[number]["id"];
 
+// The whole page content column is one CSS flex column (see the return
+// below) — every top-level section carries an explicit `order` so the
+// listener always sees the SAME layout regardless of DOM source position.
+// This is what lets the one stable-position persistent player (see
+// activePlayerNode/playerOrder) visually land at the right spot for
+// whichever tab is active without ever being reparented: `order` is a pure
+// paint-order CSS property, so the underlying DJPlayer/SyncedAudio/embed
+// iframe never moves in the actual DOM tree, just where it's painted.
+//
+// Home ("spin"): Intro, Video of the Day, Daily Encouragement, The Music,
+// category tabs, then the rest of Home's own content — the nav never
+// appears above the hero, and the player (when full) sits at whichever
+// widget (hero/Daily/Music) actually owns what's playing, never as a
+// separate generic block leading everything.
+const HOME_ORDER = {
+  intro: 10,
+  hero: 20,
+  daily: 30,
+  music: 40,
+  nav: 50,
+  musicVideosPreview: 60,
+  rest: 70,
+} as const;
+
+// Every other tab: Intro, category tabs, that tab's own heading/
+// description/filters, the full player (only when it's actually natural
+// for that tab — see isNaturalTab), then that tab's own library/cards.
+const BROWSE_ORDER = {
+  intro: 10,
+  nav: 20,
+  heading: 30,
+  player: 40,
+  cards: 50,
+} as const;
+
 // Pre-filled request email — DJ reviews everything Gospel-first before adding.
 const REQUEST_MAILTO =
   "mailto:ask@openmirrorllc.com?subject=" +
@@ -1209,12 +1244,34 @@ export default function TheDJCaresPage({
   // app/OpenMirrorNav.tsx) so the family header always wins if they ever
   // overlap, and well below ShareSheet's modal (zIndex 1000) so Share still
   // opens on top of either player state.
+  //
+  // Visual position when "full": the page's whole content column is one
+  // CSS flex column (see the return below), and every top-level section
+  // carries an explicit `order` — this is what lets the ONE stable-position
+  // player (still rendered from this single JSX call site, still never
+  // reparented) visually land wherever it belongs for the current tab
+  // instead of always leading. On Home that's right at whichever widget
+  // (hero/Daily/Music) actually owns what's playing; on a browsing tab
+  // that's between its heading/filters and its own card grid. `order` is a
+  // pure paint-order property — it never moves the underlying DOM node, so
+  // this changes nothing about how DJPlayer/SyncedAudio/the embed iframe
+  // stays mounted (see HOME_ORDER below for the full scheme).
+  const playerOrder =
+    tab === "spin"
+      ? isHeroCurrent
+        ? HOME_ORDER.hero
+        : current?.type === "sermon" || current?.type === "podcast"
+          ? HOME_ORDER.daily
+          : current?.type === "playlist"
+            ? HOME_ORDER.music
+            : HOME_ORDER.hero
+      : BROWSE_ORDER.player;
   const playerOuterStyle: React.CSSProperties =
     playerDisplayMode === "mini"
       ? { position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 45 }
       : playerDisplayMode === "overlay"
         ? { position: "fixed", inset: 0, zIndex: 46, background: "rgba(8,12,20,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center" }
-        : { position: "static" };
+        : { position: "static", order: playerOrder };
   const playerInnerStyle: React.CSSProperties =
     playerDisplayMode === "mini"
       ? { background: card, borderTop: `2px solid ${border}`, padding: "10px 14px", paddingBottom: "calc(10px + env(safe-area-inset-bottom, 0px))", boxShadow: "0 -4px 20px rgba(0,0,0,0.25)" }
@@ -1399,9 +1456,9 @@ export default function TheDJCaresPage({
 
   return (
     <main style={{ background: bg, minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: `32px 20px ${miniPlayerShowing ? "96px" : "80px"}` }}>
+      <div style={{ maxWidth: 760, margin: "0 auto", padding: `32px 20px ${miniPlayerShowing ? "96px" : "80px"}`, display: "flex", flexDirection: "column" }}>
         {/* identity */}
-        <div style={{ textAlign: "center", marginBottom: 22 }}>
+        <div style={{ textAlign: "center", marginBottom: 22, order: HOME_ORDER.intro }}>
           <h1 style={{ fontSize: "clamp(1.8rem, 8vw, 2.4rem)", fontWeight: 900, color: text, margin: "0 0 8px" }}>
             The DJ <span style={{ color: accent }}>Cares</span> <span aria-hidden>🎧</span>
           </h1>
@@ -1410,16 +1467,21 @@ export default function TheDJCaresPage({
           </p>
         </div>
 
-        {/* CATEGORY TABS, then the ONE persistent player shell, then the
-            selected category's own content — that order, always, on every
-            tab. Continuous in-site listening: selecting Music, Videos,
-            Sermons, or Podcasts only ever changes `tab`; it never touches
-            current/started/playing, so activePlayerNode (below) — the
-            single mounted DJPlayer/SyncedAudio/embed instance for whatever
-            `current` is — is never unmounted or recreated by a tab click.
-            It lives here, outside every {tab === "..."} block, so it's the
-            same instance no matter which tab is selected. */}
-        <nav aria-label="Category tabs" style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 8, maxWidth: 560, margin: "0 auto 20px" }}>
+        {/* Category tabs — on Home, ordered AFTER the hero/Daily/Music
+            widgets (HOME_ORDER.nav), never above them; on every other tab,
+            ordered right after the intro (BROWSE_ORDER.nav), leading that
+            tab's own content same as before. Continuous in-site listening:
+            selecting Music, Videos, Sermons, or Podcasts only ever changes
+            `tab`; it never touches current/started/playing, so
+            activePlayerNode (below) — the single mounted DJPlayer/
+            SyncedAudio/embed instance for whatever `current` is — is never
+            unmounted or recreated by a tab click. It lives at one fixed
+            JSX position outside every {tab === "..."} block; only its
+            `order` (see playerOrder) changes where it's painted. */}
+        <nav
+          aria-label="Category tabs"
+          style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 8, maxWidth: 560, margin: "0 auto 20px", order: tab === "spin" ? HOME_ORDER.nav : BROWSE_ORDER.nav }}
+        >
           {TABS.map((t, idx) => (
             <button
               key={t.id}
@@ -1455,7 +1517,7 @@ export default function TheDJCaresPage({
           <section
             id="video-of-the-day"
             aria-label="Video of the Day"
-            style={{ textAlign: "center", padding: "4px 0 20px", marginBottom: 6 }}
+            style={{ textAlign: "center", padding: "4px 0 20px", marginBottom: 6, order: HOME_ORDER.hero }}
           >
             <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 20px" }}>
               <span aria-hidden>📀</span> Music Video of the Day
@@ -1594,7 +1656,7 @@ export default function TheDJCaresPage({
           <section
             id="daily-encouragement"
             aria-label="Daily Encouragement"
-            style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20, textAlign: "center" }}
+            style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20, textAlign: "center", order: HOME_ORDER.daily }}
           >
             <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 2px" }}>
               <span aria-hidden>🌅</span> Daily Encouragement
@@ -1680,7 +1742,7 @@ export default function TheDJCaresPage({
             re-cue which playlist is featured (heroPlaylistId); neither
             starts playback on its own, same as the hero's Shuffle. */}
         {tab === "spin" && heroPlaylist && (
-          <section id="music" aria-label="The Music" style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20, textAlign: "center" }}>
+          <section id="music" aria-label="The Music" style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20, textAlign: "center", order: HOME_ORDER.music }}>
             <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 14px" }}>
               <span aria-hidden>🎶</span> The Music
             </p>
@@ -1775,7 +1837,7 @@ export default function TheDJCaresPage({
             Videos tab uses, just a taste of it up front. Clicking one makes
             it the new Now Playing anchor (see startItem's queue seeding). */}
         {tab === "spin" && songs.length > 0 && (
-          <section id="videos" aria-label="Music Videos preview" style={{ marginBottom: 20 }}>
+          <section id="videos" aria-label="Music Videos preview" style={{ marginBottom: 20, order: HOME_ORDER.musicVideosPreview }}>
             <p style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 12px" }}>
               <span aria-hidden>🎬</span> Music Videos
             </p>
@@ -1791,7 +1853,7 @@ export default function TheDJCaresPage({
         )}
 
         {tab === "spin" && (
-          <>
+          <div style={{ order: HOME_ORDER.rest }}>
             <section id="sermons">
               <h2 style={sectionH}>✝️ Sermons</h2>
               <p style={sectionSub}>Tap a name and The DJ spins one of their messages — approved ministers, official channels only.</p>
@@ -1929,44 +1991,56 @@ export default function TheDJCaresPage({
               <span style={{ fontSize: 14.5, fontWeight: 800, color: text }}>Does your church stream on YouTube?</span>
               <span style={{ fontSize: 14, fontWeight: 900, color: accent, flexShrink: 0 }}>⛪ Submit it →</span>
             </button>
-          </>
+          </div>
         )}
 
+        {/* Every browsing tab below follows the same order: heading +
+            description/filters (BROWSE_ORDER.heading), then the persistent
+            player — only actually visible here when it's natural for this
+            tab (see isNaturalTab/playerOrder) — then that tab's own
+            library/cards (BROWSE_ORDER.cards). The heading always leads;
+            the player never appears above it. */}
         {tab === "music" && (
           <>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-              <h2 style={sectionH}>Music</h2>
-              <button onClick={() => { setCategory("playlist"); const p = spinPool({ category: "playlist" }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={bigButton}>
-                🔀 Spin music
+            <div style={{ order: BROWSE_ORDER.heading }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <h2 style={sectionH}>Music</h2>
+                <button onClick={() => { setCategory("playlist"); const p = spinPool({ category: "playlist" }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={bigButton}>
+                  🔀 Spin music
+                </button>
+              </div>
+              <p style={sectionSub}>
+                The DJ&apos;s own Apple Music playlists — worship, hymns, country, rap, workout — whole mixes, reviewed song
+                by song. They stream right here with an Apple Music account (Spotify twins linked where they exist).
+              </p>
+            </div>
+            <div style={{ order: BROWSE_ORDER.cards }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 24 }}>
+                {playlists.map((p) => (
+                  <PlaylistCard key={p.id} p={p} />
+                ))}
+              </div>
+              <button onClick={() => goTab("videos")} className="pop" style={{ width: "100%", background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "16px 20px", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 14.5, fontWeight: 800, color: text }}>Want one song at a time instead?</span>
+                <span style={{ fontSize: 14, fontWeight: 900, color: accent, flexShrink: 0 }}>🎬 Videos →</span>
               </button>
             </div>
-            <p style={sectionSub}>
-              The DJ&apos;s own Apple Music playlists — worship, hymns, country, rap, workout — whole mixes, reviewed song
-              by song. They stream right here with an Apple Music account (Spotify twins linked where they exist).
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 24 }}>
-              {playlists.map((p) => (
-                <PlaylistCard key={p.id} p={p} />
-              ))}
-            </div>
-            <button onClick={() => goTab("videos")} className="pop" style={{ width: "100%", background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "16px 20px", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-              <span style={{ fontSize: 14.5, fontWeight: 800, color: text }}>Want one song at a time instead?</span>
-              <span style={{ fontSize: 14, fontWeight: 900, color: accent, flexShrink: 0 }}>🎬 Videos →</span>
-            </button>
           </>
         )}
 
         {tab === "videos" && (
           <>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-              <h2 style={sectionH}>Music Videos</h2>
-              <button onClick={() => { setCategory("music"); const p = spinPool({ category: "music", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={bigButton}>
-                🔀 Spin videos
-              </button>
+            <div style={{ order: BROWSE_ORDER.heading }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <h2 style={sectionH}>Music Videos</h2>
+                <button onClick={() => { setCategory("music"); const p = spinPool({ category: "music", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={bigButton}>
+                  🔀 Spin videos
+                </button>
+              </div>
+              <p style={sectionSub}>Hand-picked songs and music videos from official artist channels. Tap one and it plays right here.</p>
+              <VibeChips />
             </div>
-            <p style={sectionSub}>Hand-picked songs and music videos from official artist channels. Tap one and it plays right here.</p>
-            <VibeChips />
-            <div style={grid}>
+            <div style={{ ...grid, order: BROWSE_ORDER.cards }}>
               {vibeFiltered(songs).map((i) => (
                 <MediaCard key={i.id} item={i} />
               ))}
@@ -1976,9 +2050,11 @@ export default function TheDJCaresPage({
 
         {tab === "podcasts" && (
           <>
-            <h2 style={sectionH}>Podcasts</h2>
-            <p style={sectionSub}>Bible-first shows worth your commute. The Spotify ones play right here; the rest link to their official homes.</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ order: BROWSE_ORDER.heading }}>
+              <h2 style={sectionH}>Podcasts</h2>
+              <p style={sectionSub}>Bible-first shows worth your commute. The Spotify ones play right here; the rest link to their official homes.</p>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, order: BROWSE_ORDER.cards }}>
               {podcasts.map((p) => (
                 <div key={p.id} id={`djc-item-${p.id}`} className="pop" style={{ background: card, border: `2px solid ${current?.id === p.id && started ? activeBorder : border}`, borderRadius: 16, padding: "16px 18px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
@@ -2009,47 +2085,51 @@ export default function TheDJCaresPage({
 
         {tab === "sermons" && (
           <>
-            <h2 style={sectionH}>Sermons</h2>
-            <p style={sectionSub}>Approved ministers, official channels, Christ at the center. Pick one, or let The DJ spin.</p>
-            <div style={{ ...optionGrid, marginBottom: 20 }}>
-              <button onClick={() => setSermonMinistry(null)} aria-pressed={sermonMinistry === null} style={pill(sermonMinistry === null)}>
-                All ministries
-              </button>
-              {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0).map((m) => (
-                <button key={m.key} onClick={() => setSermonMinistry(sermonMinistry === m.key ? null : m.key)} aria-pressed={sermonMinistry === m.key} style={pill(sermonMinistry === m.key)}>
-                  {m.speaker}
+            <div style={{ order: BROWSE_ORDER.heading }}>
+              <h2 style={sectionH}>Sermons</h2>
+              <p style={sectionSub}>Approved ministers, official channels, Christ at the center. Pick one, or let The DJ spin.</p>
+              <div style={{ ...optionGrid, marginBottom: 20 }}>
+                <button onClick={() => setSermonMinistry(null)} aria-pressed={sermonMinistry === null} style={pill(sermonMinistry === null)}>
+                  All ministries
                 </button>
-              ))}
-              <button onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe, ministry: sermonMinistry }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={{ ...bigButton, borderRadius: 50, padding: "10px 8px", fontSize: 13.5 }}>
-                🔀 Spin a sermon
-              </button>
+                {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0).map((m) => (
+                  <button key={m.key} onClick={() => setSermonMinistry(sermonMinistry === m.key ? null : m.key)} aria-pressed={sermonMinistry === m.key} style={pill(sermonMinistry === m.key)}>
+                    {m.speaker}
+                  </button>
+                ))}
+                <button onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe, ministry: sermonMinistry }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={{ ...bigButton, borderRadius: 50, padding: "10px 8px", fontSize: 13.5 }}>
+                  🔀 Spin a sermon
+                </button>
+              </div>
             </div>
-            {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0 && (sermonMinistry === null || sermonMinistry === m.key)).map((m) => {
-              const list = sermons.filter((s) => s.ministry === m.key);
-              const open = expandedSermons[m.key] || sermonMinistry === m.key;
-              const shown = open ? list : list.slice(0, 6);
-              return (
-                <section key={m.key} style={{ marginBottom: 30 }}>
-                  <h3 style={{ fontSize: 18, fontWeight: 900, color: text, margin: "0 0 2px" }}>{m.speaker}</h3>
-                  <p style={{ fontSize: 13, color: sub, margin: "0 0 12px" }}>{m.name} · {list.length} messages</p>
-                  <div style={grid}>
-                    {shown.map((s) => (
-                      <MediaCard key={s.id} item={s} />
-                    ))}
-                  </div>
-                  {!open && list.length > shown.length && (
-                    <button onClick={() => setExpandedSermons((e) => ({ ...e, [m.key]: true }))} style={{ ...quietButton, width: "100%", marginTop: 12 }}>
-                      Show all {list.length} from {m.speaker} →
-                    </button>
-                  )}
-                </section>
-              );
-            })}
+            <div style={{ order: BROWSE_ORDER.cards }}>
+              {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0 && (sermonMinistry === null || sermonMinistry === m.key)).map((m) => {
+                const list = sermons.filter((s) => s.ministry === m.key);
+                const open = expandedSermons[m.key] || sermonMinistry === m.key;
+                const shown = open ? list : list.slice(0, 6);
+                return (
+                  <section key={m.key} style={{ marginBottom: 30 }}>
+                    <h3 style={{ fontSize: 18, fontWeight: 900, color: text, margin: "0 0 2px" }}>{m.speaker}</h3>
+                    <p style={{ fontSize: 13, color: sub, margin: "0 0 12px" }}>{m.name} · {list.length} messages</p>
+                    <div style={grid}>
+                      {shown.map((s) => (
+                        <MediaCard key={s.id} item={s} />
+                      ))}
+                    </div>
+                    {!open && list.length > shown.length && (
+                      <button onClick={() => setExpandedSermons((e) => ({ ...e, [m.key]: true }))} style={{ ...quietButton, width: "100%", marginTop: 12 }}>
+                        Show all {list.length} from {m.speaker} →
+                      </button>
+                    )}
+                  </section>
+                );
+              })}
+            </div>
           </>
         )}
 
         {tab === "ministries" && (
-          <>
+          <div style={{ order: BROWSE_ORDER.heading }}>
             <h2 style={sectionH}>Trusted Ministries</h2>
             <p style={sectionSub}>
               The teaching on The DJ Cares comes from these ministries — official channels only, selected for Christ-centered,
@@ -2094,11 +2174,11 @@ export default function TheDJCaresPage({
                 );
               })}
             </div>
-          </>
+          </div>
         )}
 
         {tab === "churches" && (
-          <>
+          <div style={{ order: BROWSE_ORDER.heading }}>
             <h2 style={sectionH}>Local Churches</h2>
             <p style={sectionSub}>
               Does your church stream on YouTube? Submit its official channel for review. Approved churches are added to
@@ -2145,11 +2225,11 @@ export default function TheDJCaresPage({
 
             <h3 style={{ fontSize: 18, fontWeight: 900, color: text, margin: "0 0 12px" }}>Submit your church</h3>
             <ChurchSubmitForm card={card} border={border} text={text} sub={sub} />
-          </>
+          </div>
         )}
 
         {tab === "about" && (
-          <>
+          <div style={{ order: BROWSE_ORDER.heading }}>
             <h2 style={sectionH}>About The DJ Cares</h2>
             <div style={{ background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "20px 22px", marginBottom: 16 }}>
               <p style={{ fontSize: 15, color: text, margin: 0, lineHeight: 1.7 }}>
@@ -2197,7 +2277,7 @@ export default function TheDJCaresPage({
                 hand, and submission doesn&apos;t guarantee inclusion.
               </p>
             </div>
-          </>
+          </div>
         )}
       </div>
 
