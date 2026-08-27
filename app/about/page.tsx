@@ -8,6 +8,15 @@ export const metadata: Metadata = {
 
 const A = "#A78BFA";
 
+// Pre-filled request email — DJ reviews everything Gospel-first before adding.
+const REQUEST_MAILTO =
+  "mailto:ask@openmirrorllc.com?subject=" +
+  encodeURIComponent("The DJ Cares — request") +
+  "&body=" +
+  encodeURIComponent(
+    "What I'd love on The DJ Cares:\n\nTitle / name:\nArtist or speaker:\nLink (YouTube, Apple Music, or Spotify):\nWhy it encourages:\n",
+  );
+
 // Same rounded-card, compact-hero shell every other destination on the site
 // uses (see HomeClient's card/border tokens) — kept as CSS custom
 // properties (not JS state) so this stays a plain server component while
@@ -45,8 +54,49 @@ export default function AboutPage() {
         </div>
 
         <p style={{ fontSize: 13, lineHeight: 1.7, color: "var(--sub)", margin: "0 0 8px" }}>
-          TheDJCares is an <a href="https://openmirrorllc.com">Open Mirror LLC</a> project.
+          TheDJCares is an <a href="https://openmirrorllc.com">Open Mirror LLC</a> project, and shares a heart with{" "}
+          <a href="https://crossheartpray.com">CrossHeartPray</a> — no account needed for either.
         </p>
+
+        <div className="djc-about-card">
+          <h2 style={{ fontSize: 15, fontWeight: 900, margin: "0 0 8px" }}>💌 Request something</h2>
+          <p style={{ fontSize: 14.5, lineHeight: 1.65, color: "var(--sub)", margin: "0 0 14px" }}>
+            Have a song, sermon, podcast, or playlist that encourages you? Send it over. Everything is reviewed
+            against Scripture before it&rsquo;s added — Jesus first, Scripture the test.
+          </p>
+          <a
+            href={REQUEST_MAILTO}
+            style={{
+              display: "inline-block",
+              padding: "12px 24px",
+              borderRadius: 999,
+              background: A,
+              color: "#0b1220",
+              fontWeight: 900,
+              fontSize: 14.5,
+              textDecoration: "none",
+            }}
+          >
+            💌 Send a request
+          </a>
+          <p style={{ fontSize: 12.5, color: "var(--sub)", margin: "10px 0 0" }}>
+            Opens your email app with a ready-to-fill template to ask@openmirrorllc.com.
+          </p>
+        </div>
+
+        <div className="djc-about-card">
+          <h2 style={{ fontSize: 13, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", margin: "0 0 8px", color: "var(--sub)" }}>
+            The plain print
+          </h2>
+          <p style={{ fontSize: 13, color: "var(--sub)", margin: 0, lineHeight: 1.7 }}>
+            The DJ Cares doesn&rsquo;t own the third-party music, videos, sermons, podcasts, ministry names, artwork,
+            or platform players featured here — ownership stays with their creators and publishers. Embedded and
+            linked material comes from official or believed-to-be-authorized sources, and unavailable or changed
+            content may be removed. Including a creator or ministry doesn&rsquo;t mean agreement with every statement
+            they&rsquo;ve ever made. Embedded platforms control their own players and any advertising. Church
+            submissions are reviewed by hand, and submission doesn&rsquo;t guarantee inclusion.
+          </p>
+        </div>
 
         {/* The footer's Contact and Disclaimer links land on these two
             sections (family standard, 2026-08-02). */}

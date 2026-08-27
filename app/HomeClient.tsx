@@ -87,10 +87,16 @@ const TABS = [
   { id: "sermons", label: "Sermons", emoji: "✝️" },
   { id: "ministries", label: "Ministries", emoji: "🏛️" },
   { id: "churches", label: "Churches", emoji: "⛪" },
-  { id: "about", label: "About", emoji: "💜" },
 ] as const;
 
 type Tab = (typeof TABS)[number]["id"];
+
+// The category nav is two tiers, not one flat wall of equal-weight pills:
+// the four things you actually browse/play lead; Home (a return, not an
+// action) and the two supporting discovery sections (Ministries, Churches
+// point off-site — they aren't playback categories) sit below, lighter.
+const PRIMARY_TAB_IDS: readonly Tab[] = ["music", "videos", "podcasts", "sermons"];
+const SECONDARY_TAB_IDS: readonly Tab[] = ["spin", "ministries", "churches"];
 
 // The whole page content column is one CSS flex column (see the return
 // below) — every top-level section carries an explicit `order` so the
@@ -126,15 +132,6 @@ const BROWSE_ORDER = {
   player: 40,
   cards: 50,
 } as const;
-
-// Pre-filled request email — DJ reviews everything Gospel-first before adding.
-const REQUEST_MAILTO =
-  "mailto:ask@openmirrorllc.com?subject=" +
-  encodeURIComponent("The DJ Cares — request") +
-  "&body=" +
-  encodeURIComponent(
-    "What I'd love on The DJ Cares:\n\nTitle / name:\nArtist or speaker:\nLink (YouTube, Apple Music, or Spotify):\nWhy it encourages:\n",
-  );
 
 export default function TheDJCaresPage({
   digitalDjEnabled = true,
@@ -278,6 +275,12 @@ export default function TheDJCaresPage({
   useEffect(() => {
     const fromHash = () => {
       const h = window.location.hash.replace("#", "");
+      // About is a real route now, not a tab — send old #about/#tab-about
+      // links to the canonical page instead of landing nowhere.
+      if (h === "about" || h === "tab-about") {
+        window.location.replace("/about");
+        return;
+      }
       const alias = h === "playlists" ? "music" : h; // old #playlists → Music section
       if (SECTION_IDS.includes(alias)) {
         setTab("spin");
@@ -1481,29 +1484,58 @@ export default function TheDJCaresPage({
             `order` (see playerOrder) changes where it's painted. */}
         <nav
           aria-label="Category tabs"
-          style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 8, maxWidth: 560, margin: "0 auto 20px", order: tab === "spin" ? HOME_ORDER.nav : BROWSE_ORDER.nav }}
+          style={{ maxWidth: 560, margin: "0 auto 20px", order: tab === "spin" ? HOME_ORDER.nav : BROWSE_ORDER.nav }}
         >
-          {TABS.map((t, idx) => (
-            <button
-              key={t.id}
-              onClick={() => goTab(t.id)}
-              aria-current={tab === t.id ? "page" : undefined}
-              style={{
-                gridColumn: idx < 6 ? "span 2" : "span 3",
-                background: tab === t.id ? accent : card,
-                border: `2px solid ${tab === t.id ? accent : border}`,
-                borderRadius: 14,
-                padding: "12px 6px",
-                fontSize: 13.5,
-                fontWeight: 800,
-                cursor: "pointer",
-                color: tab === t.id ? ink : sub,
-                textAlign: "center",
-              }}
-            >
-              <span aria-hidden>{t.emoji}</span> {t.label}
-            </button>
-          ))}
+          {/* Primary: the four things you actually browse and press play on */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8, marginBottom: 8 }}>
+            {TABS.filter((t) => PRIMARY_TAB_IDS.includes(t.id)).map((t) => (
+              <button
+                key={t.id}
+                onClick={() => goTab(t.id)}
+                aria-current={tab === t.id ? "page" : undefined}
+                style={{
+                  background: tab === t.id ? accent : card,
+                  border: `2px solid ${tab === t.id ? accent : border}`,
+                  borderRadius: 14,
+                  padding: "12px 4px",
+                  minHeight: 44,
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  color: tab === t.id ? ink : sub,
+                  textAlign: "center",
+                }}
+              >
+                <span aria-hidden>{t.emoji}</span> {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Secondary: Home (a return, not an action) plus two supporting
+              discovery sections — lighter chips, not another row of
+              equal-weight action pills. */}
+          <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+            {TABS.filter((t) => SECONDARY_TAB_IDS.includes(t.id)).map((t) => (
+              <button
+                key={t.id}
+                onClick={() => goTab(t.id)}
+                aria-current={tab === t.id ? "page" : undefined}
+                style={{
+                  background: tab === t.id ? accent : "transparent",
+                  border: `1.5px solid ${tab === t.id ? accent : border}`,
+                  borderRadius: 999,
+                  padding: "8px 16px",
+                  minHeight: 44,
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  color: tab === t.id ? ink : sub,
+                }}
+              >
+                <span aria-hidden>{t.emoji}</span> {t.label}
+              </button>
+            ))}
+          </div>
         </nav>
 
         {started && activePlayerNode}
@@ -2246,57 +2278,6 @@ export default function TheDJCaresPage({
           </div>
         )}
 
-        {tab === "about" && (
-          <div style={{ order: BROWSE_ORDER.heading }}>
-            <h2 style={sectionH}>About The DJ Cares</h2>
-            <div style={{ background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "20px 22px", marginBottom: 16 }}>
-              <p style={{ fontSize: 15, color: text, margin: 0, lineHeight: 1.7 }}>
-                The DJ Cares is a curated place for encouraging Christian music and media. Everything here was selected by
-                hand — Gospel first, built to point people toward Jesus — not dumped onto the page by an algorithm. Choose a
-                category, press play, and let The DJ spin something good.
-              </p>
-              <p style={{ fontSize: 14, color: sub, margin: "12px 0 0", lineHeight: 1.7 }}>
-                It&apos;s part of the{" "}
-                <a href="https://openmirrorllc.com" target="_blank" rel="noopener noreferrer" style={{ color: accent, fontWeight: 800, textDecoration: "none" }}>
-                  Open Mirror
-                </a>{" "}
-                family, and shares a heart with{" "}
-                <a href="https://crossheartpray.com" target="_blank" rel="noopener noreferrer" style={{ color: accent, fontWeight: 800, textDecoration: "none" }}>
-                  CrossHeartPray
-                </a>
-                {" "}— no account needed for either.
-              </p>
-            </div>
-
-            <div style={{ background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "20px 22px", marginBottom: 16 }}>
-              <p style={{ fontSize: 13, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: accent, margin: "0 0 8px" }}>
-                💌 Request something
-              </p>
-              <p style={{ fontSize: 14, color: sub, margin: "0 0 14px", lineHeight: 1.65 }}>
-                Have a song, sermon, podcast, or playlist that encourages you? Send it over. Everything is reviewed against
-                Scripture before it's added — Jesus first, Scripture the test.
-              </p>
-              <a href={REQUEST_MAILTO} style={{ ...bigButton, textDecoration: "none", display: "inline-block", padding: "12px 24px", fontSize: 14.5 }}>
-                💌 Send a request
-              </a>
-              <p style={{ fontSize: 12.5, color: sub, margin: "10px 0 0" }}>Opens your email app with a ready-to-fill template to ask@openmirrorllc.com.</p>
-            </div>
-
-            <div style={{ background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "20px 22px" }}>
-              <p style={{ fontSize: 13, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em", color: sub, margin: "0 0 8px" }}>
-                The plain print
-              </p>
-              <p style={{ fontSize: 13, color: sub, margin: 0, lineHeight: 1.7 }}>
-                The DJ Cares doesn&apos;t own the third-party music, videos, sermons, podcasts, ministry names, artwork, or
-                platform players featured here — ownership stays with their creators and publishers. Embedded and linked
-                material comes from official or believed-to-be-authorized sources, and unavailable or changed content may be
-                removed. Including a creator or ministry doesn&apos;t mean agreement with every statement they&apos;ve ever
-                made. Embedded platforms control their own players and any advertising. Church submissions are reviewed by
-                hand, and submission doesn&apos;t guarantee inclusion.
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
       <ShareSheet

@@ -253,14 +253,20 @@ describe("Home and category-tab visual order (locked: CSS `order`, not source po
     }
   });
 
-  it("Ministries, Churches, and About each get a real order value too (BROWSE_ORDER.heading) — none of them default to CSS order:0, which would otherwise jump them above the intro/nav", () => {
+  it("Ministries and Churches each get a real order value too (BROWSE_ORDER.heading) — neither defaults to CSS order:0, which would otherwise jump it above the intro/nav", () => {
     const ministriesIdx = homeClient.indexOf('{tab === "ministries" && (');
     const churchesIdx = homeClient.indexOf('{tab === "churches" && (');
-    const aboutIdx = homeClient.indexOf('{tab === "about" && (');
-    for (const idx of [ministriesIdx, churchesIdx, aboutIdx]) {
+    for (const idx of [ministriesIdx, churchesIdx]) {
       expect(idx).toBeGreaterThan(-1);
       expect(homeClient.slice(idx, idx + 120)).toContain("order: BROWSE_ORDER.heading");
     }
+  });
+
+  it("REGRESSION (2026-08-26): About is a real route (/about), not an in-page tab — no competing 'about' tab exists in HomeClient, and old #about/#tab-about links redirect to the canonical page", () => {
+    expect(homeClient).not.toContain('{tab === "about" && (');
+    expect(homeClient).not.toContain('{ id: "about"');
+    expect(homeClient).toContain('if (h === "about" || h === "tab-about")');
+    expect(homeClient).toContain('window.location.replace("/about")');
   });
 });
 
