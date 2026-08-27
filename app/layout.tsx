@@ -42,7 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             // is ever navigable two different ways at once.
             { emoji: "🏠", name: "Home", href: "/" },
             { emoji: "🎛️", name: "Digital DJ", href: "/digital-dj" },
-            { emoji: "ℹ️", name: "About TheDJCares", href: "/#about" },
+            { emoji: "ℹ️", name: "About TheDJCares", href: "/about" },
           ]}
         />
         {children}

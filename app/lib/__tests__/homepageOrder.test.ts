@@ -827,7 +827,7 @@ describe("primary ☰ menu doesn't duplicate the on-page category tabs (owner, 2
   const anchors: Record<string, string> = {
     Home: "/",
     "Digital DJ": "/digital-dj",
-    "About TheDJCares": "/#about",
+    "About TheDJCares": "/about",
   };
 
   for (const [name, href] of Object.entries(anchors)) {

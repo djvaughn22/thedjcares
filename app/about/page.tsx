@@ -8,61 +8,62 @@ export const metadata: Metadata = {
 
 const A = "#A78BFA";
 
+// Same rounded-card, compact-hero shell every other destination on the site
+// uses (see HomeClient's card/border tokens) — kept as CSS custom
+// properties (not JS state) so this stays a plain server component while
+// still following the site's light/dark toggle via [data-om-theme].
+const THEME_CSS = `
+.djc-about{--bg:#0b1220;--text:#e8edf5;--sub:#94a3b8;--card:#141d2e;--border:#26324c}
+html[data-om-theme="light"] .djc-about{--bg:#eef2f7;--text:#0f172a;--sub:#475569;--card:#ffffff;--border:#dbe2ea}
+.djc-about a{color:${A}}
+.djc-about-card{background:var(--card);border:2px solid var(--border);border-radius:18px;padding:20px 22px;margin-bottom:16px}
+`;
+
 export default function AboutPage() {
   return (
-    <main style={{ minHeight: "100vh", color: "#e8edf5", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <main className="djc-about" style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+      <style>{THEME_CSS}</style>
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "40px 20px 80px" }}>
+        <p style={{ fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: A, margin: "0 0 10px" }}>
+          <span aria-hidden>💜</span> About
+        </p>
         <h1 style={{ fontSize: 26, fontWeight: 900, margin: "0 0 12px" }}>
-          About TheDJCares<span style={{ color: A }}>.com</span>
+          TheDJCares<span style={{ color: A }}>.com</span>
         </h1>
-        <p style={{ fontSize: 15, lineHeight: 1.65, color: "#94a3b8", margin: "0 0 28px" }}>
-          TheDJCares is a digital DJ for Christian media. Choose a category,
-          press play, and let it spin something good — hand-picked music, music
-          videos, playlists, podcasts, and sermons. Gospel first, no algorithm.
+        <p style={{ fontSize: 15, lineHeight: 1.65, color: "var(--sub)", margin: "0 0 24px" }}>
+          A digital DJ for Christian media. Choose a category, press play, and let it spin something good —
+          hand-picked music, music videos, playlists, podcasts, and sermons. Gospel first, no algorithm.
         </p>
 
-        <h2 style={{ fontSize: 17, fontWeight: 900, margin: "0 0 8px" }}>What you can do here</h2>
-        <ul style={{ fontSize: 15, lineHeight: 1.8, color: "#94a3b8", margin: "0 0 28px", paddingLeft: 18 }}>
-          <li>Press play on hand-picked Christian music, videos, and playlists.</li>
-          <li>Listen to podcasts and sermons chosen Gospel-first.</li>
-          <li>Request something you&rsquo;d love to see added — everything is reviewed before it goes up.</li>
-        </ul>
+        <div className="djc-about-card">
+          <h2 style={{ fontSize: 15, fontWeight: 900, margin: "0 0 10px" }}>What you can do here</h2>
+          <ul style={{ fontSize: 14.5, lineHeight: 1.8, color: "var(--sub)", margin: 0, paddingLeft: 18 }}>
+            <li>Press play on hand-picked Christian music, videos, and playlists.</li>
+            <li>Listen to podcasts and sermons chosen Gospel-first.</li>
+            <li>Request something you&rsquo;d love to see added — everything is reviewed before it goes up.</li>
+          </ul>
+        </div>
 
-        <p style={{ fontSize: 13, lineHeight: 1.7, color: "#71717a", margin: 0 }}>
-          TheDJCares is an{" "}
-          <a href="https://openmirrorllc.com" style={{ color: A, textDecoration: "none" }}>
-            Open Mirror LLC
-          </a>{" "}
-          project.
+        <p style={{ fontSize: 13, lineHeight: 1.7, color: "var(--sub)", margin: "0 0 8px" }}>
+          TheDJCares is an <a href="https://openmirrorllc.com">Open Mirror LLC</a> project.
         </p>
 
         {/* The footer's Contact and Disclaimer links land on these two
             sections (family standard, 2026-08-02). */}
-        <section id="contact" style={{ marginTop: 28, scrollMarginTop: 96 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 900, margin: "0 0 8px" }}>Contact</h2>
-          <p style={{ fontSize: 15, lineHeight: 1.65, color: "#94a3b8", margin: 0 }}>
+        <section id="contact" className="djc-about-card" style={{ marginTop: 20, scrollMarginTop: 96 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 900, margin: "0 0 8px" }}>Contact</h2>
+          <p style={{ fontSize: 14.5, lineHeight: 1.65, color: "var(--sub)", margin: 0 }}>
             Have a question or an idea? Email{" "}
-            <a
-              href="mailto:ask@openmirrorllc.com?subject=Open%20Mirror%20Inquiry"
-              style={{ color: A }}
-            >
-              ask@openmirrorllc.com
-            </a>
-            .
+            <a href="mailto:ask@openmirrorllc.com?subject=Open%20Mirror%20Inquiry">ask@openmirrorllc.com</a>.
           </p>
         </section>
 
-        <section id="disclaimer" style={{ marginTop: 28, scrollMarginTop: 96 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 900, margin: "0 0 8px" }}>Disclaimer</h2>
-          <p style={{ fontSize: 15, lineHeight: 1.65, color: "#94a3b8", margin: 0 }}>
-            Open Mirror LLC is independently owned and operated. Nothing
-            published by Open Mirror LLC is sponsored by, affiliated with,
-            endorsed by, or representative of the owner&rsquo;s full-time
-            employer. Read the{" "}
-            <a href="https://openmirrorllc.com/disclaimer" style={{ color: A }}>
-              full Open Mirror disclaimer
-            </a>
-            .
+        <section id="disclaimer" className="djc-about-card" style={{ scrollMarginTop: 96, marginBottom: 0 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 900, margin: "0 0 8px" }}>Disclaimer</h2>
+          <p style={{ fontSize: 14.5, lineHeight: 1.65, color: "var(--sub)", margin: 0 }}>
+            Open Mirror LLC is independently owned and operated. Nothing published by Open Mirror LLC is sponsored
+            by, affiliated with, endorsed by, or representative of the owner&rsquo;s full-time employer. Read the{" "}
+            <a href="https://openmirrorllc.com/disclaimer">full Open Mirror disclaimer</a>.
           </p>
         </section>
       </div>
