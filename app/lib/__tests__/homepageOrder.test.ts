@@ -47,8 +47,8 @@ describe("homepage section presence (locked: every section exists; VISUAL order 
     expect(homeClient).toMatch(/startItem\(heroVideo\)/);
   });
 
-  it("the hero always renders regardless of playback state — Shuffle/other picks never make the record disappear", () => {
-    expect(homeClient).toMatch(/tab === "spin" && heroDisplayItem && \(/);
+  it("REGRESSION (2026-08-26, supersedes the prior video-only hero): the idle cue is idle-only — it stops rendering the instant ANYTHING anywhere is started, handing off to the live hero (activePlayerNode, same HOME_ORDER.hero position) which represents whatever `current` actually is, not just a music video", () => {
+    expect(homeClient).toMatch(/tab === "spin" && !started && heroVideo && \(/);
   });
 
   it("Shuffle swaps the hero's cued pick via the shared pickNext helper, without starting playback", () => {
@@ -59,11 +59,11 @@ describe("homepage section presence (locked: every section exists; VISUAL order 
     expect(fn).not.toMatch(/startItem\(/);
   });
 
-  it("the hero is a pure cue/discovery widget — it never embeds its own video, so there's exactly one place any video actually mounts (the persistent player), not a second copy that would need to survive a tab-to-tab move", () => {
+  it("REGRESSION (2026-08-26): the idle cue is a pure discovery widget — it never embeds its own video, so there's exactly one place any video actually mounts (the persistent player). The Home hero (owner direction) now DOES have a real Record/Media view switch (heroView) once something is live — that's a deliberate, explicit supersession of the prior 'no record⇄player swap' rule, not a regression: it still never creates a second DJPlayer/SyncedAudio/iframe, only shows/hides the one existing instance", () => {
     expect(homeClient).toContain("videoPanelNode");
-    expect(homeClient).not.toContain("heroView"); // retired — no more record⇄player swap inside the hero
-    expect(homeClient).not.toContain('setHeroView("player")');
-    expect(homeClient).not.toContain('setHeroView("record")');
+    expect(homeClient).toContain('const [heroView, setHeroView] = useState<"record" | "media">("record")');
+    expect(homeClient).toContain('setHeroView("record")');
+    expect(homeClient).toContain('setHeroView("media")');
     // exactly one <DJPlayer ...> element in the whole file — Daily
     // Encouragement no longer mounts a second, fully-local instance (see
     // the "Home cards are selectors, not players" describe block below);
@@ -71,11 +71,11 @@ describe("homepage section presence (locked: every section exists; VISUAL order 
     expect(homeClient.match(/<DJPlayer[\s>]/g)?.length).toBe(1);
   });
 
-  it("REGRESSION: isHeroCurrent covers ANY currently-playing music video (not just the exact cued heroVideo pick) — a Music Videos preview card, a mood mix, or a vibe spin all merge into the SAME video deck instead of opening a second Now Spinning video player", () => {
+  it("REGRESSION: isHeroCurrent still covers ANY currently-playing music video (not just the exact cued heroVideo pick) — used by originIcon/originLabel to distinguish a Music Video from other origins. heroDisplayItem (a video-only concept) is retired: the live hero now shows `current` directly, whatever type it is (2026-08-26 owner direction)", () => {
     expect(homeClient).toContain(
       "const isHeroCurrent = Boolean(current && current.type === \"music\" && current.videoId);",
     );
-    expect(homeClient).toContain("const heroDisplayItem = isHeroCurrent && current ? current : heroVideo;");
+    expect(homeClient).not.toContain("heroDisplayItem");
     expect(homeClient).not.toContain("isDailyCurrent"); // removed entirely — no longer meaningful
     expect(homeClient).toContain("const [dailyPick, setDailyPick] = useState<MediaItem | null>(initialDailyPick)");
   });
@@ -149,9 +149,10 @@ describe("homepage section presence (locked: every section exists; VISUAL order 
     expect(homeClient).toContain("setMainRepeat");
   });
 
-  it("REGRESSION (superseded): the hero no longer has its own Play/Pause/Share for the playing item — the persistent player's transportPanel is the only transport control, so there's nothing left for a hero copy to duplicate", () => {
+  it("REGRESSION (superseded): the hero no longer has its own Play/Pause/Share for the playing item — the persistent player's transportPanel is the only transport control, so there's nothing left for a hero copy to duplicate. transportPanel's own Play/Pause now covers native audio too (2026-08-26 fix — it previously had no way to pause a playing podcast/sermon at all)", () => {
     expect(homeClient).not.toMatch(/isHeroCurrent \? null : current\?\.videoId/);
-    expect(homeClient).toContain("current?.videoId && started && !blocked ? (");
+    expect(homeClient).toContain("showVideo && !blocked ? (");
+    expect(homeClient).toContain("showAudio ? (");
     expect(homeClient).toContain("{current && share(mediaShareTarget(current), \"deck\")}");
   });
 });
@@ -220,14 +221,11 @@ describe("Home and category-tab visual order (locked: CSS `order`, not source po
     expect(homeClient).toContain("order: HOME_ORDER.rest");
   });
 
-  it("REGRESSION: the persistent player's own `order` is computed from what's actually playing — HOME_ORDER.hero/daily/music on Home (so it visually sits at whichever widget owns the current item, never as a separate block above everything), and a single BROWSE_ORDER.player slot (between heading and cards) on every browsing tab", () => {
+  it("REGRESSION (2026-08-26, supersedes the prior type-routed placement): the persistent player's own `order` is ALWAYS HOME_ORDER.hero on Home, whatever `current` actually is — the owner's 'Home hero is the visual home of active playback' direction retires the old rule that sent sermons/podcasts to HOME_ORDER.daily and playlists to HOME_ORDER.music. Daily Encouragement and the Music widget still occupy their own HOME_ORDER.daily/.music slots as plain selector cards (dailyIsCurrent/musicIsCurrent below) — they just don't receive the actual player anymore, only the hero does", () => {
     const start = homeClient.indexOf("const playerOrder =");
-    const end = homeClient.indexOf(";", homeClient.indexOf("BROWSE_ORDER.player", start));
-    const src = homeClient.slice(start, end);
-    expect(src).toContain("HOME_ORDER.hero");
-    expect(src).toContain("HOME_ORDER.daily");
-    expect(src).toContain("HOME_ORDER.music");
-    expect(src).toContain("BROWSE_ORDER.player");
+    const end = homeClient.indexOf(";", start);
+    const src = homeClient.slice(start, end + 1);
+    expect(src).toBe('const playerOrder = tab === "spin" ? HOME_ORDER.hero : BROWSE_ORDER.player;');
   });
 
   it("REGRESSION: `order` is a pure CSS paint-order property applied to playerOuterStyle (the persistent player's one stable wrapper) — it's never used to conditionally include/exclude the player from the tree, so this reordering can't reparent or remount DJPlayer/SyncedAudio/the embed iframe", () => {
@@ -668,12 +666,13 @@ describe("Playback collapses to a compact mini-player off the natural tab — ne
     expect(nearbyExpand).not.toMatch(/setCurrent\(|setStarted\(|setPlaying\(/);
   });
 
-  it("the mini-player shows a thumbnail/icon, title, real Play/Pause and Mute for controllable media (video/audio), an honest provider label instead of fake controls for embeds, and an Expand button — all with 44px touch targets", () => {
+  it("the mini-player shows a thumbnail/icon, title, real Play/Pause for controllable media (video/audio), an honest provider label instead of fake controls for embeds, and an Expand button — all with 44px touch targets. Volume is a compact button showing the live percentage (2026-08-26: narrow screens don't have room for the full slider inline, so this expands it below instead of removing volume control on mobile) rather than a bare Mute icon", () => {
     const start = homeClient.indexOf("const activePlayerNode = (");
     const end = homeClient.indexOf("\n  );", start);
     const section = homeClient.slice(start, end);
-    expect(section).toContain('aria-label={(showVideo ? playerState === "playing" : audioPlayingState) ? "Pause" : "Play"}');
-    expect(section).toContain('aria-label={prefs.muted ? "Unmute" : "Mute"}');
+    expect(section).toContain('aria-label={trulyPlaying ? "Pause" : "Play"}');
+    expect(section).toContain('onClick={() => setMiniVolumeOpen((v) => !v)}');
+    expect(section).toContain('aria-label="Volume"');
     expect(section).toContain('aria-label="Expand player"');
     expect(section).toMatch(/via \{current\?\.spotifyEmbed \? "Spotify" : "Apple Music"\}/);
     expect(section.match(/minWidth: 44, minHeight: 44/g)?.length).toBeGreaterThanOrEqual(3);
@@ -696,12 +695,13 @@ describe("Playback collapses to a compact mini-player off the natural tab — ne
     expect(homeClient.match(/<iframe/g)?.length).toBe(1);
   });
 
-  it("REGRESSION: volume and mute still survive every transition, including collapsing to and expanding from the mini-player — the mini-player's own Mute button reuses the exact same toggleMute/prefs the full player uses, not a separate state", () => {
+  it("REGRESSION (2026-08-26): volume and mute still survive every transition, including collapsing to and expanding from the mini-player — its compact volume button expands the exact same shared VolumeControl (which wires the same toggleMute/prefs the full player uses) instead of a separate bare Mute button/state", () => {
     const start = homeClient.indexOf("const activePlayerNode = (");
     const end = homeClient.indexOf("\n  );", start);
     const section = homeClient.slice(start, end);
-    expect(section).toContain("onClick={toggleMute}");
+    expect(section).toContain('volumeControl("djc-mini-volume")');
     expect(section).toContain("prefs.muted");
+    expect(homeClient).toContain("onMuteToggle={toggleMute}");
   });
 
   it("Daily Encouragement and the Music widget selectors still route through startItem, unaffected by the mini-player rework", () => {
@@ -755,11 +755,12 @@ describe("shared VolumeControl: a real slider + Mute/Unmute button near playback
     expect(moodQueue).toMatch(/clamped <= 0 \? \{ volume: 0, muted: true \} : \{ volume: clamped, muted: false \}/);
   });
 
-  it("REGRESSION (superseded): HomeClient renders exactly one VolumeControl instance — inside the one persistent player's transportPanel — since Daily Encouragement and the Music widget no longer have anything of their own to control", () => {
+  it("REGRESSION (2026-08-26): HomeClient renders the shared VolumeControl through exactly two call sites, both routed through the same volumeControl() helper (same shared prefs, same volumeFromSlider/toggleMute) — the always-visible transport row, and the mini-player's own compact-button-expands-the-real-slider row for narrow mobile screens. Neither is a second independent volume implementation", () => {
     expect(homeClient).toContain('const setVolumeFromSlider = (value: number) => updatePrefs(volumeFromSlider(value));');
     expect(homeClient).toContain('const toggleMute = () => updatePrefs(volumeFromMuteToggle(prefs, lastNonZeroVolumeRef.current));');
-    expect(homeClient.match(/volumeControl\(/g)?.length).toBe(1);
+    expect(homeClient.match(/volumeControl\(/g)?.length).toBe(2);
     expect(homeClient).toContain('volumeControl("djc-transport-volume")');
+    expect(homeClient).toContain('volumeControl("djc-mini-volume")');
   });
 });
 
@@ -787,8 +788,8 @@ describe("SyncedAudio: native <audio> initializes at the shared volume and stays
 });
 
 describe("Spotify/Apple embeds: real controls preserved, no fake site-level control that can't affect playback", () => {
-  it("REGRESSION (superseded): the one provider-embed <iframe> in the whole file (inside podcastPanelNode — now covering the Music widget's playlists and Daily Encouragement's embed fallback too) is followed by the same honest note instead of a non-functional slider", () => {
-    expect(homeClient).toContain("🔊 Volume is controlled inside this player.");
+  it("REGRESSION (superseded): the one provider-embed <iframe> in the whole file (inside podcastPanelNode — now covering the Music widget's playlists and Daily Encouragement's embed fallback too) is followed by the same honest note instead of a non-functional slider — now also naming the device volume buttons explicitly (2026-08-26, so the guidance reads correctly on mobile too, without a media query)", () => {
+    expect(homeClient).toContain("🔊 Volume is controlled inside this player — or with your device&apos;s volume buttons.");
     // one shared embedVolumeNote node (its definition), referenced at the
     // one embed site — never a fake volume control standing in for it,
     // and never duplicated per card now that Daily Encouragement and the

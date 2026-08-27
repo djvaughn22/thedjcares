@@ -202,6 +202,11 @@ export default function TheDJCaresPage({
   // whenever the listener returns to a tab where the full player already
   // shows inline.
   const [playerExpanded, setPlayerExpanded] = useState(false);
+  // Whether the mini-player's compact volume button has expanded the real
+  // shared slider into its own row below the bar — narrow-screen substitute
+  // for the full-size player's always-visible VolumeControl, not a
+  // replacement for it.
+  const [miniVolumeOpen, setMiniVolumeOpen] = useState(false);
   const onEndedInProgressRef = useRef(false); // Prevent re-entrance
   // Which item the (single, page-level) share sheet is open for.
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null);
@@ -222,7 +227,7 @@ export default function TheDJCaresPage({
   const [dailyPick, setDailyPick] = useState<MediaItem | null>(initialDailyPick);
   // The Music deck's own featured/cued pick — which of the DJ's Apple Music
   // playlists is shown on the Home widget. Independent of `current` until
-  // the widget's own Play button is pressed (same heroVideo/heroDisplayItem
+  // the widget's own Play button is pressed (same heroVideo/shuffleHeroVideo
   // pattern the hero uses) — Choose a mix / Another mix just re-cue this,
   // they never touch playback.
   const [tuneSpinOpen, setTuneSpinOpen] = useState(false);
@@ -790,7 +795,7 @@ export default function TheDJCaresPage({
   // the listener where the real one lives.
   const embedVolumeNote = (
     <p role="note" style={{ textAlign: "center", fontSize: 12, fontWeight: 700, color: sub, margin: "10px 0 0" }}>
-      🔊 Volume is controlled inside this player.
+      🔊 Volume is controlled inside this player — or with your device&apos;s volume buttons.
     </p>
   );
 
@@ -1002,14 +1007,35 @@ export default function TheDJCaresPage({
   // whichever video is actually current instead of only ever showing its
   // own originally-cued pick. False for anything that isn't a video.
   const isHeroCurrent = Boolean(current && current.type === "music" && current.videoId);
-  // What the hero actually displays: the live video once one is playing,
-  // otherwise the cued (Shuffle-changeable) pick.
-  const heroDisplayItem = isHeroCurrent && current ? current : heroVideo;
   // Whether Daily Encouragement's own cued pick is what's actually playing
   // in the one persistent player right now — same isHeroCurrent pattern,
   // just keyed on id instead of type, since dailyPick spans every media
   // type (video, audio, embed).
   const dailyIsCurrent = Boolean(started && current && dailyPick && current.id === dailyPick.id);
+
+  // Home hero view: "record" (the spinning-disc presentation) or "media"
+  // (the real video/native-audio/provider element, full size). A fresh
+  // selection picks its own default — Apple/Spotify need the listener to
+  // tap inside the real embed to start it at all (no JS control over a
+  // cross-origin iframe), so those default straight to the provider view;
+  // video and native audio default to the record, since both are actually
+  // controllable from here.
+  const [heroView, setHeroView] = useState<"record" | "media">("record");
+  useEffect(() => {
+    if (current) setHeroView(showEmbed ? "media" : "record");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current?.id]);
+  // Whether the Home hero's record should actually spin — only when the
+  // application can truthfully verify playback (real YouTube state, real
+  // native-audio events). A Spotify/Apple embed's play state isn't
+  // observable across origins, so it's never assumed to be playing.
+  const trulyPlaying = showVideo ? playerState === "playing" : showAudio ? audioPlayingState : false;
+  // True only on Home, only once something is actually current, and only
+  // while the record (not the real media) is the selected hero view — the
+  // one flag that decides whether the video/audio/embed element gets
+  // visually hidden (never unmounted — see videoPanelNode/podcastPanelNode
+  // below) in favor of the decorative record.
+  const heroRecordActive = tab === "spin" && Boolean(current) && heroView === "record";
 
   // Which category tabs are the "natural home" for whatever `current` is.
   // Home ("spin") always qualifies — it hosts the hero/Daily/Music widgets
@@ -1070,7 +1096,7 @@ export default function TheDJCaresPage({
           muted={prefs.muted}
           onPreferenceChange={updatePrefs}
           style={
-            isMiniSlot
+            isMiniSlot || heroRecordActive
               ? { position: "absolute", width: 1, height: 1, overflow: "hidden", opacity: 0, pointerEvents: "none" }
               : { width: "100%" }
           }
@@ -1088,10 +1114,12 @@ export default function TheDJCaresPage({
             style={
               isMiniSlot
                 ? { width: 52, height: 52, border: 0, borderRadius: 10, overflow: "hidden", background: "transparent" }
-                : { width: "100%", height: current!.spotifyEmbed ? 352 : 450, border: 0, borderRadius: 14, overflow: "hidden", background: "transparent" }
+                : heroRecordActive
+                  ? { position: "absolute", width: 1, height: 1, overflow: "hidden", opacity: 0, pointerEvents: "none" }
+                  : { width: "100%", height: current!.spotifyEmbed ? 352 : 450, border: 0, borderRadius: 14, overflow: "hidden", background: "transparent" }
             }
           />
-          {!isMiniSlot && embedVolumeNote}
+          {!isMiniSlot && !heroRecordActive && embedVolumeNote}
         </>
       )}
     </div>
@@ -1108,11 +1136,13 @@ export default function TheDJCaresPage({
   // own mount.
   const videoPanelNode = showVideo && !blocked && (
     <div
-      className={isMiniSlot ? undefined : "djc-daily-video-enter"}
+      className={isMiniSlot || heroRecordActive ? undefined : "djc-daily-video-enter"}
       style={
         isMiniSlot
           ? { position: "relative", width: 52, height: 52, flexShrink: 0, background: "#000", borderRadius: 10, overflow: "hidden" }
-          : { position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }
+          : heroRecordActive
+            ? { position: "absolute", width: 1, height: 1, overflow: "hidden", opacity: 0, pointerEvents: "none" }
+            : { position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }
       }
     >
       {(() => {
@@ -1187,9 +1217,13 @@ export default function TheDJCaresPage({
         <button onClick={prev} disabled={posRef.current <= 0} aria-label="Previous" style={{ ...quietButton, opacity: posRef.current <= 0 ? 0.45 : 1, cursor: posRef.current <= 0 ? "default" : "pointer" }}>
           ⏮
         </button>
-        {current?.videoId && started && !blocked ? (
+        {showVideo && !blocked ? (
           <button onClick={() => setPlaying(playerState !== "playing")} aria-label={playerState === "playing" ? "Pause" : "Play"} style={quietButton}>
             {playerState === "playing" ? "⏸ Pause" : "▶ Play"}
+          </button>
+        ) : showAudio ? (
+          <button onClick={toggleAudioPlayback} aria-label={audioPlayingState ? "Pause" : "Play"} style={quietButton}>
+            {audioPlayingState ? "⏸ Pause" : "▶ Play"}
           </button>
         ) : !started && current ? (
           <button onClick={() => startItem(current)} style={bigButton}>▶ Play</button>
@@ -1255,22 +1289,20 @@ export default function TheDJCaresPage({
   // carries an explicit `order` — this is what lets the ONE stable-position
   // player (still rendered from this single JSX call site, still never
   // reparented) visually land wherever it belongs for the current tab
-  // instead of always leading. On Home that's right at whichever widget
-  // (hero/Daily/Music) actually owns what's playing; on a browsing tab
-  // that's between its heading/filters and its own card grid. `order` is a
-  // pure paint-order property — it never moves the underlying DOM node, so
-  // this changes nothing about how DJPlayer/SyncedAudio/the embed iframe
-  // stays mounted (see HOME_ORDER below for the full scheme).
-  const playerOrder =
-    tab === "spin"
-      ? isHeroCurrent
-        ? HOME_ORDER.hero
-        : current?.type === "sermon" || current?.type === "podcast"
-          ? HOME_ORDER.daily
-          : current?.type === "playlist"
-            ? HOME_ORDER.music
-            : HOME_ORDER.hero
-      : BROWSE_ORDER.player;
+  // instead of always leading. `order` is a pure paint-order property — it
+  // never moves the underlying DOM node, so this changes nothing about how
+  // DJPlayer/SyncedAudio/the embed iframe stays mounted (see HOME_ORDER
+  // below for the full scheme).
+  //
+  // On Home, the player is ALWAYS the dynamic hero at HOME_ORDER.hero,
+  // whatever `current` actually is (2026-08-26 owner direction — this
+  // supersedes the earlier rule that only routed music videos there and
+  // sent sermons/podcasts/playlists to sit at the Daily Encouragement/Music
+  // widget's own position instead). Daily Encouragement and the Music
+  // widget stay exactly where they were; they just go back to being plain
+  // selector cards the instant something else becomes current, same as
+  // they already do via dailyIsCurrent/musicIsCurrent below.
+  const playerOrder = tab === "spin" ? HOME_ORDER.hero : BROWSE_ORDER.player;
   const playerOuterStyle: React.CSSProperties =
     playerDisplayMode === "mini"
       ? { position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 45 }
@@ -1311,7 +1343,7 @@ export default function TheDJCaresPage({
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
             <p style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", color: accent, margin: 0 }}>
               <span aria-hidden>{originIcon}</span> {originLabel}
-              {playerState === "playing" && (
+              {trulyPlaying && (
                 <span className="djc-eq" aria-hidden><span /><span /><span /><span /></span>
               )}
             </p>
@@ -1319,8 +1351,72 @@ export default function TheDJCaresPage({
           </div>
         )}
 
+        {/* Home hero: a clear two-choice switch between the decorative
+            record and the real media (Video/Audio/Apple Music/Spotify,
+            whichever actually applies) — changes presentation only, never
+            touches current/started/playing, so the same DJPlayer/
+            SyncedAudio/iframe underneath just gets shown or visually
+            hidden (see heroRecordActive above), never remounted. */}
+        {tab === "spin" && current && (showVideo || showAudio || showEmbed) && (
+          <div role="group" aria-label="Hero view" style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 14 }}>
+            <button type="button" aria-pressed={heroView === "record"} onClick={() => setHeroView("record")} style={pill(heroView === "record")}>
+              📀 Record
+            </button>
+            <button type="button" aria-pressed={heroView === "media"} onClick={() => setHeroView("media")} style={pill(heroView === "media")}>
+              {showVideo ? "🎬 Video" : showAudio ? "🎧 Audio" : current?.spotifyEmbed ? "🟢 Spotify" : "🎵 Apple Music"}
+            </button>
+          </div>
+        )}
+
         <div style={playerDisplayMode === "mini" ? { display: "flex", alignItems: "center", gap: 12 } : undefined}>
           <div style={playerDisplayMode === "mini" ? { flexShrink: 0 } : undefined}>
+            {heroRecordActive && (
+              <div className="djc-turntable-wrap engaged" style={{ width: "min(300px, 66vw)", margin: "0 auto 16px", position: "relative" }}>
+                <div className="djc-turntable">
+                  <span className="djc-platter" aria-hidden />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (showVideo) setPlaying(playerState !== "playing");
+                      else if (showAudio) toggleAudioPlayback();
+                      else setHeroView("media"); // an embed's own player is the only thing that can actually play it
+                    }}
+                    aria-label={
+                      showVideo || showAudio
+                        ? (trulyPlaying ? "Pause" : "Play")
+                        : `Open ${current?.spotifyEmbed ? "Spotify" : "Apple Music"} player`
+                    }
+                    className={`djc-vinyl${trulyPlaying ? " spinning" : ""} engaged`}
+                    style={{ WebkitAppearance: "none", appearance: "none", border: 0, padding: 0, margin: 0, font: "inherit", color: "inherit" }}
+                  >
+                    <span className="djc-vinyl-sheen" aria-hidden />
+                    <span className="djc-vinyl-label">
+                      {current && artworkUrl(current) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={artworkUrl(current)!} alt="" />
+                      ) : (
+                        <span className="djc-vinyl-label-fallback" aria-hidden>🎧</span>
+                      )}
+                    </span>
+                    <span className="djc-vinyl-spindle" aria-hidden />
+                  </button>
+                  <span className="djc-tonearm lowered" aria-hidden>
+                    <span className="djc-tonearm-counterweight" />
+                    <span className="djc-tonearm-pivot" />
+                    <span className="djc-tonearm-shaft" />
+                    <span className="djc-tonearm-head" />
+                  </span>
+                  <span className="djc-power-light on" aria-hidden />
+                </div>
+                {showEmbed && (
+                  <div style={{ textAlign: "center", marginTop: 10 }}>
+                    <button onClick={() => setHeroView("media")} style={quietButton}>
+                      Open {current?.spotifyEmbed ? "Spotify" : "Apple Music"} player →
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             {videoPanelNode}
             {podcastPanelNode}
           </div>
@@ -1348,17 +1444,25 @@ export default function TheDJCaresPage({
                   <>
                     <button
                       onClick={showVideo ? () => setPlaying(playerState !== "playing") : toggleAudioPlayback}
-                      aria-label={(showVideo ? playerState === "playing" : audioPlayingState) ? "Pause" : "Play"}
+                      aria-label={trulyPlaying ? "Pause" : "Play"}
                       style={{ minWidth: 44, minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", fontSize: 22, cursor: "pointer", color: text }}
                     >
-                      {(showVideo ? playerState === "playing" : audioPlayingState) ? "⏸" : "▶"}
+                      {trulyPlaying ? "⏸" : "▶"}
                     </button>
+                    {/* Compact volume button — narrow mobile screens don't
+                        have room for the full slider inline in the mini
+                        bar, so this expands the exact same shared
+                        VolumeControl (44px targets, real percentage,
+                        Mute/Unmute) into its own row below instead of
+                        removing volume control on small screens. */}
                     <button
-                      onClick={toggleMute}
-                      aria-label={prefs.muted ? "Unmute" : "Mute"}
-                      style={{ minWidth: 44, minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", fontSize: 18, cursor: "pointer", color: text }}
+                      onClick={() => setMiniVolumeOpen((v) => !v)}
+                      aria-expanded={miniVolumeOpen}
+                      aria-label="Volume"
+                      style={{ minWidth: 44, minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 2, background: "none", border: "none", fontSize: 14, fontWeight: 800, cursor: "pointer", color: text }}
                     >
-                      {prefs.muted ? "🔇" : "🔊"}
+                      <span aria-hidden style={{ fontSize: 18 }}>{prefs.muted ? "🔇" : "🔊"}</span>
+                      {prefs.muted ? 0 : prefs.volume}%
                     </button>
                   </>
                 )}
@@ -1386,6 +1490,10 @@ export default function TheDJCaresPage({
             </>
           )}
         </div>
+
+        {playerDisplayMode === "mini" && miniVolumeOpen && !showEmbed && (
+          <div style={{ marginTop: 10 }}>{volumeControl("djc-mini-volume")}</div>
+        )}
       </div>
     </div>
   );
@@ -1409,15 +1517,6 @@ export default function TheDJCaresPage({
   // Whether the Music widget's featured playlist is what's actually
   // current — same dailyIsCurrent pattern (see above).
   const musicIsCurrent = Boolean(started && current && heroPlaylist && current.id === heroPlaylist.id);
-  // Video of the Day is always a real music video (see videoOfTheDay.ts's
-  // eligibility filter: type "music" + a real videoId), so — unlike Daily
-  // Encouragement — it never needs a branded-fallback label or an
-  // open-the-source escape hatch. It always has real artwork and always
-  // plays inline. isHeroStarted/isHeroPlaying are false whenever something
-  // else entirely is playing, so the hero shows its own idle record instead
-  // of borrowing another item's playback state.
-  const isHeroStarted = isHeroCurrent && started;
-  const isHeroPlaying = isHeroCurrent && playerState === "playing";
 
   // Once the listener is back on a tab where the full player already shows
   // inline, an expanded mini-player sheet has nothing left to add — collapse
@@ -1425,6 +1524,12 @@ export default function TheDJCaresPage({
   useEffect(() => {
     if (isNaturalTab) setPlayerExpanded(false);
   }, [isNaturalTab]);
+
+  // Same idea for the mini-player's own expanded volume row — nothing to
+  // show once the mini bar itself is gone.
+  useEffect(() => {
+    if (playerDisplayMode !== "mini") setMiniVolumeOpen(false);
+  }, [playerDisplayMode]);
 
   // Mirror the real <audio> element's own play/pause state (native controls
   // are hidden in the mini-player, replaced by our own button) — reattaches
@@ -1545,7 +1650,15 @@ export default function TheDJCaresPage({
             playback through the same authoritative startItem pipeline
             every other pick on the page uses, so the persistent player
             above shows it, on every tab, without a second copy anywhere. */}
-        {tab === "spin" && heroDisplayItem && (
+        {/* Idle-only: nothing has been selected yet anywhere on the site,
+            so the hero defaults to today's Video of the Day — a pure
+            discovery/cue widget, never its own embedded video, and never
+            autoplaying. The instant anything anywhere is started, this
+            block stops rendering (gated on !started) and activePlayerNode's
+            own hero presentation (below, same HOME_ORDER.hero position)
+            takes over showing whatever is actually current — see
+            heroRecordActive and the record view above. */}
+        {tab === "spin" && !started && heroVideo && (
           <section
             id="video-of-the-day"
             aria-label="Video of the Day"
@@ -1555,36 +1668,21 @@ export default function TheDJCaresPage({
               <span aria-hidden>📀</span> Music Video of the Day
             </p>
 
-            {/* Purely a discovery/cue widget now — a decorative record, never
-                its own embedded video. The one persistent player (above
-                every tab, including this one) is the only place any video
-                actually plays, so it survives navigating to Music, Videos,
-                Sermons, or Podcasts instead of being torn down with this
-                tab==="spin"-only section. */}
-            <div className={`djc-turntable-wrap${isHeroStarted ? " engaged" : ""}`} style={{ width: "min(460px, 88vw)", margin: "0 auto 18px", position: "relative" }}>
+            <div className="djc-turntable-wrap" style={{ width: "min(460px, 88vw)", margin: "0 auto 18px", position: "relative" }}>
               <div className="djc-turntable">
                 <span className="djc-platter" aria-hidden />
                 <button
                   type="button"
-                  onClick={() => {
-                    if (isHeroStarted) setPlaying(playerState !== "playing");
-                    else startItem(heroVideo);
-                  }}
-                  aria-label={
-                    isHeroStarted
-                      ? playerState === "playing"
-                        ? "Pause the video of the day"
-                        : "Resume the video of the day"
-                      : `Play the video of the day: ${heroDisplayItem.title}`
-                  }
-                  className={`djc-vinyl${isHeroPlaying ? " spinning" : ""}${isHeroStarted ? " engaged" : ""}`}
+                  onClick={() => startItem(heroVideo)}
+                  aria-label={`Play the video of the day: ${heroVideo.title}`}
+                  className="djc-vinyl"
                   style={{ WebkitAppearance: "none", appearance: "none", border: 0, padding: 0, margin: 0, font: "inherit", color: "inherit" }}
                 >
                   <span className="djc-vinyl-sheen" aria-hidden />
                   <span className="djc-vinyl-label">
-                    {artworkUrl(heroDisplayItem) ? (
+                    {artworkUrl(heroVideo) ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={artworkUrl(heroDisplayItem)!} alt="" />
+                      <img src={artworkUrl(heroVideo)!} alt="" />
                     ) : (
                       // Defensive only — every eligible video-of-the-day pick
                       // has a real YouTube thumbnail by construction, so this
@@ -1598,37 +1696,27 @@ export default function TheDJCaresPage({
                     <span className="djc-vinyl-playcue-txt">Play Today</span>
                   </span>
                 </button>
-                <span className={`djc-tonearm${isHeroStarted ? " lowered" : ""}`} aria-hidden>
+                <span className="djc-tonearm" aria-hidden>
                   <span className="djc-tonearm-counterweight" />
                   <span className="djc-tonearm-pivot" />
                   <span className="djc-tonearm-shaft" />
                   <span className="djc-tonearm-head" />
                 </span>
-                <span className={`djc-power-light${isHeroStarted ? " on" : ""}`} aria-hidden />
+                <span className="djc-power-light" aria-hidden />
               </div>
             </div>
 
-            <p style={{ fontSize: isHeroStarted ? 19 : 24, fontWeight: 900, color: text, margin: 0, transition: "font-size 0.3s ease" }}>{heroDisplayItem.title}</p>
-            <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{heroDisplayItem.author}</p>
-            {!isHeroStarted && heroDisplayItem.summary && (
-              <p style={{ fontSize: 13, color: sub, margin: "6px auto 0", maxWidth: 420, lineHeight: 1.5 }}>{heroDisplayItem.summary}</p>
+            <p style={{ fontSize: 24, fontWeight: 900, color: text, margin: 0 }}>{heroVideo.title}</p>
+            <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{heroVideo.author}</p>
+            {heroVideo.summary && (
+              <p style={{ fontSize: 13, color: sub, margin: "6px auto 0", maxWidth: 420, lineHeight: 1.5 }}>{heroVideo.summary}</p>
             )}
 
-            {!isHeroStarted ? (
-              <div style={{ marginTop: 18, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-                <button onClick={() => startItem(heroVideo)} style={bigButton}>▶ Play</button>
-                <button onClick={shuffleHeroVideo} style={quietButton}>🔀 Spin</button>
-                {share(mediaShareTarget(heroDisplayItem), "hero")}
-              </div>
-            ) : (
-              // The persistent player (right below the category tabs, on
-              // every tab) already has the real Play/Pause, Share, and full
-              // transport for this exact item — a second copy here would be
-              // a competing control for the same media, not a convenience.
-              <p style={{ fontSize: 12.5, fontWeight: 800, color: sub, margin: "14px 0 0" }}>
-                ▶ Now playing in the player above ↑
-              </p>
-            )}
+            <div style={{ marginTop: 18, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+              <button onClick={() => startItem(heroVideo)} style={bigButton}>▶ Play</button>
+              <button onClick={shuffleHeroVideo} style={quietButton}>🔀 Spin</button>
+              {share(mediaShareTarget(heroVideo), "hero")}
+            </div>
 
             {/* "Tune the spin" — collapsed by default. Reuses the exact
                 same Mood (QUEUE_MOODS → startMoodMix in "videos" mode,
@@ -1638,36 +1726,34 @@ export default function TheDJCaresPage({
                 just closed behind a disclosure instead of a permanent
                 wall of buttons, and never surfacing music/podcast/sermon
                 filters here. */}
-            {!isHeroStarted && (
-              <div style={{ marginTop: 14 }}>
-                <button
-                  type="button"
-                  onClick={() => setTuneSpinOpen((v) => !v)}
-                  aria-expanded={tuneSpinOpen}
-                  style={{ background: "none", border: "none", padding: 0, fontSize: 12.5, fontWeight: 800, color: sub, cursor: "pointer" }}
-                >
-                  Tune the spin {tuneSpinOpen ? "▴" : "▾"}
-                </button>
-                {tuneSpinOpen && (
-                  <div style={{ marginTop: 12, maxWidth: 420, marginLeft: "auto", marginRight: "auto", textAlign: "left" }}>
-                    <p style={{ fontSize: 11, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: sub, margin: "0 0 8px" }}>Mood</p>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(76px, 1fr))", gap: 6, marginBottom: 14 }}>
-                      {QUEUE_MOODS.map((mood) => (
-                        <button key={mood} onClick={() => startMoodMix(mood, "videos")} style={pill(false)}>
-                          {mood === "surprise" ? "🎲" : mood[0].toUpperCase()}{mood.slice(1)}
-                        </button>
-                      ))}
-                    </div>
-                    <p style={{ fontSize: 11, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: sub, margin: "0 0 8px" }}>Vibe</p>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(76px, 1fr))", gap: 6 }}>
-                      {VIBES.map((v) => (
-                        <button key={v} onClick={() => spinVideoByVibe(v)} style={pill(false)}>{v}</button>
-                      ))}
-                    </div>
+            <div style={{ marginTop: 14 }}>
+              <button
+                type="button"
+                onClick={() => setTuneSpinOpen((v) => !v)}
+                aria-expanded={tuneSpinOpen}
+                style={{ background: "none", border: "none", padding: 0, fontSize: 12.5, fontWeight: 800, color: sub, cursor: "pointer" }}
+              >
+                Tune the spin {tuneSpinOpen ? "▴" : "▾"}
+              </button>
+              {tuneSpinOpen && (
+                <div style={{ marginTop: 12, maxWidth: 420, marginLeft: "auto", marginRight: "auto", textAlign: "left" }}>
+                  <p style={{ fontSize: 11, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: sub, margin: "0 0 8px" }}>Mood</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(76px, 1fr))", gap: 6, marginBottom: 14 }}>
+                    {QUEUE_MOODS.map((mood) => (
+                      <button key={mood} onClick={() => startMoodMix(mood, "videos")} style={pill(false)}>
+                        {mood === "surprise" ? "🎲" : mood[0].toUpperCase()}{mood.slice(1)}
+                      </button>
+                    ))}
                   </div>
-                )}
-              </div>
-            )}
+                  <p style={{ fontSize: 11, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: sub, margin: "0 0 8px" }}>Vibe</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(76px, 1fr))", gap: 6 }}>
+                    {VIBES.map((v) => (
+                      <button key={v} onClick={() => spinVideoByVibe(v)} style={pill(false)}>{v}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </section>
         )}
 
