@@ -13,6 +13,7 @@ import ShareSheet, { ShareTrigger } from "./components/ShareMenu";
 import VolumeControl from "./components/VolumeControl";
 import SyncedAudio from "./components/SyncedAudio";
 import FilterDisclosure from "./components/FilterDisclosure";
+import MediaSwitcher, { mediaPanelId, mediaTabId, type MediaTab } from "./components/MediaSwitcher";
 import {
   APPROVED_CHURCHES,
   artworkUrl,
@@ -1458,6 +1459,10 @@ export default function TheDJCaresPage({
   // any other real content underneath it.
   const miniPlayerShowing = started && playerDisplayMode === "mini";
 
+  // Which of the shared switcher's four modes is selected — null on Home
+  // and the secondary sections, where none of the four is current.
+  const mediaTabActive = PRIMARY_TAB_IDS.includes(tab) ? (tab as MediaTab) : null;
+
   return (
     <main style={{ background: bg, minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div style={{ maxWidth: 760, margin: "0 auto", padding: `32px 20px ${miniPlayerShowing ? "96px" : "80px"}`, display: "flex", flexDirection: "column" }}>
@@ -1486,34 +1491,28 @@ export default function TheDJCaresPage({
           aria-label="Category tabs"
           style={{ maxWidth: 560, margin: "0 auto 20px", order: tab === "spin" ? HOME_ORDER.nav : BROWSE_ORDER.nav }}
         >
-          {/* Primary: the four things you actually browse and press play on */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 8, marginBottom: 8 }}>
-            {TABS.filter((t) => PRIMARY_TAB_IDS.includes(t.id)).map((t) => (
-              <button
-                key={t.id}
-                onClick={() => goTab(t.id)}
-                aria-current={tab === t.id ? "page" : undefined}
-                style={{
-                  background: tab === t.id ? accent : card,
-                  border: `2px solid ${tab === t.id ? accent : border}`,
-                  borderRadius: 14,
-                  padding: "12px 4px",
-                  minHeight: 44,
-                  fontSize: 13,
-                  fontWeight: 800,
-                  cursor: "pointer",
-                  color: tab === t.id ? ink : sub,
-                  textAlign: "center",
-                }}
-              >
-                <span aria-hidden>{t.emoji}</span> {t.label}
-              </button>
-            ))}
-          </div>
+          {/* Home introduces the deeper library above the switcher; every
+              browse tab already IS that library, so it doesn't repeat the
+              intro — the switcher itself (identical component, identical
+              position) is the only thing that needs to feel constant. */}
+          {tab === "spin" && (
+            <p style={{ fontSize: 13, fontWeight: 800, color: sub, textAlign: "center", margin: "0 0 10px" }}>
+              Browse everything — hand-picked music, videos, podcasts, and sermons.
+            </p>
+          )}
+          <MediaSwitcher
+            active={mediaTabActive}
+            onSelect={goTab}
+            palette={{ text, sub, card, border, accent, ink }}
+          />
 
           {/* Secondary: Home (a return, not an action) plus two supporting
-              discovery sections — lighter chips, not another row of
-              equal-weight action pills. */}
+              discovery sections that point off-site — not playback modes,
+              so they stay out of the tablist above and read as quieter,
+              smaller chips instead of a fifth/sixth equal-weight choice. */}
+          <p style={{ fontSize: 11, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: sub, textAlign: "center", margin: "14px 0 8px" }}>
+            Explore
+          </p>
           <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
             {TABS.filter((t) => SECONDARY_TAB_IDS.includes(t.id)).map((t) => (
               <button
@@ -2040,17 +2039,15 @@ export default function TheDJCaresPage({
             the player never appears above it. */}
         {tab === "music" && (
           <>
-            <div style={{ order: BROWSE_ORDER.heading }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                <h2 style={sectionH}>Music</h2>
-                <button onClick={() => { setCategory("playlist"); const p = spinPool({ category: "playlist" }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={bigButton}>
-                  🔀 Spin music
-                </button>
-              </div>
+            <div style={{ order: BROWSE_ORDER.heading }} role="tabpanel" id={mediaPanelId("music")} aria-labelledby={mediaTabId("music")}>
+              <h2 style={sectionH}>Music</h2>
               <p style={sectionSub}>
                 The DJ&apos;s own Apple Music playlists — worship, hymns, country, rap, workout — whole mixes, reviewed song
                 by song. They stream right here with an Apple Music account (Spotify twins linked where they exist).
               </p>
+              <button onClick={() => { setCategory("playlist"); const p = spinPool({ category: "playlist" }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={{ ...bigButton, marginBottom: 20 }}>
+                🔀 Spin music
+              </button>
             </div>
             <div style={{ order: BROWSE_ORDER.cards }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 24 }}>
@@ -2068,13 +2065,8 @@ export default function TheDJCaresPage({
 
         {tab === "videos" && (
           <>
-            <div style={{ order: BROWSE_ORDER.heading }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                <h2 style={sectionH}>Music Videos</h2>
-                <button onClick={() => { setCategory("music"); const p = spinPool({ category: "music", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={bigButton}>
-                  🔀 Spin videos
-                </button>
-              </div>
+            <div style={{ order: BROWSE_ORDER.heading }} role="tabpanel" id={mediaPanelId("videos")} aria-labelledby={mediaTabId("videos")}>
+              <h2 style={sectionH}>Music Videos</h2>
               <p style={sectionSub}>Hand-picked songs and music videos from official artist channels. Tap one and it plays right here.</p>
               <FilterDisclosure
                 label="Mood"
@@ -2083,6 +2075,9 @@ export default function TheDJCaresPage({
               >
                 <VibeChips />
               </FilterDisclosure>
+              <button onClick={() => { setCategory("music"); const p = spinPool({ category: "music", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={{ ...bigButton, marginBottom: 20 }}>
+                🔀 Spin videos
+              </button>
             </div>
             <div style={{ ...grid, order: BROWSE_ORDER.cards }}>
               {vibeFiltered(songs).map((i) => (
@@ -2094,42 +2089,56 @@ export default function TheDJCaresPage({
 
         {tab === "podcasts" && (
           <>
-            <div style={{ order: BROWSE_ORDER.heading }}>
+            <div style={{ order: BROWSE_ORDER.heading }} role="tabpanel" id={mediaPanelId("podcasts")} aria-labelledby={mediaTabId("podcasts")}>
               <h2 style={sectionH}>Podcasts</h2>
               <p style={sectionSub}>Bible-first shows worth your commute. The Spotify ones play right here; the rest link to their official homes.</p>
+              <button onClick={() => { setCategory("podcast"); const p = spinPool({ category: "podcast" }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={{ ...bigButton, marginBottom: 20 }}>
+                🔀 Spin a podcast
+              </button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14, order: BROWSE_ORDER.cards }}>
-              {podcasts.map((p) => (
-                <div key={p.id} id={`djc-item-${p.id}`} className="pop" style={{ background: card, border: `2px solid ${current?.id === p.id && started ? activeBorder : border}`, borderRadius: 16, padding: "16px 18px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                    <div>
-                      <p style={{ fontSize: 16, fontWeight: 900, color: text, margin: 0 }}>{p.title}</p>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>
-                        {p.author}
-                        {p.ministry ? ` · ${ministryByKey(p.ministry)?.name}` : ""}
-                      </p>
-                      {p.summary && <p style={{ fontSize: 13, color: sub, margin: "4px 0 0", lineHeight: 1.5 }}>{p.summary}</p>}
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      {p.spotifyEmbed ? (
-                        <button onClick={() => startItem(p)} style={bigButton}>▶ Play here</button>
-                      ) : (
-                        <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ ...quietButton, textDecoration: "none", display: "inline-block" }}>
-                          Listen at the official home ↗
-                        </a>
-                      )}
-                      {share(mediaShareTarget(p))}
+              {podcasts.map((p) => {
+                const isCurrent = current?.id === p.id && started;
+                return (
+                  <div key={p.id} id={`djc-item-${p.id}`} className="pop" style={{ background: card, border: `2px solid ${isCurrent ? activeBorder : border}`, borderRadius: 16, padding: "16px 18px" }}>
+                    {isCurrent && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 900, letterSpacing: "0.1em", color: accent, textTransform: "uppercase", marginBottom: 6 }}>
+                        {playerState === "playing" && (
+                          <span className="djc-eq" aria-hidden><span /><span /><span /><span /></span>
+                        )}
+                        Now Spinning
+                      </span>
+                    )}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                      <div>
+                        <p style={{ fontSize: 16, fontWeight: 900, color: text, margin: 0 }}>{p.title}</p>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>
+                          {p.author}
+                          {p.ministry ? ` · ${ministryByKey(p.ministry)?.name}` : ""}
+                        </p>
+                        {p.summary && <p style={{ fontSize: 13, color: sub, margin: "4px 0 0", lineHeight: 1.5 }}>{p.summary}</p>}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        {p.spotifyEmbed ? (
+                          <button onClick={() => startItem(p)} style={bigButton}>▶ Play here</button>
+                        ) : (
+                          <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ ...quietButton, textDecoration: "none", display: "inline-block" }}>
+                            Listen at the official home ↗
+                          </a>
+                        )}
+                        {share(mediaShareTarget(p))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}
 
         {tab === "sermons" && (
           <>
-            <div style={{ order: BROWSE_ORDER.heading }}>
+            <div style={{ order: BROWSE_ORDER.heading }} role="tabpanel" id={mediaPanelId("sermons")} aria-labelledby={mediaTabId("sermons")}>
               <h2 style={sectionH}>Sermons</h2>
               <p style={sectionSub}>Approved ministers, official channels, Christ at the center. Pick one, or let The DJ spin.</p>
               <FilterDisclosure
