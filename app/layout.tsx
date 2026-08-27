@@ -36,12 +36,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           site="TheDJCares.com"
           accent="#A78BFA"
           links={[
-            { emoji: "🌅", name: "Daily Encouragement", href: "/#daily-encouragement" },
-            { emoji: "📺", name: "Music Videos", href: "/#videos" },
-            { emoji: "🎵", name: "Music", href: "/#music" },
-            { emoji: "✝️", name: "Sermons", href: "/#sermons" },
-            { emoji: "🎙️", name: "Podcasts", href: "/#podcasts" },
-            { emoji: "🎧", name: "Now Spinning", href: "/#now-playing" },
+            // Music/Videos/Podcasts/Sermons/Ministries/Churches already live
+            // in the on-page category tabs right under the title — this menu
+            // stays to the items that AREN'T one of those tabs, so nothing
+            // is ever navigable two different ways at once.
+            { emoji: "🏠", name: "Home", href: "/" },
+            { emoji: "🎛️", name: "Digital DJ", href: "/digital-dj" },
             { emoji: "ℹ️", name: "About TheDJCares", href: "/#about" },
           ]}
         />

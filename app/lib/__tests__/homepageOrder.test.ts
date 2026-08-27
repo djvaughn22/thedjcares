@@ -815,17 +815,23 @@ describe("Daily Encouragement selection", () => {
 });
 
 describe("single-page menu navigation", () => {
+  it("every menu href is an absolute homepage anchor (works from any route), never a bare #hash", () => {
+    const hrefs = [...layout.matchAll(/href:\s*"([^"]+)"/g)].map((m) => m[1]);
+    for (const href of hrefs) {
+      if (href.includes("#")) expect(href.startsWith("/#")).toBe(true);
+    }
+  });
+});
+
+describe("primary ☰ menu doesn't duplicate the on-page category tabs (owner, 2026-08-26)", () => {
   const anchors: Record<string, string> = {
-    "Daily Encouragement": "/#daily-encouragement",
-    "Music Videos": "/#videos",
-    Music: "/#music",
-    Sermons: "/#sermons",
-    Podcasts: "/#podcasts",
-    "Now Spinning": "/#now-playing",
+    Home: "/",
+    "Digital DJ": "/digital-dj",
+    "About TheDJCares": "/#about",
   };
 
   for (const [name, href] of Object.entries(anchors)) {
-    it(`"${name}" targets the homepage anchor ${href}, not a separate route`, () => {
+    it(`"${name}" is in the primary menu, targeting ${href}`, () => {
       const re = new RegExp(`name:\\s*"${name}",\\s*href:\\s*"([^"]+)"`);
       const match = layout.match(re);
       expect(match).not.toBeNull();
@@ -833,12 +839,14 @@ describe("single-page menu navigation", () => {
     });
   }
 
-  it("every menu href is an absolute homepage anchor (works from any route), never a bare #hash", () => {
-    const hrefs = [...layout.matchAll(/href:\s*"([^"]+)"/g)].map((m) => m[1]);
-    for (const href of hrefs) {
-      if (href.includes("#")) expect(href.startsWith("/#")).toBe(true);
-    }
-  });
+  // Music/Videos/Podcasts/Sermons/Ministries/Churches already live in the
+  // on-page category tabs right under the title — repeating them here would
+  // put the same destination in two navs at once.
+  for (const name of ["Music Videos", "Music", "Sermons", "Podcasts", "Ministries", "Churches", "Now Spinning"]) {
+    it(`"${name}" is NOT duplicated in the primary menu`, () => {
+      expect(layout).not.toMatch(new RegExp(`name:\\s*"${name}"`));
+    });
+  }
 });
 
 describe("/today retirement", () => {

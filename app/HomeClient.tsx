@@ -12,6 +12,7 @@ import ChurchSubmitForm from "./components/ChurchSubmitForm";
 import ShareSheet, { ShareTrigger } from "./components/ShareMenu";
 import VolumeControl from "./components/VolumeControl";
 import SyncedAudio from "./components/SyncedAudio";
+import FilterDisclosure from "./components/FilterDisclosure";
 import {
   APPROVED_CHURCHES,
   artworkUrl,
@@ -79,7 +80,7 @@ import { buildVideoQueueFrom, reorderUpcoming, shouldStopAtQueueEnd } from "./li
 import { eligibleVideosOfTheDay } from "./lib/videoOfTheDay";
 
 const TABS = [
-  { id: "spin", label: "Spin", emoji: "🎧" },
+  { id: "spin", label: "Home", emoji: "🏠" },
   { id: "music", label: "Music", emoji: "🎵" },
   { id: "videos", label: "Videos", emoji: "🎬" },
   { id: "podcasts", label: "Podcasts", emoji: "🎙️" },
@@ -1856,18 +1857,21 @@ export default function TheDJCaresPage({
           <div style={{ order: HOME_ORDER.rest }}>
             <section id="sermons">
               <h2 style={sectionH}>✝️ Sermons</h2>
-              <p style={sectionSub}>Tap a name and The DJ spins one of their messages — approved ministers, official channels only.</p>
-              <div style={{ ...optionGrid, marginBottom: 30 }}>
-                {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0).map((m) => (
-                  <button key={m.key} onClick={() => spinMinistry(m.key)} style={pill(false)}>
-                    {m.speaker}
-                  </button>
+              <p style={sectionSub}>Approved ministers, official channels — pick a message, or let The DJ spin.</p>
+              <div style={grid}>
+                {sermons.slice(0, 3).map((s) => (
+                  <MediaCard key={s.id} item={s} showMinistry />
                 ))}
-                <button onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={{ ...bigButton, borderRadius: 50, padding: "10px 8px", fontSize: 13.5 }}>
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 14, marginBottom: 30 }}>
+                <button
+                  onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }}
+                  style={{ ...bigButton, flex: "0 0 auto" }}
+                >
                   🔀 Surprise me
                 </button>
-                <button onClick={() => goTab("sermons")} style={pill(false)}>
-                  Browse all →
+                <button onClick={() => goTab("sermons")} style={{ ...quietButton, flex: "1 1 auto" }}>
+                  All sermons →
                 </button>
               </div>
             </section>
@@ -1879,8 +1883,10 @@ export default function TheDJCaresPage({
                 {/* A selector, not its own player: Play here routes through
                     startItem into the one persistent player above — no
                     iframe mounted here, so a preview list never means
-                    several Spotify embeds playable at once. */}
-                {podcasts.filter((p) => p.spotifyEmbed).map((p) => {
+                    several Spotify embeds playable at once. Capped to a
+                    taste of the catalog, same as every other Explore
+                    preview — "All podcasts" below is the real browse. */}
+                {podcasts.filter((p) => p.spotifyEmbed).slice(0, 3).map((p) => {
                   const isCurrent = current?.id === p.id && started;
                   return (
                     <div key={p.id} className="pop" style={{ background: card, border: `2px solid ${isCurrent ? activeBorder : border}`, borderRadius: 16, padding: "16px 18px" }}>
@@ -2038,7 +2044,13 @@ export default function TheDJCaresPage({
                 </button>
               </div>
               <p style={sectionSub}>Hand-picked songs and music videos from official artist channels. Tap one and it plays right here.</p>
-              <VibeChips />
+              <FilterDisclosure
+                label="Mood"
+                summary={vibe ?? "All moods"}
+                palette={{ text, sub, border, activeBorder, accent }}
+              >
+                <VibeChips />
+              </FilterDisclosure>
             </div>
             <div style={{ ...grid, order: BROWSE_ORDER.cards }}>
               {vibeFiltered(songs).map((i) => (
@@ -2088,19 +2100,25 @@ export default function TheDJCaresPage({
             <div style={{ order: BROWSE_ORDER.heading }}>
               <h2 style={sectionH}>Sermons</h2>
               <p style={sectionSub}>Approved ministers, official channels, Christ at the center. Pick one, or let The DJ spin.</p>
-              <div style={{ ...optionGrid, marginBottom: 20 }}>
-                <button onClick={() => setSermonMinistry(null)} aria-pressed={sermonMinistry === null} style={pill(sermonMinistry === null)}>
-                  All ministries
-                </button>
-                {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0).map((m) => (
-                  <button key={m.key} onClick={() => setSermonMinistry(sermonMinistry === m.key ? null : m.key)} aria-pressed={sermonMinistry === m.key} style={pill(sermonMinistry === m.key)}>
-                    {m.speaker}
+              <FilterDisclosure
+                label="Minister"
+                summary={sermonMinistry ? (ministryByKey(sermonMinistry)?.speaker ?? "All ministries") : "All ministries"}
+                palette={{ text, sub, border, activeBorder, accent }}
+              >
+                <div style={optionGrid}>
+                  <button onClick={() => setSermonMinistry(null)} aria-pressed={sermonMinistry === null} style={pill(sermonMinistry === null)}>
+                    All ministries
                   </button>
-                ))}
-                <button onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe, ministry: sermonMinistry }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={{ ...bigButton, borderRadius: 50, padding: "10px 8px", fontSize: 13.5 }}>
-                  🔀 Spin a sermon
-                </button>
-              </div>
+                  {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0).map((m) => (
+                    <button key={m.key} onClick={() => setSermonMinistry(sermonMinistry === m.key ? null : m.key)} aria-pressed={sermonMinistry === m.key} style={pill(sermonMinistry === m.key)}>
+                      {m.speaker}
+                    </button>
+                  ))}
+                </div>
+              </FilterDisclosure>
+              <button onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe, ministry: sermonMinistry }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }} style={{ ...bigButton, marginBottom: 20 }}>
+                🔀 Spin a sermon
+              </button>
             </div>
             <div style={{ order: BROWSE_ORDER.cards }}>
               {MINISTRIES.filter((m) => ministryCounts(m).sermons > 0 && (sermonMinistry === null || sermonMinistry === m.key)).map((m) => {
