@@ -358,11 +358,11 @@ describe("Video Deck: filters collapsed by default, Spin scoped to music videos 
 });
 
 describe("Music Deck: THE MUSIC widget is a selector/featured card — Play routes into the one persistent player, never its own iframe", () => {
-  it("REGRESSION 7 (superseded again 2026-08-27): the Music widget's Play button goes through startPlaylist — Site Player by default (P0 volume fix), Apple-only fallback for an unmapped playlist — never its own iframe either way", () => {
+  it("REGRESSION 7 (superseded): the Music widget's Play button goes through the authoritative startItem pipeline — the real Apple embed only ever mounts in the one persistent player (podcastPanelNode)", () => {
     expect(homeClient).not.toContain("const [musicExpanded, setMusicExpanded] = useState(false)");
     expect(homeClient).not.toContain("const [musicPlaying, setMusicPlaying] = useState(false)");
     const section = homeClient.slice(homeClient.indexOf('id="music" aria-label="The Music"'), homeClient.indexOf('id="videos" aria-label="Music Videos preview"'));
-    expect(section).toContain("startPlaylist(heroPlaylist)");
+    expect(section).toContain("startItem(heroPlaylist)");
     expect(section).not.toContain("<iframe"); // no local embed — see podcastPanelNode
   });
 
@@ -395,10 +395,10 @@ describe("REGRESSION (superseded): the old three-way deck coordinator is retired
     expect(homeClient).not.toMatch(/if \(musicPlaying\) setActiveDeck/);
   });
 
-  it("Home cards (hero, Daily Encouragement, Music widget) each derive their own 'is this what's playing' flag straight from `current`/`started` — isHeroCurrent, dailyIsCurrent, musicIsCurrent — instead of maintaining separate playing booleans. musicIsCurrent now also matches a Site Player track from heroPlaylist's own curated queue (2026-08-27), not just the Apple embed itself", () => {
+  it("Home cards (hero, Daily Encouragement, Music widget) each derive their own 'is this what's playing' flag straight from `current`/`started` — isHeroCurrent, dailyIsCurrent, musicIsCurrent — instead of maintaining separate playing booleans", () => {
     expect(homeClient).toContain("const isHeroCurrent = Boolean(current && current.type === \"music\" && current.videoId);");
     expect(homeClient).toContain("const dailyIsCurrent = Boolean(started && current && dailyPick && current.id === dailyPick.id);");
-    expect(homeClient).toContain("current.id === heroPlaylist.id || heroPlaylist.siteQueueIds?.includes(current.id)");
+    expect(homeClient).toContain("const musicIsCurrent = Boolean(started && current && heroPlaylist && current.id === heroPlaylist.id);");
   });
 
   it("exclusivity is structural, not coordinated: starting any new item calls startItem, which replaces the single `current` value — there is no code path that lets two items be `current` at once", () => {
@@ -504,9 +504,9 @@ describe("Gap closed: Daily Encouragement and the Home Apple Music widget are se
     expect(homeClient.match(/\{podcastPanelNode\}/g)?.length).toBe(1);
   });
 
-  it("REGRESSION: starting a Home Apple playlist uses the SAME startItem/startSitePlayerQueue pipeline as every other pick — the actual <iframe> only ever mounts inside podcastPanelNode (one call site, outside every tab conditional), so it's the same mounted instance across every category tab, including Home itself", () => {
+  it("REGRESSION: starting a Home Apple playlist uses the SAME startItem call as every other pick — the actual <iframe> only ever mounts inside podcastPanelNode (one call site, outside every tab conditional), so it's the same mounted instance across every category tab, including Home itself", () => {
     const musicSection = homeClient.slice(homeClient.indexOf('id="music" aria-label="The Music"'), homeClient.indexOf('id="videos" aria-label="Music Videos preview"'));
-    expect(musicSection).toContain("startPlaylist(heroPlaylist)");
+    expect(musicSection).toContain("startItem(heroPlaylist)");
     expect(musicSection).not.toContain("<iframe");
     // Exactly one <iframe> exists anywhere in the file — podcastPanelNode's.
     expect(homeClient.match(/<iframe/g)?.length).toBe(1);
@@ -517,11 +517,11 @@ describe("Gap closed: Daily Encouragement and the Home Apple Music widget are se
     expect(iframeIdx).toBeLessThan(podcastPanelEnd);
   });
 
-  it("REGRESSION: the Music tab's playlist browse grid (PlaylistCard) is also a selector, not a live embed — one Play-here button per card (routed through startPlaylist, same P0 Site Player default as the Music widget), no iframe, so browsing several playlists never means several are playable at once", () => {
+  it("REGRESSION: the Music tab's playlist browse grid (PlaylistCard) is also a selector, not a live embed — one Play-here button per card, no iframe, so browsing several playlists never means several are playable at once", () => {
     const start = homeClient.indexOf("const PlaylistCard = ");
     const end = homeClient.indexOf("\n  };", start);
     const src = homeClient.slice(start, end);
-    expect(src).toContain("startPlaylist(p)");
+    expect(src).toContain("startItem(p)");
     expect(src).not.toContain("<iframe");
   });
 
@@ -544,11 +544,9 @@ describe("Gap closed: Daily Encouragement and the Home Apple Music widget are se
     expect(fn).toContain("setCurrent(item)");
     expect(fn).toContain("setStarted(true)");
     expect(fn).toContain("setPlaying(true)");
-    // Every Home-card Play action funnels through this one function (a
-    // playlist's own Play funnels through startPlaylist first, which
-    // itself always calls startItem or startSitePlayerQueue → startItem).
+    // Every Home-card Play action funnels through this one function.
     expect(homeClient).toContain("onClick={() => startItem(dailyPick)}");
-    expect(homeClient).toContain("onClick={() => startPlaylist(heroPlaylist)}");
+    expect(homeClient).toMatch(/onClick=\{\(\) => \{ startItem\(heroPlaylist\);/);
   });
 
   it("REGRESSION: volume/mute preferences survive every category transition regardless of which card started playback — the one persistent player always reads prefs.volume/prefs.muted, and goTab (the only tab-switch path) never touches prefs", () => {
@@ -706,9 +704,9 @@ describe("Playback collapses to a compact mini-player off the natural tab — ne
     expect(homeClient).toContain("onMuteToggle={toggleMute}");
   });
 
-  it("Daily Encouragement and the Music widget selectors still route through startItem/startPlaylist, unaffected by the mini-player rework", () => {
+  it("Daily Encouragement and the Music widget selectors still route through startItem, unaffected by the mini-player rework", () => {
     expect(homeClient).toContain("onClick={() => startItem(dailyPick)}");
-    expect(homeClient).toContain("onClick={() => startPlaylist(heroPlaylist)}");
+    expect(homeClient).toMatch(/onClick=\{\(\) => \{ startItem\(heroPlaylist\);/);
   });
 });
 

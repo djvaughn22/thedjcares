@@ -243,8 +243,8 @@ describe("REGRESSION: Home ordering and the shared four-mode switcher are unaffe
     expect(homeClient.match(/<MediaSwitcher\b/g)?.length).toBe(1);
   });
 
-  it("Daily Encouragement and the Music widget are still plain selector cards — dailyIsCurrent/musicIsCurrent still exist and still gate their own 'now playing above' language, unaffected by the hero now also representing their picks. musicIsCurrent additionally covers a Site Player track from heroPlaylist's own siteQueueIds (2026-08-27)", () => {
+  it("Daily Encouragement and the Music widget are still plain selector cards — dailyIsCurrent/musicIsCurrent still exist and still gate their own 'now playing above' language, unaffected by the hero now also representing their picks", () => {
     expect(homeClient).toContain("const dailyIsCurrent = Boolean(started && current && dailyPick && current.id === dailyPick.id);");
-    expect(homeClient).toContain("current.id === heroPlaylist.id || heroPlaylist.siteQueueIds?.includes(current.id)");
+    expect(homeClient).toContain("const musicIsCurrent = Boolean(started && current && heroPlaylist && current.id === heroPlaylist.id);");
   });
 });

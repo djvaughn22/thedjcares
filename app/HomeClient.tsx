@@ -24,7 +24,6 @@ import {
   LIBRARY,
   MINISTRIES,
   ministryByKey,
-  siteQueueFor,
   VIBES,
   type MediaItem,
   type Ministry,
@@ -438,37 +437,6 @@ export default function TheDJCaresPage({
     track("media_play", { content_type: item.type, content_title: item.title, via: viaSpin ? "spin" : "pick" });
     deckRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [moodQueue, pool.length, sessionHistory]);
-
-  // Site Player (owner, 2026-08-27): a playlist's real, site-controllable
-  // stand-in — the curated siteQueueFor(playlist) tracks, played through
-  // the exact same DJPlayer/startItem pipeline as any other music video,
-  // so it gets the real shared VolumeControl a cross-origin Apple iframe
-  // never could. `current` becomes the first track (a real song), not the
-  // playlist item — Prev/Next/Shuffle/Repeat then work for free via the
-  // existing mainQueue machinery, scoped to just this curated list instead
-  // of the whole music catalog (fromMainQueue=true skips startItem's own
-  // catalog-wide queue-seeding).
-  const startSitePlayerQueue = useCallback((playlist: MediaItem) => {
-    const tracks = siteQueueFor(playlist);
-    if (tracks.length === 0) return;
-    const first = tracks[0];
-    setMainQueue({ queue: buildVideoQueueFrom(first, tracks), position: 0 });
-    startItem(first, false, false, true);
-    track("playlist_open", { content_title: `${playlist.title} (Site Player)` });
-  }, [startItem]);
-
-  // Every playlist Play action goes through here: Site Player by default
-  // when a curated queue exists (P0 fix — no more routing straight to a
-  // cross-origin Apple iframe with no real volume control), falling back
-  // to the plain Apple embed for a playlist that hasn't been mapped.
-  const startPlaylist = useCallback((p: MediaItem) => {
-    if (siteQueueFor(p).length > 0) {
-      startSitePlayerQueue(p);
-    } else {
-      startItem(p);
-      track("playlist_open", { content_title: p.title });
-    }
-  }, [startSitePlayerQueue, startItem]);
 
   // "Put another record on" — swaps which video is cued on the hero platter.
   // Reuses the same never-repeat-recent pickNext the rest of the page's
@@ -986,10 +954,7 @@ export default function TheDJCaresPage({
   // persistent player (podcastPanelNode). No iframe mounted here — a
   // browse grid of several of these never means several playing at once.
   const PlaylistCard = ({ p }: { p: MediaItem }) => {
-    // Current either as the Apple embed itself, or (Site Player active)
-    // as one of its own curated site-queue tracks — same "this card's
-    // selection is what's playing" concept either way.
-    const isCurrent = started && Boolean(current) && (current!.id === p.id || Boolean(p.siteQueueIds?.includes(current!.id)));
+    const isCurrent = current?.id === p.id && started;
     return (
       <div key={p.id} className="pop" style={{ background: card, border: `2px solid ${isCurrent ? activeBorder : border}`, borderRadius: 16, padding: "16px 18px" }}>
         {isCurrent && (
@@ -1006,7 +971,7 @@ export default function TheDJCaresPage({
           {isCurrent ? (
             <span style={{ fontSize: 12.5, fontWeight: 800, color: sub }}>▶ Playing in the player above ↑</span>
           ) : (
-            <button onClick={() => startPlaylist(p)} style={bigButton}>▶ Play here</button>
+            <button onClick={() => startItem(p)} style={bigButton}>▶ Play here</button>
           )}
           <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
             Open in Apple Music ↗
@@ -1071,17 +1036,6 @@ export default function TheDJCaresPage({
   // visually hidden (never unmounted — see videoPanelNode/podcastPanelNode
   // below) in favor of the decorative record.
   const heroRecordActive = tab === "spin" && Boolean(current) && heroView === "record";
-
-  // The playlist behind whatever's current, if any — either `current` IS
-  // the playlist (Apple Music active) or `current` is one of its own
-  // curated Site Player tracks. A pure derivation (no extra state to keep
-  // in sync): Prev/Next/Shuffle/direct picks all naturally resolve
-  // correctly since it just checks list membership, not how we got here.
-  const sitePlayerSourcePlaylist = current
-    ? current.type === "playlist"
-      ? current
-      : itemsOfType("playlist").find((p) => p.siteQueueIds?.includes(current.id))
-    : undefined;
 
   // Which category tabs are the "natural home" for whatever `current` is.
   // Home ("spin") always qualifies — it hosts the hero/Daily/Music widgets
@@ -1397,38 +1351,6 @@ export default function TheDJCaresPage({
           </div>
         )}
 
-        {/* P0 fix (owner, 2026-08-27): for a playlist selection, Site
-            Player vs Apple Music is a real SOURCE switch — current
-            genuinely changes (a real song vs the playlist's own Apple
-            embed), unlike the presentation-only switch below. That's why
-            it's a real startItem/startSitePlayerQueue call, not a style
-            toggle: switching stops whichever provider was mounted (DJPlayer
-            or the iframe unmounts because `current` no longer matches its
-            gating condition) before the other one mounts — never both at
-            once. No-ops if you tap the side you're already on. Only shown
-            when there's actually a playlist behind the current selection
-            AND a real curated queue exists to switch to/from. */}
-        {tab === "spin" && sitePlayerSourcePlaylist && siteQueueFor(sitePlayerSourcePlaylist).length > 0 && (
-          <div role="group" aria-label="Playback source" style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 10 }}>
-            <button
-              type="button"
-              aria-pressed={current?.type !== "playlist"}
-              onClick={() => { if (current?.type === "playlist") startSitePlayerQueue(sitePlayerSourcePlaylist); }}
-              style={pill(current?.type !== "playlist")}
-            >
-              🎧 Site Player
-            </button>
-            <button
-              type="button"
-              aria-pressed={current?.type === "playlist"}
-              onClick={() => { if (current?.type !== "playlist") startItem(sitePlayerSourcePlaylist); }}
-              style={pill(current?.type === "playlist")}
-            >
-              🎵 Apple Music
-            </button>
-          </div>
-        )}
-
         {/* Home hero: a clear two-choice switch between the decorative
             record and the real media (Video/Audio/Apple Music/Spotify,
             whichever actually applies) — changes presentation only, never
@@ -1594,9 +1516,7 @@ export default function TheDJCaresPage({
   const heroPlaylist = playlists.find((p) => p.id === heroPlaylistId) ?? playlists[0];
   // Whether the Music widget's featured playlist is what's actually
   // current — same dailyIsCurrent pattern (see above).
-  const musicIsCurrent = Boolean(
-    started && current && heroPlaylist && (current.id === heroPlaylist.id || heroPlaylist.siteQueueIds?.includes(current.id)),
-  );
+  const musicIsCurrent = Boolean(started && current && heroPlaylist && current.id === heroPlaylist.id);
 
   // Once the listener is back on a tab where the full player already shows
   // inline, an expanded mini-player sheet has nothing left to add — collapse
@@ -1962,7 +1882,7 @@ export default function TheDJCaresPage({
                 <>
                   <button
                     type="button"
-                    onClick={() => startPlaylist(heroPlaylist)}
+                    onClick={() => { startItem(heroPlaylist); track("playlist_open", { content_title: heroPlaylist.title }); }}
                     aria-label={`Play ${heroPlaylist.title}`}
                     style={{ display: "block", width: "min(300px, 100%)", margin: "0 auto", background: "none", border: "none", padding: 0, cursor: "pointer" }}
                   >
@@ -1979,7 +1899,7 @@ export default function TheDJCaresPage({
                     </span>
                   </button>
                   <div style={{ marginTop: 14 }}>
-                    <button onClick={() => startPlaylist(heroPlaylist)} style={bigButton}>▶ Play</button>
+                    <button onClick={() => { startItem(heroPlaylist); track("playlist_open", { content_title: heroPlaylist.title }); }} style={bigButton}>▶ Play</button>
                   </div>
                 </>
               )}
