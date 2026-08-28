@@ -77,6 +77,15 @@ export type MediaItem = {
   appleEmbed?: string; // embed.music.apple.com URL
   spotifyEmbed?: string; // open.spotify.com/embed URL
   spotifyAlt?: string; // Spotify twin for Apple playlists
+  // A Site Player-only playlist (appleEmbed, no videoId): a hand-curated,
+  // real, site-controllable stand-in for it — ids of existing `song(...)`
+  // entries elsewhere in this file that share the playlist's own vibe, in
+  // play order. Every id must resolve to a real, active, videoId-bearing
+  // item (siteQueueFor filters defensively) — never scraped, never
+  // invented, and never claimed to BE the exact Apple track list. Omit
+  // entirely for a playlist that hasn't been curated this way yet; it then
+  // stays Apple-only (see PlaylistCard/the Music widget's startPlaylist).
+  siteQueueIds?: string[];
   artworkUrl?: string; // approved, verified square playlist cover (for Listen experience)
   vibes: Vibe[];
   duration?: string; // only when reliably known
@@ -274,13 +283,58 @@ const MUSIC: MediaItem[] = [
 // ---------------------------------------------------------------------------
 // PLAYLISTS — DJ-curated Apple Music playlists (with Spotify twins where set).
 // ---------------------------------------------------------------------------
+// Site Player curation (owner, 2026-08-27): a cross-origin Apple Music
+// iframe can't be driven by the site's VolumeControl — no real slider is
+// possible there. For playlists where the library already has a genuinely
+// matching set of real, oEmbed-verified songs, siteQueueIds below name
+// them explicitly (hand-picked here, not auto-computed from vibes — a
+// vibe match can drift as the catalog grows, an explicit list can't).
+// Faith Playlist's vibes are ["Faith", "Worship"]; the queue draws only
+// from songs actually tagged "Faith" — a real but PARTIAL, hand-curated
+// stand-in, never claimed to be the complete/exact Apple track list (see
+// the Music tab's own "curated, not the full playlist" language).
+// Church Hymns maps 1:1 onto every song already carrying the "Hymns"
+// vibe — the strongest, least-ambiguous match in the whole catalog.
+// Christian Rap Essentials / Christian Workout / Country Faith have no
+// genre data in this file (only mood vibes) to confidently curate a
+// genre-accurate queue from — they stay Apple-only rather than mislabel
+// an unrelated song as "the rap/workout/country version."
+const FAITH_PLAYLIST_SITE_QUEUE = [
+  "song-battle-belongs",
+  "song-we-believe",
+  "song-even-if",
+  "song-fear-is-a-liar",
+  "song-you-say",
+  "song-ct-howgreatisourgod",
+  "song-cc-onlyjesus",
+  "song-mm-sayiwont",
+  "song-zw-lesslikeme",
+  "song-cain-yeshecan",
+];
+const CHURCH_HYMNS_SITE_QUEUE = [
+  "hymn-amazing-grace",
+  "hymn-how-great-thou-art",
+  "hymn-it-is-well",
+  "hymn-blessed-assurance",
+  "hymn-great-is-thy-faithfulness",
+  "hymn-holyholyholy-raw",
+  "hymn-tissosweet-raw",
+  "hymn-isurrenderall-raw",
+  "hymn-turnyoureyes-raw",
+  "hymn-doxology-raw",
+  "hymn-bethoutmyvision-raw",
+  "hymn-nothingbuttheblood-raw",
+  "hymn-whatafriendwehave-raw",
+  "hymn-thisismyfatthersworld-raw",
+];
+
 const PLAYLISTS: MediaItem[] = [
-  applePl("apple-faith-playlist", "Faith Playlist", "Faith", "faith-playlist/pl.u-2aoqXjzsNqgmY7", ["Faith", "Worship"], { featured: true, spotifyAlt: "https://open.spotify.com/playlist/37i9dQZF1DXcb6CQIjdqKy", summary: "The songs I keep coming back to. Press play and let faith rise.", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/M7T0mAFjwGdXlZwwjmedEQ/540x540bb-60.jpg" }),
+  applePl("apple-faith-playlist", "Faith Playlist", "Faith", "faith-playlist/pl.u-2aoqXjzsNqgmY7", ["Faith", "Worship"], { featured: true, spotifyAlt: "https://open.spotify.com/playlist/37i9dQZF1DXcb6CQIjdqKy", summary: "The songs I keep coming back to. Press play and let faith rise.", artworkUrl: "https://is1-ssl.mzstatic.com/image/thumb/M7T0mAFjwGdXlZwwjmedEQ/540x540bb-60.jpg", siteQueueIds: FAITH_PLAYLIST_SITE_QUEUE }),
   applePl("apple-todays-christian", "Today's Christian", "Today's", "todays-christian/pl.fecfa8a26ea44ad581d4fe501892c8ff", ["Worship"], { spotifyAlt: "https://open.spotify.com/playlist/37i9dQZF1DX5SzTPIoCKiv", summary: "Today's Christian music, hand-picked to encourage." }),
   applePl("apple-christian-rap", "Christian Rap Essentials", "Rap", "christian-rap-essentials/pl.981a3c7a4e4641ceae33034bc51bdceb", ["Joy"], { summary: "Faith-filled bars that point to Jesus." }),
   applePl("apple-christian-workout", "Christian Workout", "Workout", "christian-workout/pl.4f6345e9ab6f4782bd31250b74ec6b23", ["Joy"], { summary: "High-energy worship to move to." }),
   applePl("apple-country-faith", "Country Faith", "Country", "country-faith/pl.a1f19c594aa846c3898dd98dd99c8910", ["Hope"], { summary: "Country music with a faithful heart." }),
-  applePl("apple-church-hymns", "Church Hymns", "Hymns", "church-hymns/pl.u-oZyll6RTRo9g6J", ["Hymns"], { summary: "The old hymns that have carried the church for generations." }),
+  applePl("apple-church-hymns", "Church Hymns", "Hymns", "church-hymns/pl.u-oZyll6RTRo9g6J", ["Hymns"], { summary: "The old hymns that have carried the church for generations.", siteQueueIds: CHURCH_HYMNS_SITE_QUEUE }),
 ];
 
 // ---------------------------------------------------------------------------
@@ -993,6 +1047,19 @@ export function activeItems(items: MediaItem[] = LIBRARY): MediaItem[] {
 
 export function itemsOfType(type: MediaType, items: MediaItem[] = LIBRARY): MediaItem[] {
   return activeItems(items).filter((i) => i.type === type);
+}
+
+// The real, site-playable Site Player queue for a playlist — resolves
+// siteQueueIds to actual library entries, defensively filtered to only
+// active items with a real videoId (so DJPlayer can genuinely play every
+// track; a benched or malformed entry silently drops out rather than
+// breaking playback). Empty for a playlist with no siteQueueIds — that
+// playlist stays Apple-only.
+export function siteQueueFor(item: MediaItem): MediaItem[] {
+  if (!item.siteQueueIds) return [];
+  return item.siteQueueIds
+    .map((id) => LIBRARY.find((i) => i.id === id))
+    .filter((i): i is MediaItem => Boolean(i && i.active !== false && i.videoId));
 }
 
 // musicVideos() removed — playbackExperience now distinguishes listen from watch
