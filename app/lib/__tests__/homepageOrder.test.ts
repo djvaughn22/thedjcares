@@ -788,8 +788,8 @@ describe("SyncedAudio: native <audio> initializes at the shared volume and stays
 });
 
 describe("Spotify/Apple embeds: real controls preserved, no fake site-level control that can't affect playback", () => {
-  it("REGRESSION (superseded): the one provider-embed <iframe> in the whole file (inside podcastPanelNode — now covering the Music widget's playlists and Daily Encouragement's embed fallback too) is followed by the same honest note instead of a non-functional slider — now also naming the device volume buttons explicitly (2026-08-26, so the guidance reads correctly on mobile too, without a media query)", () => {
-    expect(homeClient).toContain("🔊 Volume is controlled inside this player — or with your device&apos;s volume buttons.");
+  it("REGRESSION (superseded): the one provider-embed <iframe> in the whole file (inside podcastPanelNode — now covering the Music widget's playlists and Daily Encouragement's embed fallback too) is followed by the same honest note instead of a non-functional slider — now also naming the device volume buttons explicitly (copy updated 2026-08-27, so the guidance reads correctly on mobile too, without a media query)", () => {
+    expect(homeClient).toContain("🔊 Volume: use this player&apos;s controls or your computer/phone volume buttons.");
     // one shared embedVolumeNote node (its definition), referenced at the
     // one embed site — never a fake volume control standing in for it,
     // and never duplicated per card now that Daily Encouragement and the

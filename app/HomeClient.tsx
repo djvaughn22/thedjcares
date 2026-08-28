@@ -795,7 +795,7 @@ export default function TheDJCaresPage({
   // the listener where the real one lives.
   const embedVolumeNote = (
     <p role="note" style={{ textAlign: "center", fontSize: 12, fontWeight: 700, color: sub, margin: "10px 0 0" }}>
-      🔊 Volume is controlled inside this player — or with your device&apos;s volume buttons.
+      🔊 Volume: use this player&apos;s controls or your computer/phone volume buttons.
     </p>
   );
 

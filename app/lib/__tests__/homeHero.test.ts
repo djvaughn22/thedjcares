@@ -193,9 +193,9 @@ describe("Site-wide volume UX: visible and usable on mobile, not desktop-only", 
 });
 
 describe("Apple/Spotify embeds: honest device-volume guidance, never a fake slider", () => {
-  it("the shared note names both the in-player control and the device's own volume buttons — readable as correct guidance on desktop and mobile without a media query", () => {
+  it("the shared note names both the player's own controls and the device's volume buttons — readable as correct guidance on desktop and mobile without a media query (copy updated 2026-08-27)", () => {
     expect(homeClient).toContain(
-      "🔊 Volume is controlled inside this player — or with your device&apos;s volume buttons.",
+      "🔊 Volume: use this player&apos;s controls or your computer/phone volume buttons.",
     );
   });
 
