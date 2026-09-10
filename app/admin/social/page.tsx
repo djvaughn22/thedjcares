@@ -16,7 +16,7 @@ type PageProps = {
 
 const OTHER_BRAND_ADMINS = [
   { name: "CrossHeartPray", url: "https://crossheartpray.com/admin/social" },
-  { name: "DontCloneMeTom", url: "https://dontclonemetom.com/admin/social" },
+  { name: "DontCloneMeTom.com", url: "https://dontclonemetom.com/admin/social" },
 ];
 
 export default async function AdminSocialPage({ searchParams }: PageProps) {
