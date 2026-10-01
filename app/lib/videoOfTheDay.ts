@@ -23,6 +23,19 @@ import { itemsOfType, type MediaItem } from "./djCaresLibrary";
 // this rotation stays uncoupled from the encouragement engine's config.
 export const VIDEO_OF_THE_DAY_START = "2026-07-12";
 
+/**
+ * THE RECORD THE SITE OPENS ON, pinned by the owner.
+ *
+ * "GOOD DAY" by Forrest Frank is what TheDJCares.com leads with on a new
+ * visit, every day, rather than whichever video the rotation below happened
+ * to land on. A greeting that changes every morning is not a greeting.
+ *
+ * This constant is ONLY the opening pick. `selectVideoOfTheDay` is untouched
+ * and still rotates the whole eligible catalogue in its existing order, which
+ * is what Shuffle on the hero deals from.
+ */
+export const OPENING_RECORD_ID = "song-good-day";
+
 // Eligible: a real music video — has a YouTube id (so artworkUrl() always
 // returns a real thumbnail and the existing DJPlayer can always play it
 // inline), plus the same real-attribution bar every eligible item meets.

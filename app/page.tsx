@@ -10,9 +10,9 @@ import type { Metadata } from "next";
 import HomeClient from "./HomeClient";
 import { getCurrentAccessMode } from "./lib/featureAccess";
 import { chicagoDateKey } from "./lib/dailySocialCore";
-import { selectVideoOfTheDay } from "./lib/videoOfTheDay";
+import { OPENING_RECORD_ID, selectVideoOfTheDay } from "./lib/videoOfTheDay";
 import { selectHomeDailyPick } from "./lib/homeDailyPick";
-import type { MediaItem } from "./lib/djCaresLibrary";
+import { LIBRARY, type MediaItem } from "./lib/djCaresLibrary";
 import {
   findShareChurch,
   findShareMedia,
@@ -36,11 +36,28 @@ function getHomepageDailyPick(): MediaItem | null {
   }
 }
 
-// The hero record — always a real music video (thumbnail + inline
-// playback), never Daily Encouragement's podcast/sermon rotation. Same
-// never-500 guarantee: no eligible video, hero record just doesn't render.
+/**
+ * THE OPENING RECORD IS "GOOD DAY", EVERY VISIT AND EVERY DAY.
+ *
+ * The owner's request: this one song is what TheDJCares.com opens on, so it
+ * is the first thing selected on a new visit rather than whichever video the
+ * daily rotation happened to land on. "It's gonna be a good day. Turn it up."
+ * is the greeting the site is supposed to open with, and a greeting that
+ * changes every morning is not a greeting.
+ *
+ * ONLY THE OPENING PICK IS PINNED. `selectVideoOfTheDay` is untouched and
+ * still rotates — Shuffle on the hero still deals another eligible video, and
+ * every other caller keeps the behaviour it had. The rest of the catalogue
+ * keeps its existing relative order behind this one record.
+ *
+ * The same never-500 guarantee as before: if the pinned song is ever missing
+ * from the library, fall back to the rotation rather than render nothing, and
+ * if that fails too the hero record simply does not render.
+ */
 function getHomepageVideoOfTheDay(): MediaItem | null {
   try {
+    const opener = LIBRARY.find((item) => item.id === OPENING_RECORD_ID);
+    if (opener) return opener;
     return selectVideoOfTheDay(chicagoDateKey());
   } catch {
     return null;
