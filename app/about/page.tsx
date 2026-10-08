@@ -57,6 +57,13 @@ export default function AboutPage() {
           TheDJCares is an <a href="https://openmirrorllc.com">Open Mirror LLC</a> project, and shares a heart with{" "}
           <a href="https://crossheartpray.com">CrossHeartPray</a> — no account needed for either.
         </p>
+        {/* One optional sister-site line (owner direction 2026-10-07). The
+            listening experience itself never links out to a sales path. */}
+        <p style={{ fontSize: 13, lineHeight: 1.7, color: "var(--sub)", margin: "0 0 24px" }}>
+          Getting your household ready for storms or outages? Our sister site{" "}
+          <a href="https://pleasebeready.com/?utm_source=thedjcares&utm_medium=referral&utm_campaign=about">PleaseBeReady</a>{" "}
+          has free checklists.
+        </p>
 
         <div className="djc-about-card">
           <h2 style={{ fontSize: 15, fontWeight: 900, margin: "0 0 8px" }}>💌 Request something</h2>
