@@ -194,6 +194,19 @@ describe("explicit links and saved mixes still win over the day's pick", () => {
     expect(linkReturn).toBeLessThan(cue.indexOf("setCurrent(videoOfTheDay"));
   });
 
+  it("a playable /?play= link also takes the idle hero, labelled as shared (it used to show the day's pick, so the big Play played the wrong song)", () => {
+    const linkCue = cue.indexOf("setCurrent(shared);");
+    const linkReturn = cue.indexOf("return;", linkCue);
+    const branch = cue.slice(linkCue, linkReturn);
+    expect(branch).toContain("setHeroVideo(shared);");
+    expect(branch).toContain("setHeroShared(true);");
+    const hero = homeClient.slice(homeClient.indexOf('id="video-of-the-day"'), homeClient.indexOf("{heroVideo.title}</p>"));
+    expect(hero).toContain('{heroShared ? "Shared with you" : "Music Video of the Day"}');
+    expect(hero).toContain('{heroShared ? "Play" : "Play Today"}');
+    const spin = homeClient.slice(homeClient.indexOf("const shuffleHeroVideo"), homeClient.indexOf("const shuffleHeroVideo") + 400);
+    expect(spin).toContain("setHeroShared(false);");
+  });
+
   it("a saved mood mix is restored and returns before the day's pick", () => {
     const mixCue = cue.indexOf("setCurrent(queue[position]);");
     const mixReturn = cue.indexOf("return;", mixCue);

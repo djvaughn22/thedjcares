@@ -219,6 +219,9 @@ export default function TheDJCaresPage({
   // playback at all (see shuffleHeroVideo below). Independent of `current`
   // until the hero item is actually played.
   const [heroVideo, setHeroVideo] = useState<MediaItem | null>(videoOfTheDay);
+  // True while the hero shows an item a share link (/?play=…) asked for, so
+  // it is labelled as shared rather than as today's Video of the Day.
+  const [heroShared, setHeroShared] = useState(false);
   // The Daily Encouragement card's own pick — starts as today's official
   // rotation, but Spin can swap it for another sermon/podcast that's
   // actually inline-playable (today's official pick can land on a
@@ -345,8 +348,12 @@ export default function TheDJCaresPage({
       setAnnounce(`Ready to play: ${shared.title}`);
       bringIntoView("music");
     } else if (shared && isPlayable(shared)) {
-      // Cue it on the deck, ready for one tap of Play.
+      // Cue it on the deck, ready for one tap of Play — and put it on the
+      // idle hero too, so the big Play plays what was shared. (The hero
+      // used to keep today's pick, so only the tab title named the link.)
       setCurrent(shared);
+      setHeroVideo(shared);
+      setHeroShared(true);
       setAnnounce(`Ready to play: ${shared.title} — ${shared.author}`);
       bringIntoView("now-playing");
       return;
@@ -448,6 +455,7 @@ export default function TheDJCaresPage({
     const next = pickNext(eligible, historyRef.current);
     if (next) {
       setHeroVideo(next);
+      setHeroShared(false);
       track("hero_shuffle", { content_title: next.title });
     }
   }, []);
@@ -1661,11 +1669,11 @@ export default function TheDJCaresPage({
         {tab === "spin" && !started && heroVideo && (
           <section
             id="video-of-the-day"
-            aria-label="Video of the Day"
+            aria-label={heroShared ? "Shared with you" : "Video of the Day"}
             style={{ textAlign: "center", padding: "4px 0 20px", marginBottom: 6, order: HOME_ORDER.hero }}
           >
             <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 20px" }}>
-              <span aria-hidden>📀</span> Music Video of the Day
+              <span aria-hidden>📀</span> {heroShared ? "Shared with you" : "Music Video of the Day"}
             </p>
 
             <div className="djc-turntable-wrap" style={{ width: "min(460px, 88vw)", margin: "0 auto 18px", position: "relative" }}>
@@ -1674,7 +1682,7 @@ export default function TheDJCaresPage({
                 <button
                   type="button"
                   onClick={() => startItem(heroVideo)}
-                  aria-label={`Play the video of the day: ${heroVideo.title}`}
+                  aria-label={heroShared ? `Play ${heroVideo.title}` : `Play the video of the day: ${heroVideo.title}`}
                   className="djc-vinyl"
                   style={{ WebkitAppearance: "none", appearance: "none", border: 0, padding: 0, margin: 0, font: "inherit", color: "inherit" }}
                 >
@@ -1693,7 +1701,7 @@ export default function TheDJCaresPage({
                   <span className="djc-vinyl-spindle" aria-hidden />
                   <span className="djc-vinyl-playcue" aria-hidden>
                     <span className="djc-vinyl-playcue-tri">▶</span>
-                    <span className="djc-vinyl-playcue-txt">Play Today</span>
+                    <span className="djc-vinyl-playcue-txt">{heroShared ? "Play" : "Play Today"}</span>
                   </span>
                 </button>
                 <span className="djc-tonearm" aria-hidden>
@@ -1980,7 +1988,7 @@ export default function TheDJCaresPage({
                   <MediaCard key={s.id} item={s} showMinistry />
                 ))}
               </div>
-              <div style={{ display: "flex", gap: 10, marginTop: 14, marginBottom: 30 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 14, marginBottom: 30 }}>
                 <button
                   onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }}
                   style={{ ...bigButton, flex: "0 0 auto" }}
