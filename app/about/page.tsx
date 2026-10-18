@@ -62,7 +62,7 @@ export default function AboutPage() {
         <p style={{ fontSize: 13, lineHeight: 1.7, color: "var(--sub)", margin: "0 0 24px" }}>
           Getting your household ready for storms or outages? Our sister site{" "}
           <a href="https://pleasebeready.com/?utm_source=thedjcares&utm_medium=referral&utm_campaign=about">PleaseBeReady</a>{" "}
-          has free checklists.
+          has helpful checklists.
         </p>
 
         <div className="djc-about-card">
