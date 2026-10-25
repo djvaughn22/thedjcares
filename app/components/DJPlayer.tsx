@@ -109,8 +109,8 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
   const [apiFailed, setApiFailed] = useState(false);
   const [ready, setReady] = useState(false);
   // Latest callbacks/values without re-creating the player.
-  const cbRef = useRef({ onPlaybackChange, onProgress, onAutoplayBlocked, onUnavailable, videoId, volume, muted });
-  cbRef.current = { onPlaybackChange, onProgress, onAutoplayBlocked, onUnavailable, videoId, volume, muted };
+  const cbRef = useRef({ onPlaybackChange, onProgress, onAutoplayBlocked, onUnavailable, videoId, volume, muted, playing });
+  cbRef.current = { onPlaybackChange, onProgress, onAutoplayBlocked, onUnavailable, videoId, volume, muted, playing };
   const blockedTimerRef = useRef<number | null>(null);
 
   const clearBlockedWatchdog = () => {
@@ -176,7 +176,7 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
         playerRef.current = new YT.Player(el, {
           videoId: cbRef.current.videoId,
           host: "https://www.youtube-nocookie.com",
-          playerVars: { autoplay: 1, playsinline: 1, rel: 0, cc_load_policy: 1, cc_lang_pref: "en" },
+          playerVars: { autoplay: cbRef.current.playing ? 1 : 0, playsinline: 1, rel: 0, cc_load_policy: 1, cc_lang_pref: "en" },
           events: {
             onReady: () => {
               readyRef.current = true;
@@ -188,7 +188,7 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
               } catch {
                 // Volume re-syncs on the next prop change.
               }
-              armBlockedWatchdog();
+              if (cbRef.current.playing) armBlockedWatchdog();
             },
             onStateChange: (e) => {
               console.log('[DJPlayer] YouTube state changed:', e.data, '(0=ended, 1=playing, 2=paused, 3=buffering, 5=cued)');

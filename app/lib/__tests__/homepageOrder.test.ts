@@ -14,6 +14,7 @@ const layout = readFileSync(join(app, "layout.tsx"), "utf8");
 const page = readFileSync(join(app, "page.tsx"), "utf8");
 const nextConfig = readFileSync(join(root, "next.config.ts"), "utf8");
 const encouragementActions = readFileSync(join(app, "components/EncouragementActions.tsx"), "utf8");
+const djPlayer = readFileSync(join(app, "components/DJPlayer.tsx"), "utf8");
 
 const at = (haystack: string, needle: string) => haystack.indexOf(needle);
 
@@ -481,10 +482,15 @@ describe("Persistent player: one continuous listening experience across Music, V
 
   it("a direct entry to a category initializes normally but never autoplays without a user action — `started` (which gates the persistent player and any DJPlayer/SyncedAudio mount) only ever becomes true inside startItem, which itself is only ever invoked from onClick handlers, not from a mount effect", () => {
     expect(homeClient).toContain("const [started, setStarted] = useState(false)");
-    // The only place `started` is ever set true is inside startItem.
-    expect(homeClient.match(/setStarted\(true\)/g)?.length).toBe(1);
+    // `started` is set true inside startItem, plus one iOS-only cue that
+    // mounts the player with playing still false (iPhone needs the first
+    // tap to land inside YouTube's own player) — DJPlayer is created with
+    // autoplay off whenever it mounts cued.
+    expect(homeClient.match(/setStarted\(true\)/g)?.length).toBe(2);
     const startItemIdx = homeClient.indexOf("const startItem = ");
-    expect(homeClient.indexOf("setStarted(true)")).toBeGreaterThan(startItemIdx);
+    expect(homeClient.indexOf("setStarted(true)", startItemIdx)).toBeGreaterThan(startItemIdx);
+    expect(homeClient).toContain("if (isIOS && !started && current?.videoId) setStarted(true); // cued, playing stays false");
+    expect(djPlayer).toContain("autoplay: cbRef.current.playing ? 1 : 0");
   });
 });
 
