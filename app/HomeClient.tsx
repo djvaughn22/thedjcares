@@ -1029,10 +1029,26 @@ export default function TheDJCaresPage({
   // video and native audio default to the record, since both are actually
   // controllable from here.
   const [heroView, setHeroView] = useState<"record" | "media">("record");
+  // iPhone/iPad Safari only starts a YouTube video with sound from a tap
+  // inside the YouTube player itself — a Play sent from our own record is
+  // silently refused. So on iOS a video opens on the real player (same as
+  // Apple/Spotify above), and anywhere playback gets refused the hero
+  // flips to the real player with a one-line hint.
+  const [isIOS, setIsIOS] = useState(false);
   useEffect(() => {
-    if (current) setHeroView(showEmbed ? "media" : "record");
+    setIsIOS(/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+  }, []);
+  useEffect(() => {
+    if (current) setHeroView(showEmbed || (isIOS && showVideo) ? "media" : "record");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id]);
+  useEffect(() => {
+    if (autoplayBlocked && showVideo) setHeroView("media");
+  }, [autoplayBlocked, showVideo]);
+  useEffect(() => {
+    if (playerState === "playing") setAutoplayBlocked(false);
+  }, [playerState]);
+  const tapVideoHint = showVideo && heroView === "media" && playerState !== "playing" && (autoplayBlocked || isIOS);
   // Whether the Home hero's record should actually spin — only when the
   // application can truthfully verify playback (real YouTube state, real
   // native-audio events). A Spotify/Apple embed's play state isn't
@@ -1368,6 +1384,11 @@ export default function TheDJCaresPage({
             touches current/started/playing, so the same DJPlayer/
             SyncedAudio/iframe underneath just gets shown or visually
             hidden (see heroRecordActive above), never remounted. */}
+        {tab === "spin" && tapVideoHint && (
+          <p role="status" style={{ textAlign: "center", fontSize: 13, fontWeight: 800, color: accent, margin: "0 0 10px" }}>
+            Tap the video once to start it — your phone needs the tap on the player itself.
+          </p>
+        )}
         {tab === "spin" && current && (showVideo || showAudio || showEmbed) && (
           <div role="group" aria-label="Hero view" style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 14 }}>
             <button type="button" aria-pressed={heroView === "record"} onClick={() => setHeroView("record")} style={pill(heroView === "record")}>
@@ -1391,7 +1412,8 @@ export default function TheDJCaresPage({
                   className="djc-turntable"
                   style={{ cursor: "pointer" }}
                   onClick={() => {
-                    if (showVideo) setPlaying(playerState !== "playing");
+                    if (showVideo && isIOS && playerState === "idle") { setPlaying(true); setHeroView("media"); }
+                    else if (showVideo) setPlaying(playerState !== "playing");
                     else if (showAudio) toggleAudioPlayback();
                     else setHeroView("media"); // an embed's own player is the only thing that can actually play it
                   }}

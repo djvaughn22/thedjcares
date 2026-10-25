@@ -84,7 +84,7 @@ describe("Home hero: the Record/Media two-choice switch covers all four real sou
 
 describe("Home hero: for Apple/Spotify, default to the provider view — the site can't start playback inside a cross-origin embed", () => {
   it("a fresh selection defaults heroView to \"media\" when it's an embed, \"record\" otherwise, and re-decides on every new current item (not just once)", () => {
-    const start = homeClient.indexOf("useEffect(() => {\n    if (current) setHeroView(showEmbed ? \"media\" : \"record\");");
+    const start = homeClient.indexOf("useEffect(() => {\n    if (current) setHeroView(showEmbed || (isIOS && showVideo) ? \"media\" : \"record\");");
     expect(start).toBeGreaterThan(-1);
     const section = homeClient.slice(start, start + 200);
     expect(section).toContain("[current?.id]");
