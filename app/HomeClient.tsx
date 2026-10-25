@@ -1149,7 +1149,10 @@ export default function TheDJCaresPage({
         isMiniSlot
           ? { position: "relative", width: 52, height: 52, flexShrink: 0, background: "#000", borderRadius: 10, overflow: "hidden" }
           : heroRecordActive
-            ? { position: "absolute", width: 1, height: 1, overflow: "hidden", opacity: 0, pointerEvents: "none" }
+            // Invisible but full-size: YouTube's IFrame API won't reliably
+            // play below its 200x200 minimum, so a 1px player could refuse
+            // Play from the record.
+            ? { position: "absolute", left: 0, top: 0, width: 200, height: 200, overflow: "hidden", opacity: 0, pointerEvents: "none", zIndex: -1 }
             : { position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000", borderRadius: 14, overflow: "hidden" }
       }
     >
@@ -1380,15 +1383,22 @@ export default function TheDJCaresPage({
           <div style={playerDisplayMode === "mini" ? { flexShrink: 0 } : undefined}>
             {heroRecordActive && (
               <div className="djc-turntable-wrap engaged" style={{ width: "min(300px, 66vw)", margin: "0 auto 16px", position: "relative" }}>
-                <div className="djc-turntable">
+                {/* The whole deck is the click target, not just the disc —
+                    the platter ring around it looks like part of the record
+                    too. The button's own click (mouse or keyboard) bubbles
+                    up here, so it fires exactly once. */}
+                <div
+                  className="djc-turntable"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => {
+                    if (showVideo) setPlaying(playerState !== "playing");
+                    else if (showAudio) toggleAudioPlayback();
+                    else setHeroView("media"); // an embed's own player is the only thing that can actually play it
+                  }}
+                >
                   <span className="djc-platter" aria-hidden />
                   <button
                     type="button"
-                    onClick={() => {
-                      if (showVideo) setPlaying(playerState !== "playing");
-                      else if (showAudio) toggleAudioPlayback();
-                      else setHeroView("media"); // an embed's own player is the only thing that can actually play it
-                    }}
                     aria-label={
                       showVideo || showAudio
                         ? (trulyPlaying ? "Pause" : "Play")
@@ -1407,6 +1417,12 @@ export default function TheDJCaresPage({
                       )}
                     </span>
                     <span className="djc-vinyl-spindle" aria-hidden />
+                    {(showVideo || showAudio) && !trulyPlaying && (
+                      <span className="djc-vinyl-playcue" aria-hidden>
+                        <span className="djc-vinyl-playcue-tri">▶</span>
+                        <span className="djc-vinyl-playcue-txt">Paused</span>
+                      </span>
+                    )}
                   </button>
                   <span className="djc-tonearm lowered" aria-hidden>
                     <span className="djc-tonearm-counterweight" />
@@ -1677,11 +1693,11 @@ export default function TheDJCaresPage({
             </p>
 
             <div className="djc-turntable-wrap" style={{ width: "min(460px, 88vw)", margin: "0 auto 18px", position: "relative" }}>
-              <div className="djc-turntable">
+              {/* Whole deck is clickable — see the now-playing record above. */}
+              <div className="djc-turntable" style={{ cursor: "pointer" }} onClick={() => startItem(heroVideo)}>
                 <span className="djc-platter" aria-hidden />
                 <button
                   type="button"
-                  onClick={() => startItem(heroVideo)}
                   aria-label={heroShared ? `Play ${heroVideo.title}` : `Play the video of the day: ${heroVideo.title}`}
                   className="djc-vinyl"
                   style={{ WebkitAppearance: "none", appearance: "none", border: 0, padding: 0, margin: 0, font: "inherit", color: "inherit" }}

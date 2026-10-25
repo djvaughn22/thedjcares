@@ -167,7 +167,7 @@
   transition: opacity 0.35s ease, transform 0.35s ease;
   pointer-events: none;
 }
-.djc-vinyl.engaged .djc-vinyl-playcue {
+.djc-vinyl.spinning .djc-vinyl-playcue {
   opacity: 0;
   transform: scale(0.85);
 }
