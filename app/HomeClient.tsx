@@ -1060,6 +1060,9 @@ export default function TheDJCaresPage({
   useEffect(() => {
     if (playerState === "playing") setAutoplayBlocked(false);
   }, [playerState]);
+  // iPhone, before the first play: only the record can start the video
+  // (it's the one spot with YouTube's player under it), so Play points there.
+  const [tapRecordHint, setTapRecordHint] = useState(false);
   const tapVideoHint = showVideo && heroView === "media" && playerState !== "playing" && (autoplayBlocked || isIOS);
   // Whether the Home hero's record should actually spin — only when the
   // application can truthfully verify playback (real YouTube state, real
@@ -1262,7 +1265,14 @@ export default function TheDJCaresPage({
           ⏮
         </button>
         {showVideo && !blocked ? (
-          <button onClick={() => setPlaying(playerState !== "playing")} aria-label={playerState === "playing" ? "Pause" : "Play"} style={quietButton}>
+          <button
+            onClick={() => {
+              if (iosTapCatcher && heroRecordActive && playerState !== "playing") setTapRecordHint(true);
+              else setPlaying(playerState !== "playing");
+            }}
+            aria-label={playerState === "playing" ? "Pause" : "Play"}
+            style={quietButton}
+          >
             {playerState === "playing" ? "⏸ Pause" : "▶ Play"}
           </button>
         ) : showAudio ? (
@@ -1401,6 +1411,11 @@ export default function TheDJCaresPage({
             touches current/started/playing, so the same DJPlayer/
             SyncedAudio/iframe underneath just gets shown or visually
             hidden (see heroRecordActive above), never remounted. */}
+        {tab === "spin" && tapRecordHint && iosTapCatcher && heroRecordActive && (
+          <p role="status" style={{ textAlign: "center", fontSize: 13, fontWeight: 800, color: accent, margin: "0 0 10px" }}>
+            Tap the record to start — on iPhone the first tap has to land on the record.
+          </p>
+        )}
         {tab === "spin" && tapVideoHint && (
           <p role="status" style={{ textAlign: "center", fontSize: 13, fontWeight: 800, color: accent, margin: "0 0 10px" }}>
             Tap the video once to start it — your phone needs the tap on the player itself.
