@@ -676,7 +676,7 @@ describe("Playback collapses to a compact mini-player off the natural tab — ne
     const start = homeClient.indexOf("const activePlayerNode = (");
     const end = homeClient.indexOf("\n  );", start);
     const section = homeClient.slice(start, end);
-    expect(section).toContain('aria-label={trulyPlaying ? "Pause" : "Play"}');
+    expect(section).toContain('aria-label={trulyPlaying ? "Pause" : videoLoading ? "Loading — tap to cancel" : "Play"}');
     expect(section).toContain('onClick={() => setMiniVolumeOpen((v) => !v)}');
     expect(section).toContain('aria-label="Volume"');
     expect(section).toContain('aria-label="Expand player"');

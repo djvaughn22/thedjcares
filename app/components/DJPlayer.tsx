@@ -80,6 +80,10 @@ export type DJPlayerHandle = {
   seekToFraction: (fraction: number) => void;
   /** Restart the current video from the top (repeat-one). */
   restart: () => void;
+  // Direct play/pause, called straight from the listener's tap so the
+  // request leaves inside the user gesture (no wait for a re-render).
+  play: () => void;
+  pause: () => void;
 };
 
 export type DJPlayerProps = {
@@ -93,7 +97,7 @@ export type DJPlayerProps = {
   // whichever video is currently playing.
   volume?: number; // 0–100
   muted?: boolean;
-  onPlaybackChange: (state: "playing" | "paused" | "ended") => void;
+  onPlaybackChange: (state: "playing" | "paused" | "ended" | "buffering") => void;
   onProgress?: (currentSeconds: number, durationSeconds: number) => void;
   onAutoplayBlocked?: () => void; // asked to play, browser said no
   onUnavailable: () => void; // embedding blocked / video gone
@@ -151,6 +155,26 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
         // Ignore — next poll re-syncs.
       }
     },
+    play: () => {
+      const p = playerRef.current;
+      if (!p || !readyRef.current) return; // not ready yet — the `playing` prop starts it on ready
+      try {
+        p.playVideo();
+        armBlockedWatchdog();
+      } catch {
+        // Player mid-teardown.
+      }
+    },
+    pause: () => {
+      const p = playerRef.current;
+      if (!p || !readyRef.current) return;
+      try {
+        clearBlockedWatchdog();
+        p.pauseVideo();
+      } catch {
+        // Player mid-teardown.
+      }
+    },
     restart: () => {
       const p = playerRef.current;
       if (!p || !readyRef.current) return;
@@ -205,6 +229,8 @@ const DJPlayer = forwardRef<DJPlayerHandle, DJPlayerProps>(function DJPlayer(
               } else if (e.data === YT.PlayerState.PAUSED) {
                 console.log('[DJPlayer] PAUSED');
                 cbRef.current.onPlaybackChange("paused");
+              } else if (e.data === YT.PlayerState.BUFFERING) {
+                cbRef.current.onPlaybackChange("buffering");
               } else {
                 console.log('[DJPlayer] Other state:', e.data);
               }

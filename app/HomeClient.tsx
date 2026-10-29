@@ -183,6 +183,9 @@ export default function TheDJCaresPage({
   const [sessionHistory, setSessionHistory] = useState<SessionHistory>(createSessionHistory());
   const playedCountRef = useRef(0);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  // A play was asked for and YouTube hasn't confirmed it yet — drives the
+  // visible "Loading…" state so nothing claims playback before it starts.
+  const [startPending, setStartPending] = useState(false);
   const playerRef = useRef<DJPlayerHandle>(null);
   // Native audio doesn't report play/pause through props like DJPlayer
   // does — this ref reaches the real <audio> element (SyncedAudio forwards
@@ -432,6 +435,7 @@ export default function TheDJCaresPage({
     setPlaying(true);
     setBlocked(false);
     setAutoplayBlocked(false);
+    setStartPending(Boolean(item.videoId));
     setProgress(null);
 
     // Track this play in session history
@@ -440,7 +444,7 @@ export default function TheDJCaresPage({
     saveSessionHistory(newHistory);
     playedCountRef.current = getPlayedCount(newHistory);
 
-    setAnnounce(`Now spinning: ${item.title} — ${item.author}`);
+    setAnnounce(`Starting: ${item.title} — ${item.author}`);
     track("media_play", { content_type: item.type, content_title: item.title, via: viaSpin ? "spin" : "pick" });
     deckRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [moodQueue, pool.length, sessionHistory]);
@@ -651,7 +655,7 @@ export default function TheDJCaresPage({
     setCurrent(item);
     setPlaying(true);
     setBlocked(false);
-    setAnnounce(`Now spinning: ${item.title} — ${item.author}`);
+    setAnnounce(`Starting: ${item.title} — ${item.author}`);
   };
 
   const next = useCallback(() => {
@@ -676,7 +680,7 @@ export default function TheDJCaresPage({
       setCurrent(item);
       setPlaying(true);
       setBlocked(false);
-      setAnnounce(`Now spinning: ${item.title} — ${item.author}`);
+      setAnnounce(`Starting: ${item.title} — ${item.author}`);
       return;
     }
     if (mainNext(1)) return;
@@ -1030,13 +1034,12 @@ export default function TheDJCaresPage({
   // controllable from here.
   const [heroView, setHeroView] = useState<"record" | "media">("record");
   // iPhone/iPad Safari only starts a YouTube video with sound from a tap
-  // that lands inside the YouTube player itself — a Play sent from our own
-  // record or buttons is silently refused until that first tap. So on iOS
-  // the cued video's player is mounted up front (no sound until a tap) and,
-  // until it has played once, laid invisibly over the record: tapping the
-  // record IS tapping YouTube's player. After that first play, every
-  // control on the page drives it normally. Anywhere playback still gets
-  // refused, the hero flips to the real player with a one-line hint.
+  // inside YouTube's own player — a play request sent from our record or
+  // buttons is refused until that player has been tapped once. So on iOS
+  // the cued video's player is mounted up front (no sound) and shown as the
+  // real video; until it has played once, our play controls bring that
+  // player into view instead of pretending to start it. After the first
+  // play, every control drives it directly, same as desktop.
   const [isIOS, setIsIOS] = useState(false);
   const [ytActivated, setYtActivated] = useState(false);
   useEffect(() => {
@@ -1049,26 +1052,29 @@ export default function TheDJCaresPage({
   useEffect(() => {
     if (playerState === "playing") setYtActivated(true);
   }, [playerState]);
-  const iosTapCatcher = isIOS && !ytActivated;
+  useEffect(() => {
+    if (!showVideo) setYtActivated(false); // a new YouTube player needs its own first tap
+  }, [showVideo]);
+  const needsPlayerTap = isIOS && Boolean(showVideo) && !ytActivated;
   useEffect(() => {
     if (current) setHeroView(showEmbed ? "media" : "record");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id]);
+  useEffect(() => {
+    if (needsPlayerTap) setHeroView("media");
+  }, [needsPlayerTap]);
   useEffect(() => {
     if (autoplayBlocked && showVideo) setHeroView("media");
   }, [autoplayBlocked, showVideo]);
   useEffect(() => {
     if (playerState === "playing") setAutoplayBlocked(false);
   }, [playerState]);
-  // iPhone, before the first play: only the record can start the video
-  // (it's the one spot with YouTube's player under it), so Play points there.
-  const [tapRecordHint, setTapRecordHint] = useState(false);
-  const tapVideoHint = showVideo && heroView === "media" && playerState !== "playing" && (autoplayBlocked || isIOS);
   // Whether the Home hero's record should actually spin — only when the
   // application can truthfully verify playback (real YouTube state, real
   // native-audio events). A Spotify/Apple embed's play state isn't
   // observable across origins, so it's never assumed to be playing.
   const trulyPlaying = showVideo ? playerState === "playing" : showAudio ? audioPlayingState : false;
+  const videoLoading = Boolean(showVideo) && startPending && playerState !== "playing";
   // True only on Home, only once something is actually current, and only
   // while the record (not the real media) is the selected hero view — the
   // one flag that decides whether the video/audio/embed element gets
@@ -1110,6 +1116,32 @@ export default function TheDJCaresPage({
   // mini-player expands, collapses, or the listener changes tabs — see
   // activePlayerNode below, where this is the ONLY place either renders.
   const isMiniSlot = playerDisplayMode === "mini";
+
+  // The ONE play/pause action — the record, the button under it, and the
+  // mini-player all call this, so they can never disagree. YouTube's own
+  // events (onPlaybackChange) are what move playerState, so a play or
+  // pause made inside the video's own controls keeps all of them in step.
+  const togglePlayback = () => {
+    if (showAudio) { toggleAudioPlayback(); return; }
+    if (!showVideo) { setHeroView("media"); return; } // Spotify/Apple: only their own player can play
+    if (needsPlayerTap) {
+      // iPhone, first play: bring YouTube's real player (and its Play) into view.
+      setHeroView("media");
+      if (playerDisplayMode === "mini") setPlayerExpanded(true);
+      return;
+    }
+    if (playerState === "playing" || videoLoading) {
+      setPlaying(false);
+      setStartPending(false);
+      playerRef.current?.pause();
+    } else {
+      setPlaying(true);
+      setStartPending(true);
+      setAutoplayBlocked(false);
+      playerRef.current?.play();
+    }
+  };
+  const videoButtonLabel = playerState === "playing" ? "⏸ Pause" : videoLoading ? "⏳ Loading…" : "▶ Play";
 
   // The actual inline audio/embed element for whatever podcast/sermon is
   // current — including a Daily Encouragement pick, now that its Play
@@ -1179,10 +1211,6 @@ export default function TheDJCaresPage({
       style={
         isMiniSlot
           ? { position: "relative", width: 52, height: 52, flexShrink: 0, background: "#000", borderRadius: 10, overflow: "hidden" }
-          : heroRecordActive && iosTapCatcher
-            // Exactly over the record (same box as .djc-turntable-wrap),
-            // invisible, and the top layer so the tap reaches YouTube.
-            ? { position: "absolute", left: "50%", top: 0, transform: "translateX(-50%)", width: "min(300px, 66vw)", aspectRatio: "1", overflow: "hidden", opacity: 0.011, zIndex: 3 }
           : heroRecordActive
             // Invisible but full-size: YouTube's IFrame API won't reliably
             // play below its 200x200 minimum, so a 1px player could refuse
@@ -1204,6 +1232,8 @@ export default function TheDJCaresPage({
         volume={prefs.volume}
         muted={prefs.muted}
         onPlaybackChange={(s) => {
+          if (s === "buffering") { setStartPending(true); return; }
+          if (s !== "ended") { setPlaying(s === "playing"); setStartPending(false); }
           const DEV = typeof window !== 'undefined' && (window as any).__djDebug;
           DEV && console.log('[DJPlayer.onPlaybackChange] state:', s, 'current video:', current?.videoId);
           if (s === "ended") {
@@ -1212,7 +1242,6 @@ export default function TheDJCaresPage({
           } else {
             DEV && console.log('[DJPlayer.onPlaybackChange] setPlayerState:', s);
             setPlayerState(s);
-            if (s === "playing") setPlaying(true);
           }
         }}
         onProgress={(t, d) => {
@@ -1222,8 +1251,8 @@ export default function TheDJCaresPage({
           }
           setProgress({ t, d });
         }}
-        onAutoplayBlocked={() => setAutoplayBlocked(true)}
-        onUnavailable={onUnavailable}
+        onAutoplayBlocked={() => { setAutoplayBlocked(true); setStartPending(false); setPlaying(false); }}
+        onUnavailable={() => { setStartPending(false); onUnavailable(); }}
       />
     </div>
   );
@@ -1265,16 +1294,17 @@ export default function TheDJCaresPage({
           ⏮
         </button>
         {showVideo && !blocked ? (
-          <button
-            onClick={() => {
-              if (iosTapCatcher && heroRecordActive && playerState !== "playing") setTapRecordHint(true);
-              else setPlaying(playerState !== "playing");
-            }}
-            aria-label={playerState === "playing" ? "Pause" : "Play"}
-            style={quietButton}
-          >
-            {playerState === "playing" ? "⏸ Pause" : "▶ Play"}
-          </button>
+          // iPhone before its first play, with the real video on screen:
+          // YouTube's own Play is the control — no second, dead one here.
+          needsPlayerTap && heroView === "media" ? null : (
+            <button
+              onClick={togglePlayback}
+              aria-label={playerState === "playing" ? "Pause" : videoLoading ? "Loading — tap to cancel" : "Play"}
+              style={quietButton}
+            >
+              {videoButtonLabel}
+            </button>
+          )
         ) : showAudio ? (
           <button onClick={toggleAudioPlayback} aria-label={audioPlayingState ? "Pause" : "Play"} style={quietButton}>
             {audioPlayingState ? "⏸ Pause" : "▶ Play"}
@@ -1411,14 +1441,10 @@ export default function TheDJCaresPage({
             touches current/started/playing, so the same DJPlayer/
             SyncedAudio/iframe underneath just gets shown or visually
             hidden (see heroRecordActive above), never remounted. */}
-        {tab === "spin" && tapRecordHint && iosTapCatcher && heroRecordActive && (
-          <p role="status" style={{ textAlign: "center", fontSize: 13, fontWeight: 800, color: accent, margin: "0 0 10px" }}>
-            Tap the record to start — on iPhone the first tap has to land on the record.
-          </p>
-        )}
-        {tab === "spin" && tapVideoHint && (
-          <p role="status" style={{ textAlign: "center", fontSize: 13, fontWeight: 800, color: accent, margin: "0 0 10px" }}>
-            Tap the video once to start it — your phone needs the tap on the player itself.
+        {autoplayBlocked && showVideo && !blocked && playerState !== "playing" && playerDisplayMode !== "mini" && current && (
+          <p role="status" style={{ textAlign: "center", fontSize: 13.5, fontWeight: 700, color: text, margin: "0 0 12px" }}>
+            It didn&apos;t start from here. Press play on the video, or{" "}
+            <a href={current.url} target="_blank" rel="noopener noreferrer" style={{ color: accent, fontWeight: 800 }}>watch on YouTube ↗</a>
           </p>
         )}
         {tab === "spin" && current && (showVideo || showAudio || showEmbed) && (
@@ -1433,7 +1459,7 @@ export default function TheDJCaresPage({
         )}
 
         <div style={playerDisplayMode === "mini" ? { display: "flex", alignItems: "center", gap: 12 } : undefined}>
-          <div style={playerDisplayMode === "mini" ? { flexShrink: 0 } : { position: "relative" }}>
+          <div style={playerDisplayMode === "mini" ? { flexShrink: 0 } : undefined}>
             {heroRecordActive && (
               <div className="djc-turntable-wrap engaged" style={{ width: "min(300px, 66vw)", margin: "0 auto 16px", position: "relative" }}>
                 {/* The whole deck is the click target, not just the disc —
@@ -1443,18 +1469,14 @@ export default function TheDJCaresPage({
                 <div
                   className="djc-turntable"
                   style={{ cursor: "pointer" }}
-                  onClick={() => {
-                    if (showVideo) setPlaying(playerState !== "playing");
-                    else if (showAudio) toggleAudioPlayback();
-                    else setHeroView("media"); // an embed's own player is the only thing that can actually play it
-                  }}
+                  onClick={togglePlayback}
                 >
                   <span className="djc-platter" aria-hidden />
                   <button
                     type="button"
                     aria-label={
                       showVideo || showAudio
-                        ? (trulyPlaying ? "Pause" : "Play")
+                        ? (trulyPlaying ? "Pause" : needsPlayerTap ? "Show the video player" : videoLoading ? "Loading — tap to cancel" : "Play")
                         : `Open ${current?.spotifyEmbed ? "Spotify" : "Apple Music"} player`
                     }
                     className={`djc-vinyl${trulyPlaying ? " spinning" : ""} engaged`}
@@ -1473,7 +1495,9 @@ export default function TheDJCaresPage({
                     {(showVideo || showAudio) && !trulyPlaying && (
                       <span className="djc-vinyl-playcue" aria-hidden>
                         <span className="djc-vinyl-playcue-tri">▶</span>
-                        <span className="djc-vinyl-playcue-txt">{playerState === "idle" ? "Play" : "Paused"}</span>
+                        <span className="djc-vinyl-playcue-txt">
+                          {videoLoading ? "Loading…" : needsPlayerTap ? "Play video" : playerState === "idle" || showAudio ? "Play" : "Paused"}
+                        </span>
                       </span>
                     )}
                   </button>
@@ -1520,11 +1544,11 @@ export default function TheDJCaresPage({
                 ) : (
                   <>
                     <button
-                      onClick={showVideo ? () => setPlaying(playerState !== "playing") : toggleAudioPlayback}
-                      aria-label={trulyPlaying ? "Pause" : "Play"}
+                      onClick={togglePlayback}
+                      aria-label={trulyPlaying ? "Pause" : videoLoading ? "Loading — tap to cancel" : "Play"}
                       style={{ minWidth: 44, minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", fontSize: 22, cursor: "pointer", color: text }}
                     >
-                      {trulyPlaying ? "⏸" : "▶"}
+                      {trulyPlaying ? "⏸" : videoLoading ? "⏳" : "▶"}
                     </button>
                     {/* Compact volume button — narrow mobile screens don't
                         have room for the full slider inline in the mini

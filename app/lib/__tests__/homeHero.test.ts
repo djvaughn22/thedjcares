@@ -136,8 +136,13 @@ describe("Home hero: switching views is presentation-only — never touches play
     const start = homeClient.indexOf("heroRecordActive && (");
     const end = homeClient.indexOf("{videoPanelNode}", start);
     const section = homeClient.slice(start, end);
-    expect(section).toContain("if (showVideo) setPlaying(playerState !== \"playing\");");
-    expect(section).toContain("else if (showAudio) toggleAudioPlayback();");
+    // One shared action: the record, the transport button and the mini-player all call togglePlayback.
+    expect(section).toContain("onClick={togglePlayback}");
+    expect(homeClient.match(/onClick=\{togglePlayback\}/g)?.length).toBe(3);
+    const toggle = homeClient.slice(homeClient.indexOf("const togglePlayback = () => {"), homeClient.indexOf("const videoButtonLabel"));
+    expect(toggle).toContain("if (showAudio) { toggleAudioPlayback(); return; }");
+    expect(toggle).toContain("playerRef.current?.play();");
+    expect(toggle).toContain("playerRef.current?.pause();");
   });
 });
 
