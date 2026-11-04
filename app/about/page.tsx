@@ -118,8 +118,10 @@ export default function AboutPage() {
         <section id="disclaimer" className="djc-about-card" style={{ scrollMarginTop: 96, marginBottom: 0 }}>
           <h2 style={{ fontSize: 15, fontWeight: 900, margin: "0 0 8px" }}>Disclaimer</h2>
           <p style={{ fontSize: 14.5, lineHeight: 1.65, color: "var(--sub)", margin: 0 }}>
-            Open Mirror LLC is independently owned and operated. Nothing published by Open Mirror LLC is sponsored
-            by, affiliated with, endorsed by, or representative of the owner&rsquo;s full-time employer. Read the{" "}
+            Open Mirror LLC and its projects are independently owned and operated. They
+            are not affiliated with, sponsored by, or endorsed by the owner&rsquo;s
+            current or former employers or their affiliates. The plain print above also
+            applies. Read the{" "}
             <a href="https://openmirrorllc.com/disclaimer">full Open Mirror disclaimer</a>.
           </p>
         </section>
