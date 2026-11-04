@@ -2,7 +2,7 @@
 // the shared centered three-line OpenMirrorFooter on every route —
 //   OpenMirrorLLC.com · About · ✝️ ❤️ 🙏
 //   Contact · Disclaimer      (anchors into THIS site's own About page)
-//   Open Mirror LLC is a small independent company.
+//   © 2026 Open Mirror LLC, a small independent company.   (© added 2026-11-03, owner)
 // The component is canonical in the hub repo (packages/openmirror-ui) —
 // never edit the local copy. The About page must carry the two landing
 // sections the footer links to.
@@ -36,8 +36,9 @@ describe("family footer standard", () => {
     expect(footer).not.toContain("mailto:");
   });
 
-  it("line three is the plain ownership sentence", () => {
-    expect(footer).toContain("Open Mirror LLC is a small independent company.");
+  it("line three is the copyright and the plain ownership phrase", () => {
+    expect(footer).toContain("<span>© 2026 Open Mirror LLC,</span>");
+    expect(footer).toContain("<span>a small independent company.</span>");
   });
 
   it("the About page carries the two footer landing sections", () => {
@@ -47,7 +48,6 @@ describe("family footer standard", () => {
 
   it("old clutter stays gone and links open in the same tab", () => {
     for (const banned of [
-      "©",
       "About Open Mirror",
       ">CrossHeartPray</a>",
       'target="_blank"',

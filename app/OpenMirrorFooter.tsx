@@ -10,7 +10,8 @@
 //   2. Contact · Disclaimer
 //      (both are anchors into THIS site's own About page sections —
 //      never a mailto, never a separate page, never another site)
-//   3. Open Mirror LLC is a small independent company.  (plain text)
+//   3. © 2026 Open Mirror LLC, a small independent company.  (plain text;
+//      the © joined this line on 2026-11-03, owner)
 // Self-contained: handles its own light/dark theming for BOTH theme
 // attributes (data-om-theme and data-chp-visual-theme) and pins itself to
 // the bottom of short pages via the body flex column below. Every About
@@ -33,6 +34,7 @@ body{min-height:100vh;min-height:100svh;display:flex;flex-direction:column}
 .om-footer-row a:focus-visible{outline:2px solid #94a3b8;outline-offset:2px}
 .om-footer-dot{color:#475569;font-size:12px;user-select:none}
 .om-footer-legal{margin:2px 0 0;text-align:center;font-size:11px;font-weight:500;color:#7a8aa3}
+.om-footer-legal span{display:inline-block}
 @media (max-width:360px){.om-footer-main a{font-size:12px}.om-footer-sub a{font-size:11.5px}.om-footer-row{column-gap:7px}.om-footer{padding-top:36px}}
 @media (prefers-reduced-motion:reduce){.om-footer *{transition:none!important;animation:none!important}}
 html[data-om-theme="light"] .om-footer-rule,html[data-chp-visual-theme="light"] .om-footer-rule{border-top-color:#dbe2ea}
@@ -81,7 +83,9 @@ export default function OpenMirrorFooter({ aboutHref = "/about" }: Props) {
             </p>
           </nav>
           <p className="om-footer-legal">
-            Open Mirror LLC is a small independent company.
+            {/* Two phrases, so a narrow phone breaks between them, not mid-phrase. */}
+            <span>© 2026 Open Mirror LLC,</span>{" "}
+            <span>a small independent company.</span>
           </p>
         </div>
       </div>
