@@ -21,13 +21,55 @@
 // A11y contract (unchanged): React-controlled open/close, real aria wiring,
 // Escape + outside-click + route-change close, focus into the menu on open and
 // back to the trigger on close, body-scroll lock on phones, 44px touch rows.
+//
+// Width (2026-11-08): the row is 680px wide with 20px sides. A site whose pages
+// run wider sets two variables on .om-bar in its own CSS so the brand and the
+// menu line up with its content, e.g. DontCloneMeTom's 1024px page:
+//   .om-bar { --om-bar-max: 64rem; --om-bar-pad-x: 1rem; }
+//   @media (min-width: 40rem) { .om-bar { --om-bar-pad-x: 1.5rem; } }
+//
+// Groups (2026-11-09): a site with more than a handful of pages passes `groups`
+// instead of `links`: a short heading over each set of rows. On a wide screen the
+// groups sit side by side; on a phone they stack in one full-width column. A row
+// whose href starts with http opens in a new tab and says which site it opens
+// (↗ and "Opens example.com"), so a page of this site never looks like another
+// app and another app never hides behind a plain row. The row for the page you
+// are on, or the section it sits in, is marked. Tabbing out of the menu closes it.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import OpenMirrorThemeToggle from "./OpenMirrorTheme";
 
-export type OmNavLink = { emoji?: string; name: string; href: string };
+export type OmNavLink = {
+  emoji?: string;
+  name: string;
+  href: string;
+  /** a few plain words under the name, e.g. "Scores, next games, playoffs" */
+  note?: string;
+};
+export type OmNavGroup = { label: string; links: OmNavLink[] };
+
+/** "example.com" for an outside link, null for one of this site's pages. */
+function outsideHost(href: string): string | null {
+  if (!/^https?:\/\//.test(href)) return null;
+  try {
+    return new URL(href).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+/** The row for the page you are on: the longest of this site's hrefs the path sits under. */
+function currentHref(pathname: string, hrefs: string[]): string | null {
+  let best: string | null = null;
+  for (const href of hrefs) {
+    if (outsideHost(href) || href.includes("#")) continue;
+    const hit = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+    if (hit && (!best || href.length > best.length)) best = href;
+  }
+  return best;
+}
 
 // Scoped chrome the inline styles can't express: hover, focus rings, the
 // light-theme panel, and reduced-motion. Keyed to .om-menu-* class names so it
@@ -42,6 +84,16 @@ const MENU_CSS = `
 .om-menu-link[aria-current="page"]{background:#1f2a44}
 .om-brand:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(148,163,184,.6);border-radius:8px}
 @media (max-width:640px){.om-menu-btn-label{display:none}}
+.om-menu-panel{background:#141d2e;border:1px solid #26324c;right:var(--om-bar-pad-x,16px);width:264px;max-width:calc(100vw - 2rem);max-height:min(70vh,30rem)}
+.om-menu-panel[data-grouped]{width:min(46rem,calc(100vw - 2rem));max-height:calc(100vh - 6rem);display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:4px 8px;padding:10px}
+.om-menu-group-label{margin:6px 14px 4px;font-size:12.5px;font-weight:800;color:#94a3b8;letter-spacing:.01em}
+.om-menu-note{display:block;font-size:12px;font-weight:500;color:#94a3b8;line-height:1.35;margin-top:1px}
+.om-menu-link[aria-current="page"]{box-shadow:inset 3px 0 0 var(--om-menu-accent)}
+@media (max-width:640px){
+  .om-menu-panel,.om-menu-panel[data-grouped]{left:12px;right:12px;width:auto;max-width:none}
+  .om-menu-panel[data-grouped]{grid-template-columns:1fr;max-height:calc(100dvh - 5.5rem)}
+}
+html[data-om-theme="light"] .om-menu-group-label,html[data-om-theme="light"] .om-menu-note{color:#475569}
 html[data-om-theme="light"] .om-menu-panel{background:#ffffff;border-color:#dbe2ea}
 html[data-om-theme="light"] .om-menu-link:hover{background:#eef2f7}
 html[data-om-theme="light"] .om-menu-link[aria-current="page"]{background:#eef2f7}
@@ -54,6 +106,7 @@ export default function OpenMirrorNav({
   site,
   accent = "#94a3b8",
   links = [],
+  groups,
 }: {
   /** e.g. "iDontCry.com" — the current site; the brand links to its home */
   site?: string;
@@ -61,6 +114,8 @@ export default function OpenMirrorNav({
   accent?: string;
   /** the site's own pages, in reading order (About last) */
   links?: OmNavLink[];
+  /** the same rows under short headings; when given, `links` is ignored */
+  groups?: OmNavGroup[];
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -73,6 +128,13 @@ export default function OpenMirrorNav({
   const baseName = hasCom ? site!.slice(0, -4) : site;
 
   const closeMenu = () => setOpen(false);
+
+  const sets: OmNavGroup[] = groups?.length ? groups : [{ label: "", links }];
+  const rowCount = sets.reduce((n, g) => n + g.links.length, 0);
+  const current = currentHref(
+    pathname ?? "/",
+    sets.flatMap((g) => g.links.map((l) => l.href)),
+  );
 
   // Escape closes (focus returns to the trigger); any pointer down outside the
   // header closes too.
@@ -121,14 +183,16 @@ export default function OpenMirrorNav({
   }, [open]);
 
   const renderRow = (l: OmNavLink) => {
-    const active = !l.href.startsWith("http") && pathname === l.href;
+    const host = outsideHost(l.href);
+    const note = l.note ?? (host ? `Opens ${host}` : undefined);
     return (
       <a
         key={l.href}
         href={l.href}
         className="om-menu-link"
-        aria-current={active ? "page" : undefined}
+        aria-current={l.href === current ? "page" : undefined}
         onClick={closeMenu}
+        {...(host ? { target: "_blank", rel: "noopener noreferrer" } : {})}
         style={{
           display: "flex",
           alignItems: "center",
@@ -136,7 +200,7 @@ export default function OpenMirrorNav({
           minHeight: 44,
           boxSizing: "border-box",
           borderRadius: 12,
-          padding: "10px 14px",
+          padding: note ? "8px 14px" : "10px 14px",
           color: "#e8edf5",
           fontSize: 14,
           fontWeight: 600,
@@ -147,7 +211,12 @@ export default function OpenMirrorNav({
         <span aria-hidden="true" style={{ width: 20, flexShrink: 0, textAlign: "center", lineHeight: 1 }}>
           {l.emoji ?? "·"}
         </span>
-        <span style={{ minWidth: 0 }}>{l.name}</span>
+        <span style={{ minWidth: 0, flex: 1 }}>
+          {l.name}
+          {note ? <span className="om-menu-note">{note}</span> : null}
+          {host ? <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0,0,0,0)" }}> (new tab)</span> : null}
+        </span>
+        {host ? <span aria-hidden="true" style={{ flexShrink: 0, fontWeight: 800 }}>↗</span> : null}
       </a>
     );
   };
@@ -160,15 +229,19 @@ export default function OpenMirrorNav({
       <style>{MENU_CSS}</style>
       <div
         ref={containerRef}
+        // Tabbing past the last row (or back past the button) closes the menu.
+        onBlur={(e) => {
+          if (open && e.relatedTarget && !containerRef.current?.contains(e.relatedTarget as Node)) setOpen(false);
+        }}
         style={{
           position: "relative",
-          maxWidth: 680,
+          maxWidth: "var(--om-bar-max, 680px)",
           margin: "0 auto",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
-          padding: "12px 20px",
+          padding: "12px var(--om-bar-pad-x, 20px)",
         }}
       >
         {/* The brand is the CURRENT site and goes to its own home. */}
@@ -202,7 +275,7 @@ export default function OpenMirrorNav({
         <span style={{ display: "inline-flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
           <OpenMirrorThemeToggle />
 
-          {links.length > 0 ? (
+          {rowCount > 0 ? (
           <button
             ref={buttonRef}
             type="button"
@@ -237,30 +310,39 @@ export default function OpenMirrorNav({
           </button>
           ) : null}
 
-          {open && links.length > 0 ? (
+          {open && rowCount > 0 ? (
             <nav
               id={menuId}
               ref={menuRef}
               aria-label={site ? `${site} menu` : "Menu"}
               className="om-menu-panel"
+              data-grouped={groups?.length ? "" : undefined}
               style={{
+                // Width, height and the right edge (flush with the Menu
+                // button) are in MENU_CSS so a phone can widen the panel.
+                ["--om-menu-accent" as string]: accent,
                 position: "absolute",
-                right: 16,
                 top: "calc(100% + 8px)",
                 zIndex: 60,
-                width: 264,
-                maxWidth: "calc(100vw - 2rem)",
-                maxHeight: "min(70vh, 30rem)",
                 overflowY: "auto",
                 overflowX: "hidden",
-                background: "#141d2e",
-                border: "1px solid #26324c",
+                // Background and border are in MENU_CSS: inline colours beat
+                // the light theme's panel rule, which left dark-on-dark rows.
                 borderRadius: 16,
                 padding: 8,
                 boxShadow: "0 20px 40px rgba(0,0,0,.4)",
               }}
             >
-              {links.map(renderRow)}
+              {groups?.length
+                ? groups.map((g, i) => (
+                    <div key={g.label} role="group" aria-labelledby={`${menuId}-g${i}`}>
+                      <p id={`${menuId}-g${i}`} className="om-menu-group-label">
+                        {g.label}
+                      </p>
+                      {g.links.map(renderRow)}
+                    </div>
+                  ))
+                : links.map(renderRow)}
             </nav>
           ) : null}
         </span>
