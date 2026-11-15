@@ -79,15 +79,17 @@ describe("REGRESSION (2026-08-27): the accepted 59e676a hero behavior is restore
     }
   });
 
-  it("Home hierarchy (Intro < Hero < Daily < Music < nav < rest) is untouched", () => {
+  // Order updated for the calm home (owner, Nov 14 2026).
+  it("Home hierarchy (Intro < Hero < Listen < Watch < Reflect < Explore)", () => {
     const homeOrderIdx = homeClient.indexOf("const HOME_ORDER = {");
     const homeOrderEnd = homeClient.indexOf("} as const;", homeOrderIdx);
     const src = homeClient.slice(homeOrderIdx, homeOrderEnd);
     const readOrderValue = (key: string) => Number(src.match(new RegExp(`\\b${key}:\\s*(\\d+)`))?.[1]);
     expect(readOrderValue("intro")).toBeLessThan(readOrderValue("hero"));
-    expect(readOrderValue("hero")).toBeLessThan(readOrderValue("daily"));
-    expect(readOrderValue("daily")).toBeLessThan(readOrderValue("music"));
-    expect(readOrderValue("music")).toBeLessThan(readOrderValue("nav"));
+    expect(readOrderValue("hero")).toBeLessThan(readOrderValue("listen"));
+    expect(readOrderValue("listen")).toBeLessThan(readOrderValue("watch"));
+    expect(readOrderValue("watch")).toBeLessThan(readOrderValue("reflect"));
+    expect(readOrderValue("reflect")).toBeLessThan(readOrderValue("explore"));
   });
 
   it("the shared four-mode MediaSwitcher is still mounted exactly once, untouched", () => {

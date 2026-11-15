@@ -180,21 +180,22 @@ describe("Home and category-tab visual order (locked: CSS `order`, not source po
     expect(homeClient).toMatch(/maxWidth: 760, margin: "0 auto"[\s\S]*?display: "flex", flexDirection: "column"/);
   });
 
-  it('REGRESSION: Home\'s locked order is Intro < Video of the Day < Daily Encouragement < The Music < category tabs < remaining content — the tabs never appear before the hero', () => {
+  // Calm home (owner, Nov 14 2026) supersedes the Aug 12/26 order: a calm
+  // first screen names four sections, and the page follows them in that
+  // order. The record/player hero still comes straight after the intro.
+  it("Home's order is Intro < Music Video of the Day (or the live player) < Listen < Watch < Reflect < Explore — the same order as the four words on the first screen", () => {
     const intro = readOrderValue(homeOrderSrc, "intro");
     const hero = readOrderValue(homeOrderSrc, "hero");
-    const daily = readOrderValue(homeOrderSrc, "daily");
-    const music = readOrderValue(homeOrderSrc, "music");
-    const nav = readOrderValue(homeOrderSrc, "nav");
-    const musicVideosPreview = readOrderValue(homeOrderSrc, "musicVideosPreview");
-    const rest = readOrderValue(homeOrderSrc, "rest");
+    const listen = readOrderValue(homeOrderSrc, "listen");
+    const watch = readOrderValue(homeOrderSrc, "watch");
+    const reflect = readOrderValue(homeOrderSrc, "reflect");
+    const explore = readOrderValue(homeOrderSrc, "explore");
 
     expect(intro).toBeLessThan(hero);
-    expect(hero).toBeLessThan(daily);
-    expect(daily).toBeLessThan(music);
-    expect(music).toBeLessThan(nav); // category buttons never appear before the video hero
-    expect(nav).toBeLessThan(musicVideosPreview);
-    expect(musicVideosPreview).toBeLessThan(rest);
+    expect(hero).toBeLessThan(listen);
+    expect(listen).toBeLessThan(watch);
+    expect(watch).toBeLessThan(reflect);
+    expect(reflect).toBeLessThan(explore);
   });
 
   it('REGRESSION: every browsing tab (Music/Videos/Sermons/Podcasts) is ordered Intro < category tabs < heading/description/filters < full player < library/cards — the full player never appears before the heading', () => {
@@ -210,16 +211,18 @@ describe("Home and category-tab visual order (locked: CSS `order`, not source po
     expect(player).toBeLessThan(cards);
   });
 
-  it("REGRESSION: on Home, the nav's own order flips to HOME_ORDER.nav (after the hero/Daily/Music triad); on every other tab it stays BROWSE_ORDER.nav (right after the intro, leading that tab's content, unchanged from before)", () => {
-    expect(homeClient).toContain('order: tab === "spin" ? HOME_ORDER.nav : BROWSE_ORDER.nav');
+  it("the category tabs render only off Home (Home's four sections link to each category instead), and on every browse tab they keep BROWSE_ORDER.nav, right after the intro", () => {
+    const navIdx = homeClient.indexOf('aria-label="Category tabs"');
+    expect(homeClient.slice(Math.max(0, navIdx - 60), navIdx)).toContain('{tab !== "spin" && (');
+    expect(homeClient).toContain("order: BROWSE_ORDER.nav");
   });
 
-  it("REGRESSION: the hero, Daily Encouragement, The Music, and the Music Videos preview sections each carry their own fixed HOME_ORDER value — none of them depend on which tab is active (they only ever render on tab===\"spin\" anyway) or on what's currently playing", () => {
+  it("the hero and each of the four sections carry their own fixed HOME_ORDER value — none of them depend on what's currently playing", () => {
     expect(homeClient).toContain("order: HOME_ORDER.hero");
-    expect(homeClient).toContain("order: HOME_ORDER.daily");
-    expect(homeClient).toContain("order: HOME_ORDER.music");
-    expect(homeClient).toContain("order: HOME_ORDER.musicVideosPreview");
-    expect(homeClient).toContain("order: HOME_ORDER.rest");
+    expect(homeClient).toContain("order: HOME_ORDER.listen");
+    expect(homeClient).toContain("order: HOME_ORDER.watch");
+    expect(homeClient).toContain("order: HOME_ORDER.reflect");
+    expect(homeClient).toContain("order: HOME_ORDER.explore");
   });
 
   it("REGRESSION (2026-08-26, supersedes the prior type-routed placement): the persistent player's own `order` is ALWAYS HOME_ORDER.hero on Home, whatever `current` actually is — the owner's 'Home hero is the visual home of active playback' direction retires the old rule that sent sermons/podcasts to HOME_ORDER.daily and playlists to HOME_ORDER.music. Daily Encouragement and the Music widget still occupy their own HOME_ORDER.daily/.music slots as plain selector cards (dailyIsCurrent/musicIsCurrent below) — they just don't receive the actual player anymore, only the hero does", () => {

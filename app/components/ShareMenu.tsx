@@ -61,11 +61,11 @@ export function ShareTrigger({
         minWidth: 44,
         padding: "0 14px",
         background: "none",
-        border: `2px solid ${palette.border}`,
+        border: `1px solid ${palette.border}`,
         borderRadius: 50,
         color: palette.sub,
         fontSize: 13,
-        fontWeight: 800,
+        fontWeight: 600,
         cursor: "pointer",
         whiteSpace: "nowrap",
       }}

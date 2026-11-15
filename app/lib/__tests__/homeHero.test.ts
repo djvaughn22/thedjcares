@@ -233,15 +233,18 @@ describe("REGRESSION: 25% default volume and mute-restoration are untouched by t
 });
 
 describe("REGRESSION: Home ordering and the shared four-mode switcher are unaffected by the hero rework", () => {
-  it("HOME_ORDER's Intro < Hero < Daily < Music < nav (switcher) < rest sequence is untouched", () => {
+  // Order updated for the calm home (owner, Nov 14 2026): the record/player
+  // hero still comes straight after the intro; the four sections follow.
+  it("HOME_ORDER keeps the hero right after the intro, then Listen < Watch < Reflect < Explore", () => {
     const homeOrderIdx = homeClient.indexOf("const HOME_ORDER = {");
     const homeOrderEnd = homeClient.indexOf("} as const;", homeOrderIdx);
     const src = homeClient.slice(homeOrderIdx, homeOrderEnd);
     const readOrderValue = (key: string) => Number(src.match(new RegExp(`\\b${key}:\\s*(\\d+)`))?.[1]);
     expect(readOrderValue("intro")).toBeLessThan(readOrderValue("hero"));
-    expect(readOrderValue("hero")).toBeLessThan(readOrderValue("daily"));
-    expect(readOrderValue("daily")).toBeLessThan(readOrderValue("music"));
-    expect(readOrderValue("music")).toBeLessThan(readOrderValue("nav"));
+    expect(readOrderValue("hero")).toBeLessThan(readOrderValue("listen"));
+    expect(readOrderValue("listen")).toBeLessThan(readOrderValue("watch"));
+    expect(readOrderValue("watch")).toBeLessThan(readOrderValue("reflect"));
+    expect(readOrderValue("reflect")).toBeLessThan(readOrderValue("explore"));
   });
 
   it("MediaSwitcher is still the one shared four-mode control, still mounted exactly once", () => {

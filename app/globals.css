@@ -483,3 +483,83 @@ a[href]:hover {
   color: var(--om-ink);
 }
 /* OPEN MIRROR FAMILY STYLE OVERRIDE END */
+
+/* ── Calm home (calm-prototype branch, Nov 2026) ──
+   Scoped to <main className="djc-calm"> in HomeClient. Flat and quiet:
+   no gradients, glows, glints or drop shadows on the record, no hover
+   lifts, lavender in place of the green status light. */
+.djc-calm .pop:hover,
+.djc-calm button:not([disabled]):hover,
+.djc-calm a[href]:hover {
+  transform: none;
+}
+.djc-calm .djc-door:hover { color: #C4B5FD !important; }
+html[data-om-theme="light"] .djc-calm .djc-door:hover { color: #6d28d9 !important; }
+.djc-calm :focus-visible { outline-color: #C4B5FD; }
+
+.djc-calm .djc-turntable-wrap,
+.djc-calm .djc-turntable-wrap:hover,
+.djc-calm .djc-turntable-wrap:focus-within,
+.djc-calm .djc-turntable-wrap.engaged {
+  transform: none;
+}
+/* just the record: no deck slab or tonearm (flat, they read as shapes cut
+   off at the box edge), the disc centred in its square */
+.djc-calm .djc-platter,
+.djc-calm .djc-tonearm {
+  display: none;
+}
+/* flat grooves: thin rings drawn with zero-blur inset outlines */
+.djc-calm .djc-vinyl {
+  left: 4%;
+  right: 4%;
+  top: 4%;
+  bottom: 4%;
+  background: #080d18;
+  box-shadow:
+    inset 0 0 0 1px #2a3654,
+    inset 0 0 0 16px #080d18,
+    inset 0 0 0 17px #182238,
+    inset 0 0 0 30px #080d18,
+    inset 0 0 0 31px #182238,
+    inset 0 0 0 44px #080d18,
+    inset 0 0 0 45px #182238;
+}
+.djc-calm .djc-turntable-wrap:hover .djc-vinyl,
+.djc-calm .djc-turntable-wrap:focus-within .djc-vinyl {
+  filter: none;
+}
+.djc-calm .djc-vinyl-sheen { display: none; }
+.djc-calm .djc-vinyl-label { box-shadow: 0 0 0 3px #080d18, 0 0 0 4px #2a3654; }
+.djc-calm .djc-vinyl-label-fallback { background: #141d2e; }
+.djc-calm .djc-vinyl-spindle { background: #94a3b8; box-shadow: 0 0 0 2px #080d18; }
+.djc-calm .djc-vinyl-playcue { background: none; gap: 8px; }
+.djc-calm .djc-vinyl-playcue-tri {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  box-sizing: border-box;
+  padding-left: 3px;
+  border-radius: 50%;
+  background: #0b1220;
+  border: 1px solid #33507e;
+  color: #e8edf5;
+  font-size: 20px;
+  filter: none;
+}
+.djc-calm .djc-vinyl-playcue-txt {
+  background: #0b1220;
+  border: 1px solid #33507e;
+  border-radius: 999px;
+  padding: 3px 10px;
+  color: #e8edf5;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  text-shadow: none;
+}
+.djc-calm .djc-power-light { display: none; }
+.djc-calm .djc-eq span { background: #C4B5FD; }

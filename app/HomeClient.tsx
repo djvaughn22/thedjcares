@@ -108,20 +108,41 @@ const SECONDARY_TAB_IDS: readonly Tab[] = ["spin", "ministries", "churches"];
 // paint-order CSS property, so the underlying DJPlayer/SyncedAudio/embed
 // iframe never moves in the actual DOM tree, just where it's painted.
 //
-// Home ("spin"): Intro, Video of the Day, Daily Encouragement, The Music,
-// category tabs, then the rest of Home's own content — the nav never
-// appears above the hero, and the player (when full) sits at whichever
-// widget (hero/Daily/Music) actually owns what's playing, never as a
-// separate generic block leading everything.
+// Home ("spin"), top to bottom (owner's Nov 14 2026 direction: a calm first
+// screen, then four sections named by the four words on it): Intro (the
+// name, one plain line, Listen / Watch / Reflect / Explore, the nature
+// photo), the Music Video of the Day record (the persistent player takes
+// this same slot once anything plays), then Listen, Watch, Reflect and
+// Explore. The category tabs no longer show on Home; each section links to
+// its full category instead, and the tabs still lead every browse tab.
 const HOME_ORDER = {
   intro: 10,
   hero: 20,
-  daily: 30,
-  music: 40,
-  nav: 50,
-  musicVideosPreview: 60,
-  rest: 70,
+  listen: 30,
+  watch: 40,
+  reflect: 50,
+  explore: 60,
 } as const;
+
+// The four words on Home's first screen, in the order the sections below
+// follow. Each is an in-page anchor (see SECTION_IDS), so /#reflect works as
+// a shared link too.
+const HOME_DOORS = [
+  { id: "listen", label: "Listen" },
+  { id: "watch", label: "Watch" },
+  { id: "reflect", label: "Reflect" },
+  { id: "explore", label: "Explore" },
+] as const;
+
+// The first screen's nature photo: only the owner's own photo, or one with a
+// clear license for this site. While this is null a labelled placeholder
+// shows where it goes. To add one, put the file in public/ (wide 3:1,
+// compressed) and set { src: "/file.jpg", alt: "what the photo shows" }.
+const NATURE_PHOTO: { src: string; alt: string } | null = null;
+
+// Gentle headings: Georgia ships on iPhone, Mac and Windows, so no web-font
+// download is needed (and no build-time font fetch to break a deploy).
+const SERIF = 'Georgia, "Times New Roman", Times, serif';
 
 // Every other tab: Intro, category tabs, that tab's own heading/
 // description/filters, the full player (only when it's actually natural
@@ -273,7 +294,7 @@ export default function TheDJCaresPage({
   // Homepage section anchors — the single-page nav menu's destinations.
   // These land on the Spin tab (where the sections live) and scroll to the
   // matching element, rather than switching to an isolated exclusive tab.
-  const SECTION_IDS = ["video-of-the-day", "daily-encouragement", "now-playing", "videos", "music", "sermons", "podcasts"];
+  const SECTION_IDS = ["video-of-the-day", "daily-encouragement", "now-playing", "videos", "music", "sermons", "podcasts", ...HOME_DOORS.map((d) => d.id)];
 
   // URL hash ↔ page state. Two namespaces share one hash string:
   //  - bare section names (#videos, #music, #sermons, #podcasts, plus
@@ -774,7 +795,9 @@ export default function TheDJCaresPage({
   const border = dark ? "#26324c" : "#dbe2ea";
   const active = dark ? "#1c2740" : "#eef4ff";
   const activeBorder = dark ? "#33507e" : "#c7d7f5";
-  const accent = "#A78BFA";
+  // Lavender — the calm hub accent (the family light theme darkens it to
+  // #6d28d9 for text, so it stays readable on white).
+  const accent = "#C4B5FD";
   const ink = "#0b1220";
 
   // One Share look everywhere: the trigger opens the single page-level sheet.
@@ -813,11 +836,11 @@ export default function TheDJCaresPage({
 
   const pill = (selected: boolean): React.CSSProperties => ({
     background: selected ? active : "none",
-    border: `2px solid ${selected ? activeBorder : border}`,
+    border: `1px solid ${selected ? activeBorder : border}`,
     borderRadius: 50,
     padding: "10px 8px",
     fontSize: 13.5,
-    fontWeight: 800,
+    fontWeight: 600,
     cursor: "pointer",
     color: selected ? accent : sub,
     textAlign: "center",
@@ -836,34 +859,89 @@ export default function TheDJCaresPage({
     border: "none",
     color: ink,
     borderRadius: 50,
-    padding: "14px 26px",
-    fontSize: 16,
-    fontWeight: 900,
+    padding: "13px 24px",
+    fontSize: 15,
+    fontWeight: 600,
     cursor: "pointer",
     whiteSpace: "nowrap",
   };
 
   const quietButton: React.CSSProperties = {
     background: "none",
-    border: `2px solid ${border}`,
+    border: `1px solid ${border}`,
     color: text,
     borderRadius: 50,
     padding: "12px 18px",
     fontSize: 15,
-    fontWeight: 800,
+    fontWeight: 500,
     cursor: "pointer",
     whiteSpace: "nowrap",
   };
 
-  const sectionH: React.CSSProperties = { fontSize: 24, fontWeight: 900, color: text, margin: "0 0 6px" };
+  const sectionH: React.CSSProperties = { fontFamily: SERIF, fontSize: 28, fontWeight: 400, color: text, margin: "0 0 6px" };
   const sectionSub: React.CSSProperties = { fontSize: 14.5, color: sub, margin: "0 0 18px", lineHeight: 1.6 };
+
+  // Home's four sections: a quiet serif title, one plain line, generous room.
+  const chapterStyle: React.CSSProperties = { scrollMarginTop: 76, marginTop: 44, paddingTop: 36, borderTop: `1px solid ${border}` };
+  const chapterTitle: React.CSSProperties = { fontFamily: SERIF, fontSize: "clamp(1.75rem, 6.5vw, 2.1rem)", fontWeight: 400, letterSpacing: "-0.01em", color: text, margin: "0 0 6px" };
+  const chapterLine: React.CSSProperties = { fontSize: 15, color: sub, margin: "0 0 22px", lineHeight: 1.6 };
+  const subHead: React.CSSProperties = { fontSize: 14, fontWeight: 600, color: sub, margin: "0 0 12px" };
+  const calmCard: React.CSSProperties = { background: card, border: `1px solid ${border}`, borderRadius: 18, padding: "22px 20px" };
+  const smallLabel: React.CSSProperties = { fontSize: 13.5, fontWeight: 500, color: sub, margin: "0 0 8px" };
+  const smallLink: React.CSSProperties = { fontSize: 13.5, fontWeight: 500, color: sub, textDecoration: "none" };
+  const smallTextButton: React.CSSProperties = { background: "none", border: "none", padding: 0, fontSize: 13.5, fontWeight: 500, color: sub, cursor: "pointer" };
+  const chapterLinks: React.CSSProperties = { display: "flex", flexWrap: "wrap", gap: "4px 22px", marginTop: 14 };
+  const textLink: React.CSSProperties = { background: "none", border: "none", padding: "8px 0", minHeight: 44, fontSize: 15, fontWeight: 500, color: accent, cursor: "pointer" };
+  // Solid, never see-through: the play mark drawn over a thumbnail.
+  const playCircle: React.CSSProperties = { width: 54, height: 54, borderRadius: "50%", background: "#0b1220", border: "1px solid #33507e", color: "#e8edf5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, paddingLeft: 3, boxSizing: "border-box" };
+  const exploreRow: React.CSSProperties = { width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, textAlign: "left", background: card, border: `1px solid ${border}`, borderRadius: 16, padding: "16px 20px", minHeight: 44, cursor: "pointer", color: text, font: "inherit" };
+  const rowTitle: React.CSSProperties = { display: "block", fontSize: 16, fontWeight: 600, color: text };
+  const rowLine: React.CSSProperties = { display: "block", fontSize: 14, color: sub, marginTop: 3, lineHeight: 1.5 };
 
   // --- small building blocks ---
 
-  const MediaCard = ({ item, showMinistry = false }: { item: MediaItem; showMinistry?: boolean }) => {
+  const MediaCard = ({ item, showMinistry = false, compact = false }: { item: MediaItem; showMinistry?: boolean; compact?: boolean }) => {
     const art = artworkUrl(item);
     const playable = Boolean(item.videoId || item.spotifyEmbed || item.appleEmbed);
     const isCurrent = current?.id === item.id && started;
+    if (compact) {
+      // Home's short lists: a small thumbnail and the title in one quiet row.
+      // The whole row plays through the same startItem path as the full
+      // cards. Share and the official link live in the player and on the
+      // full category pages, so the row stays uncluttered on a phone.
+      const row = (
+        <>
+          <span style={{ position: "relative", flex: "0 0 auto", width: 112, aspectRatio: "16 / 9", borderRadius: 10, overflow: "hidden", background: active }}>
+            {art && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={art} alt="" loading="lazy" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+            )}
+          </span>
+          <span style={{ flex: "1 1 auto", minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+            {isCurrent && <span style={{ fontSize: 12.5, fontWeight: 600, color: accent }}>Now Spinning</span>}
+            <span style={{ fontSize: 15, fontWeight: 600, color: text, lineHeight: 1.35 }}>{item.title}</span>
+            <span style={{ fontSize: 13.5, fontWeight: 500, color: accent, lineHeight: 1.35 }}>
+              {item.author}
+              {showMinistry && item.ministry ? ` · ${ministryByKey(item.ministry)?.name}` : ""}
+            </span>
+          </span>
+        </>
+      );
+      const rowStyle: React.CSSProperties = { display: "flex", alignItems: "center", gap: 14, width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", color: "inherit", font: "inherit", textDecoration: "none" };
+      return (
+        <div className="pop" style={{ background: card, border: `1px solid ${isCurrent ? activeBorder : border}`, borderRadius: 14, padding: 10 }}>
+          {playable ? (
+            <button onClick={() => startItem(item)} aria-label={`Play ${typeLabel(item).toLowerCase()}: ${item.title} by ${item.author}`} style={rowStyle}>
+              {row}
+            </button>
+          ) : (
+            <a href={item.url} target="_blank" rel="noopener noreferrer" style={rowStyle}>
+              {row}
+            </a>
+          )}
+        </div>
+      );
+    }
     const open = (
       <a
         href={item.url}
@@ -893,7 +971,7 @@ export default function TheDJCaresPage({
               </span>
             )}
             {item.duration && (
-              <span style={{ position: "absolute", right: 8, bottom: 8, background: "rgba(0,0,0,0.75)", color: "#fff", borderRadius: 8, padding: "2px 8px", fontSize: 12, fontWeight: 800 }}>
+              <span style={{ position: "absolute", right: 8, bottom: 8, background: "#0b1220", color: "#e8edf5", borderRadius: 8, padding: "2px 8px", fontSize: 12, fontWeight: 600 }}>
                 {item.duration}
               </span>
             )}
@@ -910,8 +988,8 @@ export default function TheDJCaresPage({
               Now Spinning
             </span>
           )}
-          <p style={{ fontSize: 15, fontWeight: 800, color: text, margin: 0 }}>{item.title}</p>
-          <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: 0 }}>
+          <p style={{ fontSize: 15, fontWeight: 600, color: text, margin: 0 }}>{item.title}</p>
+          <p style={{ fontSize: 13, fontWeight: 500, color: accent, margin: 0 }}>
             {item.author}
             {showMinistry && item.ministry ? ` · ${ministryByKey(item.ministry)?.name}` : ""}
           </p>
@@ -921,7 +999,7 @@ export default function TheDJCaresPage({
     );
     if (!playable) {
       return (
-        <div className="pop" style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, overflow: "hidden" }}>
+        <div className="pop" style={{ background: card, border: `1px solid ${border}`, borderRadius: 16, overflow: "hidden" }}>
           {body}
           {footer}
         </div>
@@ -930,7 +1008,7 @@ export default function TheDJCaresPage({
     return (
       <div
         className="pop"
-        style={{ background: card, border: `2px solid ${isCurrent ? activeBorder : border}`, borderRadius: 16, overflow: "hidden", position: "relative" }}
+        style={{ background: card, border: `1px solid ${isCurrent ? activeBorder : border}`, borderRadius: 16, overflow: "hidden", position: "relative" }}
       >
         <button
           onClick={() => startItem(item)}
@@ -968,7 +1046,7 @@ export default function TheDJCaresPage({
   const PlaylistCard = ({ p }: { p: MediaItem }) => {
     const isCurrent = current?.id === p.id && started;
     return (
-      <div key={p.id} className="pop" style={{ background: card, border: `2px solid ${isCurrent ? activeBorder : border}`, borderRadius: 16, padding: "16px 18px" }}>
+      <div key={p.id} className="pop" style={{ background: card, border: `1px solid ${isCurrent ? activeBorder : border}`, borderRadius: 16, padding: "16px 18px" }}>
         {isCurrent && (
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 900, letterSpacing: "0.1em", color: accent, textTransform: "uppercase", marginBottom: 6 }}>
             {playerState === "playing" && (
@@ -1267,7 +1345,7 @@ export default function TheDJCaresPage({
   const transportPanel = (
     <>
       {blocked && current && (
-        <div role="status" style={{ border: `2px solid ${border}`, borderRadius: 14, padding: "18px 18px", textAlign: "center" }}>
+        <div role="status" style={{ border: `1px solid ${border}`, borderRadius: 14, padding: "18px 18px", textAlign: "center" }}>
           <p style={{ fontSize: 15, fontWeight: 800, color: text, margin: "0 0 4px" }}>That one won&apos;t play here.</p>
           <p style={{ fontSize: 13.5, color: sub, margin: "0 0 12px" }}>Some videos only play on YouTube itself — the official link still works.</p>
           <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
@@ -1395,10 +1473,10 @@ export default function TheDJCaresPage({
         : { position: "static", order: playerOrder };
   const playerInnerStyle: React.CSSProperties =
     playerDisplayMode === "mini"
-      ? { background: card, borderTop: `2px solid ${border}`, padding: "10px 14px", paddingBottom: "calc(10px + env(safe-area-inset-bottom, 0px))", boxShadow: "0 -4px 20px rgba(0,0,0,0.25)" }
+      ? { background: card, borderTop: `1px solid ${border}`, padding: "10px 14px", paddingBottom: "calc(10px + env(safe-area-inset-bottom, 0px))", boxShadow: "0 -4px 20px rgba(0,0,0,0.25)" }
       : playerDisplayMode === "overlay"
         ? { background: card, borderRadius: "22px 22px 0 0", padding: "16px 20px", paddingBottom: "calc(20px + env(safe-area-inset-bottom, 0px))", width: "100%", maxWidth: 760, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 -8px 30px rgba(0,0,0,0.4)" }
-        : { background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 28 };
+        : { background: card, border: `1px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 28 };
 
   const activePlayerNode = (
     <div
@@ -1425,13 +1503,13 @@ export default function TheDJCaresPage({
 
         {playerDisplayMode !== "mini" && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 14 }}>
-            <p style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", color: accent, margin: 0 }}>
+            <p style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 600, color: accent, margin: 0 }}>
               <span aria-hidden>{originIcon}</span> {originLabel}
               {trulyPlaying && (
                 <span className="djc-eq" aria-hidden><span /><span /><span /><span /></span>
               )}
             </p>
-            {current && <span style={{ fontSize: 12, fontWeight: 800, color: sub, textTransform: "uppercase", letterSpacing: "0.08em" }}>{typeLabel(current)}</span>}
+            {current && <span style={{ fontSize: 13, fontWeight: 500, color: sub }}>{typeLabel(current)}</span>}
           </div>
         )}
 
@@ -1580,8 +1658,8 @@ export default function TheDJCaresPage({
             <>
               {current && !blocked && (
                 <div style={{ textAlign: "center", margin: "14px 0 0" }}>
-                  <p style={{ fontSize: 18, fontWeight: 900, color: text, margin: 0 }}>{current.title}</p>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: accent, margin: "2px 0 0" }}>
+                  <p style={{ fontSize: 18, fontWeight: 600, color: text, margin: 0 }}>{current.title}</p>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: accent, margin: "2px 0 0" }}>
                     {current.author}
                     {current.ministry ? ` · ${ministryByKey(current.ministry)?.name}` : ""}
                   </p>
@@ -1670,106 +1748,131 @@ export default function TheDJCaresPage({
   const mediaTabActive = PRIMARY_TAB_IDS.includes(tab) ? (tab as MediaTab) : null;
 
   return (
-    <main style={{ background: bg, minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <main className="djc-calm" style={{ background: bg, minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div style={{ maxWidth: 760, margin: "0 auto", padding: `32px 20px ${miniPlayerShowing ? "96px" : "80px"}`, display: "flex", flexDirection: "column" }}>
-        {/* identity */}
-        <div style={{ textAlign: "center", marginBottom: 22, order: HOME_ORDER.intro }}>
-          <h1 style={{ fontSize: "clamp(1.8rem, 8vw, 2.4rem)", fontWeight: 900, color: text, margin: "0 0 8px" }}>
-            The DJ <span style={{ color: accent }}>Cares</span> <span aria-hidden>🎧</span>
+        {/* The first screen: the name, one plain line, the four ways in
+            (Listen, Watch, Reflect, Explore) and the nature photo. Nothing
+            here plays anything. Browse tabs keep only the name and the
+            line, with their own category nav right under it. */}
+        <div style={{ textAlign: "center", marginBottom: tab === "spin" ? 40 : 22, order: HOME_ORDER.intro }}>
+          <h1 style={{ fontFamily: SERIF, fontSize: "clamp(2.2rem, 9vw, 3rem)", fontWeight: 400, letterSpacing: "-0.01em", lineHeight: 1.15, color: text, margin: "8px 0 10px" }}>
+            The DJ <span style={{ color: accent }}>Cares</span>
           </h1>
-          <p style={{ fontSize: 15, color: sub, lineHeight: 1.55, maxWidth: 460, margin: "0 auto" }}>
-            Music, messages, and encouragement worth passing on — hand-picked, Gospel first.
+          <p style={{ fontSize: 16, color: sub, lineHeight: 1.6, maxWidth: 400, margin: "0 auto" }}>
+            Christian music, videos, sermons and podcasts, picked by hand.
           </p>
+
+          {tab === "spin" && (
+            <>
+              <nav aria-label="On this page" style={{ maxWidth: 520, margin: "30px auto 0", borderTop: `1px solid ${border}`, borderBottom: `1px solid ${border}` }}>
+                <ul style={{ listStyle: "none", margin: 0, padding: "4px 0", display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+                  {HOME_DOORS.map((d) => (
+                    <li key={d.id}>
+                      <a
+                        href={`#${d.id}`}
+                        className="djc-door"
+                        onClick={() => track("home_door", { door: d.id })}
+                        style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 48, fontSize: 16.5, fontWeight: 500, letterSpacing: "0.01em", color: text, textDecoration: "none" }}
+                      >
+                        {d.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+
+              {NATURE_PHOTO ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={NATURE_PHOTO.src}
+                  alt={NATURE_PHOTO.alt}
+                  style={{ display: "block", width: "100%", height: "auto", aspectRatio: "3 / 1", objectFit: "cover", borderRadius: 18, marginTop: 30 }}
+                />
+              ) : (
+                <div
+                  role="img"
+                  aria-label="Placeholder for a nature photo"
+                  style={{ marginTop: 30, aspectRatio: "3 / 1", borderRadius: 18, border: `1px dashed ${activeBorder}`, background: card, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, padding: 16 }}
+                >
+                  <span style={{ fontSize: 14.5, fontWeight: 600, color: sub }}>Nature photo goes here</span>
+                  <span style={{ fontSize: 13, color: sub }}>Placeholder: the owner&apos;s own photo, or one with a clear license</span>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
-        {/* Category tabs — on Home, ordered AFTER the hero/Daily/Music
-            widgets (HOME_ORDER.nav), never above them; on every other tab,
-            ordered right after the intro (BROWSE_ORDER.nav), leading that
-            tab's own content same as before. Continuous in-site listening:
-            selecting Music, Videos, Sermons, or Podcasts only ever changes
-            `tab`; it never touches current/started/playing, so
+        {/* Category tabs — browse tabs only (Home has its four sections
+            instead, each linking to its full category). Continuous in-site
+            listening: selecting Music, Videos, Sermons, or Podcasts only
+            ever changes `tab`; it never touches current/started/playing, so
             activePlayerNode (below) — the single mounted DJPlayer/
             SyncedAudio/embed instance for whatever `current` is — is never
-            unmounted or recreated by a tab click. It lives at one fixed
-            JSX position outside every {tab === "..."} block; only its
-            `order` (see playerOrder) changes where it's painted. */}
-        <nav
-          aria-label="Category tabs"
-          style={{ maxWidth: 560, margin: "0 auto 20px", order: tab === "spin" ? HOME_ORDER.nav : BROWSE_ORDER.nav }}
-        >
-          {/* Home introduces the deeper library above the switcher; every
-              browse tab already IS that library, so it doesn't repeat the
-              intro — the switcher itself (identical component, identical
-              position) is the only thing that needs to feel constant. */}
-          {tab === "spin" && (
-            <p style={{ fontSize: 13, fontWeight: 800, color: sub, textAlign: "center", margin: "0 0 10px" }}>
-              Browse everything — hand-picked music, videos, podcasts, and sermons.
-            </p>
-          )}
-          <MediaSwitcher
-            active={mediaTabActive}
-            onSelect={goTab}
-            palette={{ text, sub, card, border, accent, ink }}
-          />
+            unmounted or recreated by a tab click. It lives at one fixed JSX
+            position outside every per-tab block; only its `order` (see
+            playerOrder) changes where it's painted. */}
+        {tab !== "spin" && (
+          <nav
+            aria-label="Category tabs"
+            style={{ maxWidth: 560, margin: "0 auto 20px", order: BROWSE_ORDER.nav }}
+          >
+            <MediaSwitcher
+              active={mediaTabActive}
+              onSelect={goTab}
+              palette={{ text, sub, card, border, accent, ink }}
+            />
 
-          {/* Secondary: Home (a return, not an action) plus two supporting
-              discovery sections that point off-site — not playback modes,
-              so they stay out of the tablist above and read as quieter,
-              smaller chips instead of a fifth/sixth equal-weight choice. */}
-          <p style={{ fontSize: 11, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", color: sub, textAlign: "center", margin: "14px 0 8px" }}>
-            Explore
-          </p>
-          <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-            {TABS.filter((t) => SECONDARY_TAB_IDS.includes(t.id)).map((t) => (
-              <button
-                key={t.id}
-                onClick={() => goTab(t.id)}
-                aria-current={tab === t.id ? "page" : undefined}
-                style={{
-                  background: tab === t.id ? accent : "transparent",
-                  border: `1.5px solid ${tab === t.id ? accent : border}`,
-                  borderRadius: 999,
-                  padding: "8px 16px",
-                  minHeight: 44,
-                  fontSize: 12.5,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  color: tab === t.id ? ink : sub,
-                }}
-              >
-                <span aria-hidden>{t.emoji}</span> {t.label}
-              </button>
-            ))}
-          </div>
-        </nav>
+            {/* Secondary: Home (a return, not an action) plus two supporting
+                discovery sections that point off-site — not playback modes,
+                so they stay out of the tablist above and read as quieter,
+                smaller chips instead of a fifth/sixth equal-weight choice. */}
+            <p style={{ fontSize: 13, fontWeight: 600, color: sub, textAlign: "center", margin: "14px 0 8px" }}>
+              Explore
+            </p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+              {TABS.filter((t) => SECONDARY_TAB_IDS.includes(t.id)).map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => goTab(t.id)}
+                  aria-current={tab === t.id ? "page" : undefined}
+                  style={{
+                    background: tab === t.id ? accent : "transparent",
+                    border: `1.5px solid ${tab === t.id ? accent : border}`,
+                    borderRadius: 999,
+                    padding: "8px 16px",
+                    minHeight: 44,
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    color: tab === t.id ? ink : sub,
+                  }}
+                >
+                  <span aria-hidden>{t.emoji}</span> {t.label}
+                </button>
+              ))}
+            </div>
+          </nav>
+        )}
 
         {started && activePlayerNode}
 
-        {/* MUSIC VIDEO DECK — a cue/discovery widget for today's featured
-            video, Home-only. Never embeds its own player (see
-            activePlayerNode above) — pressing Play here just starts
-            playback through the same authoritative startItem pipeline
-            every other pick on the page uses, so the persistent player
-            above shows it, on every tab, without a second copy anywhere. */}
-        {/* Idle-only: nothing has been selected yet anywhere on the site,
-            so the hero defaults to today's Video of the Day — a pure
-            discovery/cue widget, never its own embedded video, and never
-            autoplaying. The instant anything anywhere is started, this
-            block stops rendering (gated on !started) and activePlayerNode's
-            own hero presentation (below, same HOME_ORDER.hero position)
-            takes over showing whatever is actually current — see
-            heroRecordActive and the record view above. */}
+        {/* Music Video of the Day — idle only. Nothing has been started
+            anywhere yet, so today's pick is cued on the record: a pure cue,
+            never its own embedded video and never autoplaying. The instant
+            anything is started this stops rendering (gated on !started) and
+            the persistent player takes the same HOME_ORDER.hero slot,
+            showing whatever is actually current (see heroRecordActive). */}
         {tab === "spin" && !started && heroVideo && (
           <section
             id="video-of-the-day"
             aria-label={heroShared ? "Shared with you" : "Video of the Day"}
-            style={{ textAlign: "center", padding: "4px 0 20px", marginBottom: 6, order: HOME_ORDER.hero }}
+            style={{ textAlign: "center", padding: "4px 0 0", order: HOME_ORDER.hero }}
           >
-            <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 20px" }}>
-              <span aria-hidden>📀</span> {heroShared ? "Shared with you" : "Music Video of the Day"}
+            <p style={{ fontSize: 14, fontWeight: 500, color: sub, margin: "0 0 18px" }}>
+              {heroShared ? "Shared with you" : "Music Video of the Day"}
             </p>
 
-            <div className="djc-turntable-wrap" style={{ width: "min(460px, 88vw)", margin: "0 auto 18px", position: "relative" }}>
+            <div className="djc-turntable-wrap" style={{ width: "min(340px, 76vw)", margin: "0 auto 20px", position: "relative" }}>
               {/* Whole deck is clickable — see the now-playing record above. */}
               <div className="djc-turntable" style={{ cursor: "pointer" }} onClick={() => startItem(heroVideo)}>
                 <span className="djc-platter" aria-hidden />
@@ -1807,38 +1910,34 @@ export default function TheDJCaresPage({
               </div>
             </div>
 
-            <p style={{ fontSize: 24, fontWeight: 900, color: text, margin: 0 }}>{heroVideo.title}</p>
-            <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{heroVideo.author}</p>
+            <p style={{ fontSize: 21, fontWeight: 600, color: text, margin: 0, lineHeight: 1.3 }}>{heroVideo.title}</p>
+            <p style={{ fontSize: 14, fontWeight: 500, color: accent, margin: "4px 0 0" }}>{heroVideo.author}</p>
             {heroVideo.summary && (
-              <p style={{ fontSize: 13, color: sub, margin: "6px auto 0", maxWidth: 420, lineHeight: 1.5 }}>{heroVideo.summary}</p>
+              <p style={{ fontSize: 14, color: sub, margin: "8px auto 0", maxWidth: 420, lineHeight: 1.6 }}>{heroVideo.summary}</p>
             )}
 
-            <div style={{ marginTop: 18, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+            <div style={{ marginTop: 20, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
               <button onClick={() => startItem(heroVideo)} style={bigButton}>▶ Play</button>
               <button onClick={shuffleHeroVideo} style={quietButton}>🔀 Spin</button>
               {share(mediaShareTarget(heroVideo), "hero")}
             </div>
 
-            {/* "Tune the spin" — collapsed by default. Reuses the exact
-                same Mood (QUEUE_MOODS → startMoodMix in "videos" mode,
-                which already filters to real music videos only) and Vibe
-                (VIBES → spinVideoByVibe, spinPool scoped to category
-                "videos") machinery the rest of the page already has —
-                just closed behind a disclosure instead of a permanent
-                wall of buttons, and never surfacing music/podcast/sermon
-                filters here. */}
-            <div style={{ marginTop: 14 }}>
+            {/* "Tune the spin" — collapsed by default. Reuses the real Mood
+                (QUEUE_MOODS → startMoodMix in "videos" mode, music videos
+                only) and Vibe (VIBES → spinVideoByVibe) machinery, closed
+                behind one disclosure instead of a wall of buttons. */}
+            <div style={{ marginTop: 10 }}>
               <button
                 type="button"
                 onClick={() => setTuneSpinOpen((v) => !v)}
                 aria-expanded={tuneSpinOpen}
-                style={{ background: "none", border: "none", padding: 0, fontSize: 12.5, fontWeight: 800, color: sub, cursor: "pointer" }}
+                style={{ ...smallTextButton, minHeight: 44 }}
               >
                 Tune the spin {tuneSpinOpen ? "▴" : "▾"}
               </button>
               {tuneSpinOpen && (
-                <div style={{ marginTop: 12, maxWidth: 420, marginLeft: "auto", marginRight: "auto", textAlign: "left" }}>
-                  <p style={{ fontSize: 11, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: sub, margin: "0 0 8px" }}>Mood</p>
+                <div style={{ marginTop: 8, maxWidth: 420, marginLeft: "auto", marginRight: "auto", textAlign: "left" }}>
+                  <p style={{ fontSize: 13.5, fontWeight: 600, color: sub, margin: "0 0 8px" }}>Mood</p>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(76px, 1fr))", gap: 6, marginBottom: 14 }}>
                     {QUEUE_MOODS.map((mood) => (
                       <button key={mood} onClick={() => startMoodMix(mood, "videos")} style={pill(false)}>
@@ -1846,7 +1945,7 @@ export default function TheDJCaresPage({
                       </button>
                     ))}
                   </div>
-                  <p style={{ fontSize: 11, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: sub, margin: "0 0 8px" }}>Vibe</p>
+                  <p style={{ fontSize: 13.5, fontWeight: 600, color: sub, margin: "0 0 8px" }}>Vibe</p>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(76px, 1fr))", gap: 6 }}>
                     {VIBES.map((v) => (
                       <button key={v} onClick={() => spinVideoByVibe(v)} style={pill(false)}>{v}</button>
@@ -1858,270 +1957,130 @@ export default function TheDJCaresPage({
           </section>
         )}
 
-        {/* Daily Encouragement — directly beneath the hero (locked homepage
-            order: hero, then Daily Encouragement, then everything else).
-            ONE card, ONE current selection — Spin replaces this same
-            card's contents in place, no "today's pick vs spun pick"
-            concept, no second card, no back button. A pure selector now:
-            Play here routes through the same authoritative startItem
-            pipeline every other pick on the page uses (see
-            activePlayerNode above) — it never mounts its own
-            DJPlayer/SyncedAudio/iframe, so there's exactly one place any
-            of this actually plays, and it survives navigating to Music,
-            Videos, Sermons, or Podcasts. Never fabricates a source:
-            Original source always points at whatever's actually
-            displayed, honestly. */}
-        {tab === "spin" && dailyPick && (
-          <section
-            id="daily-encouragement"
-            aria-label="Daily Encouragement"
-            style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20, textAlign: "center", order: HOME_ORDER.daily }}
-          >
-            <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 2px" }}>
-              <span aria-hidden>🌅</span> Daily Encouragement
-            </p>
-            <p style={{ fontSize: 12, fontWeight: 700, color: sub, margin: "0 0 14px" }}>{typeLabel(dailyPick)}</p>
-            <p style={{ fontSize: 20, fontWeight: 900, color: text, margin: 0 }}>{dailyPick.title}</p>
-            <p style={{ fontSize: 13.5, fontWeight: 700, color: accent, margin: "2px 0 0" }}>
-              {dailyPick.author}
-              {dailyPick.ministry ? ` · ${ministryByKey(dailyPick.ministry)?.name}` : ""}
-            </p>
-            {!dailyIsCurrent && dailyPick.summary && (
-              <p style={{ fontSize: 13.5, color: sub, margin: "6px auto 0", maxWidth: 460, lineHeight: 1.55 }}>{dailyPick.summary}</p>
-            )}
+        {/* LISTEN — the DJ's playlists and podcasts. Both are selectors:
+            Play routes through the same startItem pipeline every other pick
+            uses, so the real Apple/Spotify embed only ever mounts in the one
+            persistent player (podcastPanelNode), never in these cards.
+            "Choose a mix" and "Another mix" only re-cue which playlist is
+            shown (heroPlaylistId); neither starts playback. */}
+        {tab === "spin" && (
+          <section id="listen" aria-labelledby="listen-heading" style={{ ...chapterStyle, order: HOME_ORDER.listen }}>
+            <h2 id="listen-heading" style={chapterTitle}>Listen</h2>
+            <p style={chapterLine}>The DJ&apos;s playlists and podcasts.</p>
 
-            {isPlayable(dailyPick) && (
-              <div style={{ marginTop: 16 }}>
-                {dailyIsCurrent ? (
-                  // The persistent player (right below the category tabs, on
-                  // every tab) already has the real Play/Pause, Share, and
-                  // full transport for this exact item — a second copy here
-                  // would be a competing control for the same media.
-                  <p style={{ fontSize: 12.5, fontWeight: 800, color: sub, margin: 0 }}>
-                    ▶ Now playing in the player above ↑
-                  </p>
-                ) : (
-                  <>
-                    {/* compact 16:9 preview — belongs to the card, not a
-                        giant embed dropped into it. Clicking either this
-                        or the button below starts it in the persistent
-                        player above. */}
-                    <button
-                      type="button"
-                      onClick={() => startItem(dailyPick)}
-                      aria-label={`Play ${dailyPick.title}`}
-                      style={{ display: "block", width: "min(420px, 100%)", margin: "0 auto", background: "none", border: "none", padding: 0, cursor: "pointer" }}
-                    >
-                      <span style={{ position: "relative", display: "block", width: "100%", aspectRatio: "16 / 9", borderRadius: 14, overflow: "hidden", background: active }}>
-                        {artworkUrl(dailyPick) ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={artworkUrl(dailyPick)!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        ) : (
-                          <span style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", fontSize: 40 }}>🎧</span>
-                        )}
-                        <span aria-hidden style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <span style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(11,18,32,0.85)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>▶</span>
-                        </span>
-                      </span>
-                    </button>
-                    <div style={{ marginTop: 14 }}>
-                      <button onClick={() => startItem(dailyPick)} style={bigButton}>▶ Play here</button>
-                    </div>
-                  </>
+            {heroPlaylist && (
+              <section id="music" aria-label="The Music" style={{ ...calmCard, textAlign: "center", marginBottom: 28 }}>
+                <p style={smallLabel}>Playlist</p>
+                <p style={{ fontSize: 20, fontWeight: 600, color: text, margin: 0, lineHeight: 1.35 }}>{heroPlaylist.title}</p>
+                {!musicIsCurrent && heroPlaylist.summary && (
+                  <p style={{ fontSize: 14, color: sub, margin: "8px auto 0", maxWidth: 440, lineHeight: 1.6 }}>{heroPlaylist.summary}</p>
                 )}
-              </div>
-            )}
 
-            <div style={{ marginTop: 14, display: "flex", gap: 16, justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
-              <a
-                href={getWatchUrl(dailyPick)}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => track("djc_source_opened", { content_id: dailyPick.id })}
-                style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}
-              >
-                Original source ↗
-              </a>
-              <button onClick={spinDailyPick} style={{ background: "none", border: "none", padding: 0, fontSize: 12.5, fontWeight: 800, color: sub, cursor: "pointer" }}>
-                🔀 Spin another
-              </button>
-              {share(mediaShareTarget(dailyPick), "daily")}
-            </div>
-          </section>
-        )}
+                <div style={{ marginTop: 18 }}>
+                  {musicIsCurrent ? (
+                    // The persistent player at the top already has the real
+                    // embed, Share and the volume note for this playlist.
+                    <p style={{ fontSize: 13.5, fontWeight: 500, color: sub, margin: 0 }}>
+                      ▶ Now playing in the player above ↑
+                    </p>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => { startItem(heroPlaylist); track("playlist_open", { content_title: heroPlaylist.title }); }}
+                        aria-label={`Play ${heroPlaylist.title}`}
+                        style={{ display: "block", width: "min(240px, 100%)", margin: "0 auto", background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                      >
+                        <span style={{ position: "relative", display: "block", width: "100%", aspectRatio: "1", borderRadius: 14, overflow: "hidden", background: active }}>
+                          {heroPlaylist.artworkUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={heroPlaylist.artworkUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            <span style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", fontSize: 40 }}>🎶</span>
+                          )}
+                          <span aria-hidden style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <span style={playCircle}>▶</span>
+                          </span>
+                        </span>
+                      </button>
+                      <div style={{ marginTop: 16 }}>
+                        <button onClick={() => { startItem(heroPlaylist); track("playlist_open", { content_title: heroPlaylist.title }); }} style={bigButton}>▶ Play</button>
+                      </div>
+                    </>
+                  )}
+                </div>
 
-        {/* THE MUSIC — the third deck, right after Daily Encouragement. A
-            selector/featured card now: cover artwork + Play here, but
-            pressing it routes through the same startItem pipeline every
-            other pick on the page uses (see activePlayerNode above), which
-            renders the real Apple Music embed via podcastPanelNode — no
-            iframe mounted here, so there's exactly one place any playlist
-            actually plays, and it survives navigating to Music, Videos,
-            Sermons, or Podcasts. "Choose a mix" and "Another mix" just
-            re-cue which playlist is featured (heroPlaylistId); neither
-            starts playback on its own, same as the hero's Shuffle. */}
-        {tab === "spin" && heroPlaylist && (
-          <section id="music" aria-label="The Music" style={{ background: card, border: `2px solid ${border}`, borderRadius: 22, padding: "20px 20px 22px", marginBottom: 20, textAlign: "center", order: HOME_ORDER.music }}>
-            <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 14px" }}>
-              <span aria-hidden>🎶</span> The Music
-            </p>
-            <p style={{ fontSize: 20, fontWeight: 900, color: text, margin: 0 }}>{heroPlaylist.title}</p>
-            {!musicIsCurrent && heroPlaylist.summary && (
-              <p style={{ fontSize: 13.5, color: sub, margin: "6px auto 0", maxWidth: 460, lineHeight: 1.55 }}>{heroPlaylist.summary}</p>
-            )}
+                <div style={{ marginTop: 16, display: "flex", gap: "8px 18px", justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
+                  <a href={heroPlaylist.url} target="_blank" rel="noopener noreferrer" style={smallLink}>
+                    Open in Apple Music ↗
+                  </a>
+                  {heroPlaylist.spotifyAlt && (
+                    <a href={heroPlaylist.spotifyAlt} target="_blank" rel="noopener noreferrer" style={smallLink}>
+                      Prefer Spotify? ↗
+                    </a>
+                  )}
+                  <button onClick={spinMusicMix} style={smallTextButton}>
+                    🔀 Another mix
+                  </button>
+                  {share(mediaShareTarget(heroPlaylist), "hero")}
+                </div>
 
-            <div style={{ marginTop: 16 }}>
-              {musicIsCurrent ? (
-                // The persistent player (right below the category tabs, on
-                // every tab) already has the real embed, Share, and volume
-                // note for this exact playlist — a second copy here would
-                // be a competing control for the same media.
-                <p style={{ fontSize: 12.5, fontWeight: 800, color: sub, margin: 0 }}>
-                  ▶ Now playing in the player above ↑
-                </p>
-              ) : (
-                <>
+                <div style={{ marginTop: 6 }}>
                   <button
                     type="button"
-                    onClick={() => { startItem(heroPlaylist); track("playlist_open", { content_title: heroPlaylist.title }); }}
-                    aria-label={`Play ${heroPlaylist.title}`}
-                    style={{ display: "block", width: "min(300px, 100%)", margin: "0 auto", background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                    onClick={() => setChooseMixOpen((v) => !v)}
+                    aria-expanded={chooseMixOpen}
+                    style={{ ...smallTextButton, minHeight: 44 }}
                   >
-                    <span style={{ position: "relative", display: "block", width: "100%", aspectRatio: "1", borderRadius: 14, overflow: "hidden", background: active }}>
-                      {heroPlaylist.artworkUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={heroPlaylist.artworkUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      ) : (
-                        <span style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", fontSize: 40 }}>🎶</span>
-                      )}
-                      <span aria-hidden style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <span style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(11,18,32,0.85)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>▶</span>
-                      </span>
-                    </span>
+                    Choose a mix {chooseMixOpen ? "▴" : "▾"}
                   </button>
-                  <div style={{ marginTop: 14 }}>
-                    <button onClick={() => { startItem(heroPlaylist); track("playlist_open", { content_title: heroPlaylist.title }); }} style={bigButton}>▶ Play</button>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div style={{ marginTop: 14, display: "flex", gap: 16, justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
-              <a href={heroPlaylist.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
-                Open in Apple Music ↗
-              </a>
-              {heroPlaylist.spotifyAlt && (
-                <a href={heroPlaylist.spotifyAlt} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 800, color: sub, textDecoration: "none" }}>
-                  Prefer Spotify? ↗
-                </a>
-              )}
-              <button onClick={spinMusicMix} style={{ background: "none", border: "none", padding: 0, fontSize: 12.5, fontWeight: 800, color: sub, cursor: "pointer" }}>
-                🔀 Another mix
-              </button>
-              {share(mediaShareTarget(heroPlaylist), "hero")}
-            </div>
-
-            <div style={{ marginTop: 14 }}>
-              <button
-                type="button"
-                onClick={() => setChooseMixOpen((v) => !v)}
-                aria-expanded={chooseMixOpen}
-                style={{ background: "none", border: "none", padding: 0, fontSize: 12.5, fontWeight: 800, color: sub, cursor: "pointer" }}
-              >
-                Choose a mix {chooseMixOpen ? "▴" : "▾"}
-              </button>
-              {chooseMixOpen && (
-                <div style={{ ...optionGrid, marginTop: 12 }}>
-                  {playlists.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => {
-                        setHeroPlaylistId(p.id);
-                        setChooseMixOpen(false);
-                        track("playlist_open", { content_title: p.title });
-                      }}
-                      aria-pressed={heroPlaylistId === p.id}
-                      style={pill(heroPlaylistId === p.id)}
-                    >
-                      {p.shortTitle ?? p.title}
-                    </button>
-                  ))}
+                  {chooseMixOpen && (
+                    <div style={{ ...optionGrid, marginTop: 8 }}>
+                      {playlists.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => {
+                            setHeroPlaylistId(p.id);
+                            setChooseMixOpen(false);
+                            track("playlist_open", { content_title: p.title });
+                          }}
+                          aria-pressed={heroPlaylistId === p.id}
+                          style={pill(heroPlaylistId === p.id)}
+                        >
+                          {p.shortTitle ?? p.title}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* Music Videos preview — hand-picked songs, same MediaCard grid the
-            Videos tab uses, just a taste of it up front. Clicking one makes
-            it the new Now Playing anchor (see startItem's queue seeding). */}
-        {tab === "spin" && songs.length > 0 && (
-          <section id="videos" aria-label="Music Videos preview" style={{ marginBottom: 20, order: HOME_ORDER.musicVideosPreview }}>
-            <p style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 12px" }}>
-              <span aria-hidden>🎬</span> Music Videos
-            </p>
-            <div style={grid}>
-              {songs.slice(0, 6).map((i) => (
-                <MediaCard key={i.id} item={i} />
-              ))}
-            </div>
-            <button onClick={() => goTab("videos")} style={{ ...quietButton, width: "100%", marginTop: 14 }}>
-              All videos →
-            </button>
-          </section>
-        )}
-
-        {tab === "spin" && (
-          <div style={{ order: HOME_ORDER.rest }}>
-            <section id="sermons">
-              <h2 style={sectionH}>✝️ Sermons</h2>
-              <p style={sectionSub}>Approved ministers, official channels — pick a message, or let The DJ spin.</p>
-              <div style={grid}>
-                {sermons.slice(0, 3).map((s) => (
-                  <MediaCard key={s.id} item={s} showMinistry />
-                ))}
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 14, marginBottom: 30 }}>
-                <button
-                  onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }}
-                  style={{ ...bigButton, flex: "0 0 auto" }}
-                >
-                  🔀 Surprise me
-                </button>
-                <button onClick={() => goTab("sermons")} style={{ ...quietButton, flex: "1 1 auto" }}>
-                  All sermons →
-                </button>
-              </div>
-            </section>
+              </section>
+            )}
 
             <section id="podcasts">
-              <h2 style={sectionH}>🎙️ Podcasts</h2>
-              <p style={sectionSub}>Bible-first shows — press play, they stream right here.</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 12 }}>
-                {/* A selector, not its own player: Play here routes through
-                    startItem into the one persistent player above — no
-                    iframe mounted here, so a preview list never means
-                    several Spotify embeds playable at once. Capped to a
-                    taste of the catalog, same as every other Explore
-                    preview — "All podcasts" below is the real browse. */}
-                {podcasts.filter((p) => p.spotifyEmbed).slice(0, 3).map((p) => {
+              <h3 style={subHead}>Podcasts</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {/* Selectors, not players: Play here routes through
+                    startItem into the one persistent player at the top —
+                    no per-card embed, so a short list never means several
+                    playable at once. "All podcasts" below is the full list. */}
+                {podcasts.filter((p) => p.spotifyEmbed).slice(0, 2).map((p) => {
                   const isCurrent = current?.id === p.id && started;
                   return (
-                    <div key={p.id} className="pop" style={{ background: card, border: `2px solid ${isCurrent ? activeBorder : border}`, borderRadius: 16, padding: "16px 18px" }}>
+                    <div key={p.id} className="pop" style={{ background: card, border: `1px solid ${isCurrent ? activeBorder : border}`, borderRadius: 16, padding: "16px 18px" }}>
                       {isCurrent && (
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 900, letterSpacing: "0.1em", color: accent, textTransform: "uppercase", marginBottom: 6 }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12.5, fontWeight: 600, color: accent, marginBottom: 6 }}>
                           {playerState === "playing" && (
                             <span className="djc-eq" aria-hidden><span /><span /><span /><span /></span>
                           )}
                           Now Spinning
                         </span>
                       )}
-                      <p style={{ fontSize: 16, fontWeight: 900, color: text, margin: 0 }}>{p.title}</p>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: accent, margin: "2px 0 0" }}>{p.author}</p>
-                      {p.summary && <p style={{ fontSize: 13, color: sub, margin: "4px 0 0", lineHeight: 1.5 }}>{p.summary}</p>}
-                      <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                      <p style={{ fontSize: 16, fontWeight: 600, color: text, margin: 0 }}>{p.title}</p>
+                      <p style={{ fontSize: 13.5, fontWeight: 500, color: accent, margin: "3px 0 0" }}>{p.author}</p>
+                      {p.summary && <p style={{ fontSize: 14, color: sub, margin: "6px 0 0", lineHeight: 1.55 }}>{p.summary}</p>}
+                      <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                         {isCurrent ? (
-                          <span style={{ fontSize: 12.5, fontWeight: 800, color: sub }}>▶ Playing in the player above ↑</span>
+                          <span style={{ fontSize: 13.5, fontWeight: 500, color: sub }}>▶ Playing in the player above ↑</span>
                         ) : (
                           <button onClick={() => startItem(p)} style={bigButton}>▶ Play here</button>
                         )}
@@ -2131,91 +2090,180 @@ export default function TheDJCaresPage({
                   );
                 })}
               </div>
-              <button onClick={() => goTab("podcasts")} style={{ ...quietButton, width: "100%", marginBottom: 30 }}>
-                All podcasts →
-              </button>
             </section>
 
-            {/* Digital DJ — a secondary discovery tool now that Daily
-                Encouragement leads the page. Same card, just demoted. */}
-            {digitalDjEnabled && (
-              <section
-                aria-label="Digital DJ"
-                style={{ background: card, border: `2px solid ${activeBorder}`, borderRadius: 22, padding: "18px 20px", marginBottom: 30 }}
-              >
-                <div style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
-                  <div style={{ flex: "1 1 250px", minWidth: 0 }}>
-                    <p style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: accent, margin: "0 0 8px" }}>
-                      <span className="djc-eq" aria-hidden>
-                        <span /><span /><span /><span />
-                      </span>
-                      Digital DJ
-                    </p>
-                    <p style={{ fontSize: 21, fontWeight: 900, color: text, margin: "0 0 4px" }}>What should we play?</p>
-                    <p style={{ fontSize: 13.5, color: sub, margin: "0 0 12px", lineHeight: 1.55 }}>
-                      Choose your time and mood. The DJ will cue an approved session.
-                    </p>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-                      {[
-                        ["⏱", "5–60 min"],
-                        ["💜", "9 moods"],
-                        ["🎧", "Music · Videos · Sermons · Podcasts"],
-                      ].map(([emoji, label]) => (
-                        <span
-                          key={label}
-                          style={{ display: "inline-flex", alignItems: "center", gap: 5, border: `2px solid ${border}`, borderRadius: 50, padding: "4px 10px", fontSize: 12, fontWeight: 800, color: sub }}
-                        >
-                          <span aria-hidden>{emoji}</span> {label}
-                        </span>
-                      ))}
-                    </div>
-                    <a
-                      href="/digital-dj"
-                      onClick={() => track("digital_dj_homepage_click")}
-                      style={{ display: "inline-block", background: accent, color: ink, borderRadius: 50, padding: "12px 24px", fontSize: 15, fontWeight: 900, textDecoration: "none", whiteSpace: "nowrap" }}
-                    >
-                      🎛️ Cue my session
-                    </a>
-                  </div>
-                  {/* A taste of the shelf: artwork from approved catalog records. */}
-                  <div aria-hidden style={{ position: "relative", width: 150, height: 108, flexShrink: 0 }}>
-                    {["song-my-jesus", "bg-seoul-1973", "song-way-maker"].map((id, i) => {
-                      const item = LIBRARY.find((x) => x.id === id);
-                      const art = item ? artworkUrl(item) : null;
-                      if (!art) return null;
-                      return (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          key={id}
-                          src={art}
-                          alt=""
-                          loading="lazy"
-                          width={116}
-                          height={65}
-                          style={{
-                            position: "absolute",
-                            top: i * 16,
-                            right: i * 14,
-                            width: 116,
-                            height: 65,
-                            objectFit: "cover",
-                            borderRadius: 10,
-                            border: `2px solid ${border}`,
-                            boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
+            <div style={chapterLinks}>
+              <button onClick={() => goTab("music")} style={textLink}>All music →</button>
+              <button onClick={() => goTab("podcasts")} style={textLink}>All podcasts →</button>
+            </div>
+          </section>
+        )}
+
+        {/* WATCH — music videos and sermons from official channels, a short
+            list of each. A row plays through startItem (a video row also
+            seeds the continuous video queue there). */}
+        {tab === "spin" && (
+          <section id="watch" aria-labelledby="watch-heading" style={{ ...chapterStyle, order: HOME_ORDER.watch }}>
+            <h2 id="watch-heading" style={chapterTitle}>Watch</h2>
+            <p style={chapterLine}>Music videos and sermons from official channels.</p>
+
+            {songs.length > 0 && (
+              <section id="videos" aria-label="Music Videos preview" style={{ marginBottom: 28 }}>
+                <h3 style={subHead}>Music videos</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {songs.slice(0, 3).map((i) => (
+                    <MediaCard key={i.id} item={i} compact />
+                  ))}
                 </div>
               </section>
             )}
 
-            <button onClick={() => goTab("churches")} className="pop" style={{ width: "100%", background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "18px 22px", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-              <span style={{ fontSize: 14.5, fontWeight: 800, color: text }}>Does your church stream on YouTube?</span>
-              <span style={{ fontSize: 14, fontWeight: 900, color: accent, flexShrink: 0 }}>⛪ Submit it →</span>
-            </button>
-          </div>
+            <section id="sermons">
+              <h3 style={subHead}>Sermons</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {sermons.slice(0, 3).map((s) => (
+                  <MediaCard key={s.id} item={s} showMinistry compact />
+                ))}
+              </div>
+              <button
+                onClick={() => { setCategory("sermon"); const p = spinPool({ category: "sermon", vibe }).filter((i) => !unavailable.has(i.id)); const n = pickNext(p, historyRef.current); if (n) startItem(n, true); }}
+                style={{ ...quietButton, marginTop: 14 }}
+              >
+                🔀 Surprise me
+              </button>
+            </section>
+
+            <div style={chapterLinks}>
+              <button onClick={() => goTab("videos")} style={textLink}>All videos →</button>
+              <button onClick={() => goTab("sermons")} style={textLink}>All sermons →</button>
+            </div>
+          </section>
+        )}
+
+        {/* REFLECT — Daily Encouragement. ONE card, ONE current selection:
+            Spin another replaces this card's contents in place and never
+            starts playback. Play here routes through the same startItem
+            pipeline every other pick uses, so it plays in the one
+            persistent player at the top, never in this card. Original
+            source always points at whatever is displayed. */}
+        {tab === "spin" && (
+          <section id="reflect" aria-labelledby="reflect-heading" style={{ ...chapterStyle, order: HOME_ORDER.reflect }}>
+            <h2 id="reflect-heading" style={chapterTitle}>Reflect</h2>
+            <p style={chapterLine}>A sermon or podcast for today. A new one each day.</p>
+
+            {dailyPick ? (
+              <section id="daily-encouragement" aria-label="Daily Encouragement" style={{ ...calmCard, textAlign: "center" }}>
+                <p style={smallLabel}>Daily Encouragement · {typeLabel(dailyPick)}</p>
+                <p style={{ fontSize: 20, fontWeight: 600, color: text, margin: 0, lineHeight: 1.35 }}>{dailyPick.title}</p>
+                <p style={{ fontSize: 14, fontWeight: 500, color: accent, margin: "4px 0 0" }}>
+                  {dailyPick.author}
+                  {dailyPick.ministry ? ` · ${ministryByKey(dailyPick.ministry)?.name}` : ""}
+                </p>
+                {!dailyIsCurrent && dailyPick.summary && (
+                  <p style={{ fontSize: 14, color: sub, margin: "8px auto 0", maxWidth: 460, lineHeight: 1.6 }}>{dailyPick.summary}</p>
+                )}
+
+                {isPlayable(dailyPick) && (
+                  <div style={{ marginTop: 18 }}>
+                    {dailyIsCurrent ? (
+                      // The persistent player at the top already has the real
+                      // Play/Pause, Share and transport for this item.
+                      <p style={{ fontSize: 13.5, fontWeight: 500, color: sub, margin: 0 }}>
+                        ▶ Now playing in the player above ↑
+                      </p>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => startItem(dailyPick)}
+                          aria-label={`Play ${dailyPick.title}`}
+                          style={{ display: "block", width: "min(420px, 100%)", margin: "0 auto", background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                        >
+                          <span style={{ position: "relative", display: "block", width: "100%", aspectRatio: "16 / 9", borderRadius: 14, overflow: "hidden", background: active }}>
+                            {artworkUrl(dailyPick) ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={artworkUrl(dailyPick)!} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            ) : (
+                              <span style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", fontSize: 40 }}>🎧</span>
+                            )}
+                            <span aria-hidden style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <span style={playCircle}>▶</span>
+                            </span>
+                          </span>
+                        </button>
+                        <div style={{ marginTop: 16 }}>
+                          <button onClick={() => startItem(dailyPick)} style={bigButton}>▶ Play here</button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                <div style={{ marginTop: 16, display: "flex", gap: "8px 18px", justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
+                  <a
+                    href={getWatchUrl(dailyPick)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => track("djc_source_opened", { content_id: dailyPick.id })}
+                    style={smallLink}
+                  >
+                    Original source ↗
+                  </a>
+                  <button onClick={spinDailyPick} style={smallTextButton}>
+                    🔀 Spin another
+                  </button>
+                  {share(mediaShareTarget(dailyPick), "daily")}
+                </div>
+              </section>
+            ) : (
+              <p style={{ fontSize: 14.5, color: sub, margin: 0 }}>
+                Today&apos;s pick isn&apos;t ready yet.{" "}
+                <button onClick={() => goTab("sermons")} style={{ ...textLink, minHeight: 0, padding: 0 }}>All sermons →</button>
+              </p>
+            )}
+          </section>
+        )}
+
+        {/* EXPLORE — the Digital DJ, the ministries behind the teaching, and
+            local churches. Ministries and Churches open through goTab, the
+            same client-side path the category tabs use. */}
+        {tab === "spin" && (
+          <section id="explore" aria-labelledby="explore-heading" style={{ ...chapterStyle, order: HOME_ORDER.explore }}>
+            <h2 id="explore-heading" style={chapterTitle}>Explore</h2>
+            <p style={chapterLine}>The Digital DJ, ministries and local churches.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {digitalDjEnabled && (
+                <section aria-label="Digital DJ" style={calmCard}>
+                  <p style={smallLabel}>Digital DJ</p>
+                  <p style={{ fontSize: 20, fontWeight: 600, color: text, margin: "0 0 6px" }}>What should we play?</p>
+                  <p style={{ fontSize: 14, color: sub, margin: "0 0 16px", lineHeight: 1.6 }}>
+                    Choose your time and mood. The DJ will cue an approved session.
+                  </p>
+                  <a
+                    href="/digital-dj"
+                    onClick={() => track("digital_dj_homepage_click")}
+                    style={{ ...bigButton, display: "inline-block", textDecoration: "none" }}
+                  >
+                    Cue my session
+                  </a>
+                </section>
+              )}
+              <button onClick={() => goTab("ministries")} style={exploreRow}>
+                <span>
+                  <span style={rowTitle}>Ministries</span>
+                  <span style={rowLine}>Where the sermons and podcasts come from.</span>
+                </span>
+                <span aria-hidden style={{ fontSize: 18, color: accent, flexShrink: 0 }}>→</span>
+              </button>
+              <button onClick={() => goTab("churches")} style={exploreRow}>
+                <span>
+                  <span style={rowTitle}>Churches</span>
+                  <span style={rowLine}>Churches that stream on YouTube, and a form to submit yours.</span>
+                </span>
+                <span aria-hidden style={{ fontSize: 18, color: accent, flexShrink: 0 }}>→</span>
+              </button>
+            </div>
+          </section>
         )}
 
         {/* Every browsing tab below follows the same order: heading +
@@ -2242,7 +2290,7 @@ export default function TheDJCaresPage({
                   <PlaylistCard key={p.id} p={p} />
                 ))}
               </div>
-              <button onClick={() => goTab("videos")} className="pop" style={{ width: "100%", background: card, border: `2px solid ${border}`, borderRadius: 18, padding: "16px 20px", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <button onClick={() => goTab("videos")} className="pop" style={{ width: "100%", background: card, border: `1px solid ${border}`, borderRadius: 18, padding: "16px 20px", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: 14.5, fontWeight: 800, color: text }}>Want one song at a time instead?</span>
                 <span style={{ fontSize: 14, fontWeight: 900, color: accent, flexShrink: 0 }}>🎬 Videos →</span>
               </button>
@@ -2287,7 +2335,7 @@ export default function TheDJCaresPage({
               {podcasts.map((p) => {
                 const isCurrent = current?.id === p.id && started;
                 return (
-                  <div key={p.id} id={`djc-item-${p.id}`} className="pop" style={{ background: card, border: `2px solid ${isCurrent ? activeBorder : border}`, borderRadius: 16, padding: "16px 18px" }}>
+                  <div key={p.id} id={`djc-item-${p.id}`} className="pop" style={{ background: card, border: `1px solid ${isCurrent ? activeBorder : border}`, borderRadius: 16, padding: "16px 18px" }}>
                     {isCurrent && (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 900, letterSpacing: "0.1em", color: accent, textTransform: "uppercase", marginBottom: 6 }}>
                         {playerState === "playing" && (
@@ -2385,7 +2433,7 @@ export default function TheDJCaresPage({
               {MINISTRIES.map((m) => {
                 const counts = ministryCounts(m);
                 return (
-                  <div key={m.key} id={`djc-ministry-${m.key}`} className="pop" style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, padding: "18px 20px" }}>
+                  <div key={m.key} id={`djc-ministry-${m.key}`} className="pop" style={{ background: card, border: `1px solid ${border}`, borderRadius: 16, padding: "18px 20px" }}>
                     <p style={{ fontSize: 17, fontWeight: 900, color: text, margin: 0 }}>{m.name}</p>
                     <p style={{ fontSize: 13.5, fontWeight: 700, color: accent, margin: "2px 0 6px" }}>{m.speaker}</p>
                     <p style={{ fontSize: 13.5, color: sub, margin: "0 0 10px", lineHeight: 1.55 }}>{m.purpose}</p>
@@ -2434,7 +2482,7 @@ export default function TheDJCaresPage({
             {APPROVED_CHURCHES.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 26 }}>
                 {APPROVED_CHURCHES.map((c) => (
-                  <div key={c.id} id={`djc-church-${c.id}`} className="pop" style={{ background: card, border: `2px solid ${border}`, borderRadius: 16, padding: "18px 20px" }}>
+                  <div key={c.id} id={`djc-church-${c.id}`} className="pop" style={{ background: card, border: `1px solid ${border}`, borderRadius: 16, padding: "18px 20px" }}>
                     <p style={{ fontSize: 16, fontWeight: 900, color: text, margin: 0 }}>{c.name}</p>
                     <p style={{ fontSize: 13, fontWeight: 700, color: sub, margin: "2px 0 8px" }}>
                       {c.city}, {c.region} · {c.country}
@@ -2463,7 +2511,7 @@ export default function TheDJCaresPage({
                 ))}
               </div>
             ) : (
-              <div style={{ background: card, border: `2px dashed ${border}`, borderRadius: 16, padding: "18px 20px", marginBottom: 26, textAlign: "center" }}>
+              <div style={{ background: card, border: `1px dashed ${border}`, borderRadius: 16, padding: "18px 20px", marginBottom: 26, textAlign: "center" }}>
                 <p style={{ fontSize: 14, fontWeight: 800, color: text, margin: 0 }}>Approved churches will appear here.</p>
                 <p style={{ fontSize: 13, color: sub, margin: "4px 0 0" }}>Every submission is reviewed by hand first — yours could be the first one listed.</p>
               </div>
