@@ -61,9 +61,11 @@ describe("every existing feature stays reachable from Home", () => {
 });
 
 describe("the nature photo", () => {
-  it("is the owner's own (or clearly licensed) photo; until one is chosen a labelled placeholder holds its place", () => {
+  it("is the owner's own (or clearly licensed) photo; until one is chosen nothing shows (no placeholder)", () => {
     expect(homeClient).toContain("const NATURE_PHOTO: { src: string; alt: string } | null = null;");
-    expect(homeRegion).toContain('aria-label="Placeholder for a nature photo"');
+    expect(homeRegion).not.toContain("Placeholder for a nature photo");
+    expect(homeRegion).not.toContain("Nature photo goes here");
+    expect(homeRegion).toContain("{NATURE_PHOTO && (");
     expect(homeRegion).toContain("alt={NATURE_PHOTO.alt}");
   });
 });

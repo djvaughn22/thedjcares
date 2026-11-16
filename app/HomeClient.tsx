@@ -135,8 +135,8 @@ const HOME_DOORS = [
 ] as const;
 
 // The first screen's nature photo: only the owner's own photo, or one with a
-// clear license for this site. While this is null a labelled placeholder
-// shows where it goes. To add one, put the file in public/ (wide 3:1,
+// clear license for this site. While this is null nothing shows (no
+// placeholder). To add one, put the file in public/ (wide 3:1,
 // compressed) and set { src: "/file.jpg", alt: "what the photo shows" }.
 const NATURE_PHOTO: { src: string; alt: string } | null = null;
 
@@ -1781,22 +1781,15 @@ export default function TheDJCaresPage({
                 </ul>
               </nav>
 
-              {NATURE_PHOTO ? (
+              {/* Nature photo: shown only once NATURE_PHOTO is set (owner's own
+                  photo or a clearly licensed one). Nothing renders until then. */}
+              {NATURE_PHOTO && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={NATURE_PHOTO.src}
                   alt={NATURE_PHOTO.alt}
                   style={{ display: "block", width: "100%", height: "auto", aspectRatio: "3 / 1", objectFit: "cover", borderRadius: 18, marginTop: 30 }}
                 />
-              ) : (
-                <div
-                  role="img"
-                  aria-label="Placeholder for a nature photo"
-                  style={{ marginTop: 30, aspectRatio: "3 / 1", borderRadius: 18, border: `1px dashed ${activeBorder}`, background: card, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, padding: 16 }}
-                >
-                  <span style={{ fontSize: 14.5, fontWeight: 600, color: sub }}>Nature photo goes here</span>
-                  <span style={{ fontSize: 13, color: sub }}>Placeholder: the owner&apos;s own photo, or one with a clear license</span>
-                </div>
               )}
             </>
           )}
